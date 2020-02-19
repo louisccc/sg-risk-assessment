@@ -14,5 +14,4 @@ def system_graph_extraction(img_path):
 def system_visualize_graph(graph, video_path):
 
 	gv = GraphVisualizer("input/lane-change/")
-    gv.show()
-
+	gv.show()

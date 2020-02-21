@@ -473,8 +473,7 @@ class HUD(object):
             if len(vehicles) > 1:
                 for vehicle in vehicles:
                     if vehicle.id != world.player.id and distance(vehicle.get_location()) < 100:
-                        if vehicle.id not in actordict:
-                            actordict[vehicle.id] = defaultdict()
+                        actordict[vehicle.id] = defaultdict()
                         actordict[vehicle.id]['velocity'] = int(velocity(vehicle.get_velocity()))
                         actordict[vehicle.id]['dv'] = int(dv(vehicle.get_velocity())) #delta v from ego
                         actordict[vehicle.id]['distance'] = int(distance(vehicle.get_location()))

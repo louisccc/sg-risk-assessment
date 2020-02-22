@@ -30,8 +30,10 @@ import glob
 import os
 import sys
 
+CARLA_DIST_PATH = r'C:\Users\AICPS\Documents\GitHub\carla\PythonAPI\carla\dist'
 try:
-    sys.path.append(glob.glob('../carla/dist/carla-*%d.%d-%s.egg' % (
+    sys.path.append(glob.glob('%s/carla-*%d.%d-%s.egg' % (
+        CARLA_DIST_PATH,
         sys.version_info.major,
         sys.version_info.minor,
         'win-amd64' if os.name == 'nt' else 'linux-x86_64'))[0])

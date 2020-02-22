@@ -29,9 +29,12 @@ import time
 import pkg_resources
 import glob
 
-CARLA_DIST_PATH = r'C:\Users\AICPS\Documents\GitHub\carla\PythonAPI\carla\dist'
+CARLA_API_PATH = r'.\PythonAPI' 
+CARLA_ROOT_PATH = r'.\PythonAPI\carla' 
+CARLA_DIST_PATH = r'.\PythonAPI\carla\dist'
+# CARLA_DIST_PATH = r'.\\'
 
-sys.path.append(CARLA_DIST_PATH)
+
 
 try:
     sys.path.append(glob.glob('%s/carla-*%d.%d-%s.egg' % (
@@ -41,16 +44,16 @@ try:
         'win-amd64' if os.name == 'nt' else 'linux-x86_64'))[0])
 
 except IndexError:
-    print('%s/carla-*%d.%d-%s.egg' % (
+    print('Import failed! path: %s/carla-*%d.%d-%s.egg' % (
         CARLA_DIST_PATH,
         sys.version_info.major,
         sys.version_info.minor,
         'win-amd64' if os.name == 'nt' else 'linux-x86_64'))
-    pass
 
+sys.path.append(CARLA_API_PATH)
+sys.path.append(CARLA_DIST_PATH)
+sys.path.append(CARLA_ROOT_PATH)
 
-
-sys.path.append(r'C:\Users\AICPS\Documents\GitHub\carla\PythonAPI\carla')
 import carla
 
 
@@ -124,10 +127,15 @@ class ScenarioRunner(object):
         # requests in the localhost at port 2000.
         self.client = carla.Client(args.host, int(args.port))
         self.client.set_timeout(self.client_timeout)
-        import pdb; pdb.set_trace()
-        # dist = pkg_resources.get_distribution("carla")
-        # if LooseVersion(dist.version) < LooseVersion('0.9.6'):
-            # raise ImportError("CARLA version 0.9.6 or newer required. CARLA version found: {}".format(dist))
+
+        carla_dists = [x for x in pkg_resources.find_distributions(CARLA_DIST_PATH)]
+
+        assert len(carla_dists) > 0, "No carla distribution found in %s" % CARLA_DIST_PATH
+
+        carla_dist = carla_dists[0]
+
+        if LooseVersion(carla_dist.version) < LooseVersion('0.9.6'):
+            raise ImportError("CARLA version 0.9.6 or newer required. CARLA version found: {}".format(carla_dist))
 
         # Load additional scenario definitions, if there are any
         # If something goes wrong an exception will be thrown by importlib (ok here)

@@ -158,12 +158,12 @@ class World(object):
         self._weather_index = 0
         self._actor_filter = args.filter
         self._gamma = args.gamma
-        self.restart()
+        self.restart(args)
         self.world.on_tick(hud.on_world_tick)
         self.recording_enabled = False
         self.recording_start = 0
 
-    def restart(self):
+    def restart(self, args):
         # Keep same camera config if the camera manager exists.
         cam_index = self.camera_manager.index if self.camera_manager is not None else 0
         cam_pos_index = self.camera_manager.transform_index if self.camera_manager is not None else 0
@@ -180,30 +180,30 @@ class World(object):
             blueprint.set_attribute('is_invincible', 'true')
 
         # change from here to go on scenario runner's ego car. 
+        if args.hook:
+            # hook on an existing player using the car "hero".
+            while self.player is None:
+                print("Scenario not yet ready")
+                time.sleep(1)
+                possible_vehicles = self.world.get_actors().filter('vehicle.*')
+
+                for vehicle in possible_vehicles:
+                    if vehicle.attributes['role_name'] == "hero":
+                        self.player = vehicle
+        else: 
+            # Spawn the new player.
+            if self.player is not None:
+                spawn_point = self.player.get_transform()
+                spawn_point.location.z += 2.0
+                spawn_point.rotation.roll = 0.0
+                spawn_point.rotation.pitch = 0.0
+                self.destroy()
+                self.player = self.world.try_spawn_actor(blueprint, spawn_point)
+            while self.player is None:
+                spawn_points = self.map.get_spawn_points()
+                spawn_point = random.choice(spawn_points) if spawn_points else carla.Transform()
+                self.player = self.world.try_spawn_actor(blueprint, spawn_point)
         
-        '''# Spawn the player.
-        if self.player is not None:
-            spawn_point = self.player.get_transform()
-            spawn_point.location.z += 2.0
-            spawn_point.rotation.roll = 0.0
-            spawn_point.rotation.pitch = 0.0
-            self.destroy()
-            self.player = self.world.try_spawn_actor(blueprint, spawn_point)
-        while self.player is None:
-            spawn_points = self.map.get_spawn_points()
-            spawn_point = random.choice(spawn_points) if spawn_points else carla.Transform()
-            self.player = self.world.try_spawn_actor(blueprint, spawn_point)
-        '''
-
-        while self.player is None:
-            print("Scenario not yet ready")
-            time.sleep(1)
-            possible_vehicles = self.world.get_actors().filter('vehicle.*')
-
-            for vehicle in possible_vehicles:
-                if vehicle.attributes['role_name'] == "hero":
-                    self.player = vehicle
-
         # Set up the sensors.
         self.collision_sensor = CollisionSensor(self.player, self.hud)
         self.lane_invasion_sensor = LaneInvasionSensor(self.player, self.hud)
@@ -1055,9 +1055,14 @@ def main():
         help='Gamma correction of the camera (default: 2.2)')
     argparser.add_argument(
         '--steering',
-        default = False,
+        default=False,
         type=bool,
         help='To use steering wheel or not (default: false)')
+    argparser.add_argument(
+        '--hook',
+        default=False,
+        type=bool,
+        help='To hook on an existing car or not (scenario_runner) (default: false)')
 
     args = argparser.parse_args()
 

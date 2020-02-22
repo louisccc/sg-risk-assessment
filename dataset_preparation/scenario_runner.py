@@ -32,9 +32,6 @@ import glob
 CARLA_API_PATH = r'.\PythonAPI' 
 CARLA_ROOT_PATH = r'.\PythonAPI\carla' 
 CARLA_DIST_PATH = r'.\PythonAPI\carla\dist'
-# CARLA_DIST_PATH = r'.\\'
-
-
 
 try:
     sys.path.append(glob.glob('%s/carla-*%d.%d-%s.egg' % (
@@ -53,6 +50,7 @@ except IndexError:
 sys.path.append(CARLA_API_PATH)
 sys.path.append(CARLA_DIST_PATH)
 sys.path.append(CARLA_ROOT_PATH)
+
 
 import carla
 

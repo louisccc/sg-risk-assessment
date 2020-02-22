@@ -80,6 +80,7 @@ import random
 import re
 import time
 import weakref
+from collections import defaultdict
 
 try:
     import pygame
@@ -636,6 +637,40 @@ class HUD(object):
             self._info_text += [
                 ('Speed:', c.speed, 0.0, 5.556),
                 ('Jump:', c.jump)]
+
+        #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~DATA EXPORT TO CSV FILE~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        #if camera is exporting images, then record CSV data at the same time.
+        output_dir = "_out/data/"
+        
+        if world.camera_manager.recording:
+            print("recording data for frame:" + str(self.frame))
+            if not os.path.exists(output_dir):
+                os.mkdir(output_dir)
+            egodict = defaultdict()
+            actordict = defaultdict()
+            
+            #ego info to export
+            egodict['velocity'] = int(velocity(v))
+            egodict['yaw'] = int(t.rotation.yaw)
+            
+            #export data from surrounding vehicles
+            if len(vehicles) > 1:
+                for vehicle in vehicles:
+                    if vehicle.id != world.player.id and distance(vehicle.get_location()) < 100:
+                        actordict[vehicle.id] = defaultdict()
+                        actordict[vehicle.id]['velocity'] = int(velocity(vehicle.get_velocity()))
+                        actordict[vehicle.id]['dv'] = int(dv(vehicle.get_velocity())) #delta v from ego
+                        actordict[vehicle.id]['distance'] = int(distance(vehicle.get_location()))
+                        actordict[vehicle.id]['yaw'] = int(vehicle.get_transform().rotation.yaw)
+                        actordict[vehicle.id]['name'] = get_actor_display_name(vehicle)
+            print(egodict)
+            print(actordict)
+            
+            with open(output_dir + str(self.frame) + '_ego.txt', 'w') as file:
+                file.write(json.dumps(egodict))
+            with open(output_dir + str(self.frame) + '_actor.txt', 'w') as file:
+                file.write(json.dumps(actordict))
+        #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         self._info_text += [
             '',
             'Collision:',

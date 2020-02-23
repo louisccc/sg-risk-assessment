@@ -138,6 +138,26 @@ def get_actor_display_name(actor, truncate=250):
     name = ' '.join(actor.type_id.replace('_', '.').title().split('.')[1:])
     return (name[:truncate - 1] + u'\u2026') if len(name) > truncate else name
 
+def get_actor_attributes(actor):
+    velocity = lambda l: (3.6 * math.sqrt(l.x**2 + l.y**2 + l.z**2))
+    # dv = lambda l: (3.6 * math.sqrt((l.x-v.x)**2 + (l.y-v.y)**2 + (l.z-v.z)**2))
+    # distance = lambda l: math.sqrt((l.x - t.location.x)**2 + (l.y - t.location.y)**2 + (l.z - t.location.z)**2)
+
+    return_dict = defaultdict()
+    v_3d = actor.get_velocity()
+    t_3d = actor.get_transform()
+    l_3d = t_3d.location
+    r_3d = t_3d.rotation
+    a_3d = actor.get_angular_velocity()
+
+    return_dict['velocity_abs'] = int(velocity(v_3d))
+    return_dict['velocity'] = int(v_3d.x), int(v_3d.y), int(v_3d.z)
+    return_dict['location'] = int(l_3d.x), int(l_3d.y), int(l_3d.z)
+    return_dict['rotation'] =  int(r_3d.yaw), int(r_3d.roll), int(r_3d.pitch)
+    return_dict['ang_velocity'] = int(a_3d.x), int(a_3d.y), int(a_3d.z)
+    return_dict['name'] = get_actor_display_name(actor)
+    return return_dict
+
 
 # ==============================================================================
 # -- World ---------------------------------------------------------------------
@@ -640,32 +660,42 @@ class HUD(object):
 
         #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~DATA EXPORT TO CSV FILE~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         #if camera is exporting images, then record CSV data at the same time.
+        
+        velocity = lambda l: (3.6 * math.sqrt(l.x**2 + l.y**2 + l.z**2))
+        dv = lambda l: (3.6 * math.sqrt((l.x-v.x)**2 + (l.y-v.y)**2 + (l.z-v.z)**2))
+        distance = lambda l: math.sqrt((l.x - t.location.x)**2 + (l.y - t.location.y)**2 + (l.z - t.location.z)**2)
+        import json
+        output_root_dir = "_out/"
         output_dir = "_out/data/"
         
+
         if world.camera_manager.recording:
-            print("recording data for frame:" + str(self.frame))
+            # import pdb; pdb.set_trace()
+            # print("recording data for frame:" + str(self.frame))
+            if not os.path.exists(output_root_dir):
+                os.mkdir(output_root_dir)
             if not os.path.exists(output_dir):
                 os.mkdir(output_dir)
+            
             egodict = defaultdict()
             actordict = defaultdict()
             
-            # ego info to export
-            egodict['velocity'] = int(velocity(v))
-            egodict['yaw'] = int(t.rotation.yaw)
+            
+            egodict = get_actor_attributes(world.player)
             
             #export data from surrounding vehicles
             if len(vehicles) > 1:
                 for vehicle in vehicles:
+                    # TODO: change the 100m condition to field of view. 
                     if vehicle.id != world.player.id and distance(vehicle.get_location()) < 100:
-                        actordict[vehicle.id] = defaultdict()
-                        actordict[vehicle.id]['velocity'] = int(velocity(vehicle.get_velocity()))
-                        actordict[vehicle.id]['dv'] = int(dv(vehicle.get_velocity())) #delta v from ego
-                        actordict[vehicle.id]['distance'] = int(distance(vehicle.get_location()))
-                        actordict[vehicle.id]['yaw'] = int(vehicle.get_transform().rotation.yaw)
-                        actordict[vehicle.id]['name'] = get_actor_display_name(vehicle)
-            print(egodict)
-            print(actordict)
-            
+                        actordict[vehicle.id] = get_actor_attributes(vehicle)
+                        # actordict[vehicle.id] = defaultdict()
+                        # actordict[vehicle.id]['velocity'] = int(velocity(vehicle.get_velocity()))
+                        # actordict[vehicle.id]['dv'] = int(dv(vehicle.get_velocity())) #delta v from ego
+                        # actordict[vehicle.id]['distance'] = int(distance(vehicle.get_location()))
+                        # actordict[vehicle.id]['yaw'] = int(vehicle.get_transform().rotation.yaw)
+                        # actordict[vehicle.id]['name'] = get_actor_display_name(vehicle)
+        
             with open(output_dir + str(self.frame) + '_ego.txt', 'w') as file:
                 file.write(json.dumps(egodict))
             with open(output_dir + str(self.frame) + '_actor.txt', 'w') as file:
@@ -992,7 +1022,7 @@ class CameraManager(object):
             array = array[:, :, ::-1]
             self.surface = pygame.surfarray.make_surface(array.swapaxes(0, 1))
         if self.recording:
-            image.save_to_disk('_out/%08d' % image.frame)
+            image.save_to_disk('_out/raw_images/%08d' % image.frame)
 
 
 # ==============================================================================

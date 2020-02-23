@@ -167,7 +167,7 @@ class World(object):
     def restart(self, args):
         # Keep same camera config if the camera manager exists.
         cam_index = self.camera_manager.index if self.camera_manager is not None else 0
-        cam_pos_index = self.camera_manager.transform_index if self.camera_manager is not None else 0
+        cam_pos_index = self.camera_manager.transform_index if self.camera_manager is not None else 1
         # Get a random blueprint.
         blueprint = random.choice(self.world.get_blueprint_library().filter(self._actor_filter))
         blueprint.set_attribute('role_name', self.actor_role_name)
@@ -649,7 +649,7 @@ class HUD(object):
             egodict = defaultdict()
             actordict = defaultdict()
             
-            #ego info to export
+            # ego info to export
             egodict['velocity'] = int(velocity(v))
             egodict['yaw'] = int(t.rotation.yaw)
             
@@ -1091,7 +1091,7 @@ def main():
     argparser.add_argument(
         '--steering',
         default=False,
-        type=bool,
+        type=lambda x: (str(x).lower() == 'true'),
         help='To use steering wheel or not (default: false)')
     argparser.add_argument(
         '--hook',

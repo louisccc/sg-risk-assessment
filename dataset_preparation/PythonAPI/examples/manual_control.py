@@ -607,6 +607,7 @@ class HUD(object):
         self._show_info = True
         self._info_text = []
         self._server_clock = pygame.time.Clock()
+        self.framedict=defaultdict()
 
     def on_world_tick(self, timestamp):
         self._server_clock.tick()
@@ -631,12 +632,12 @@ class HUD(object):
         collision = [x / max_col for x in collision]
         vehicles = world.world.get_actors().filter('vehicle.*')
         
-        ###Emily's additions###
+       
         pedestrians=world.world.get_actors().filter('walker.*')
         trafficlights=world.world.get_actors().filter('traffic.traffic_light')
         signs=world.world.get_actors().filter('traffic.traffic_sign')
         waypoint = world.world.get_map().get_waypoint(world.player.get_location(),project_to_road=True, lane_type=(carla.LaneType.Driving | carla.LaneType.Shoulder | carla.LaneType.Sidewalk))
-        ##################
+        
 
         self._info_text = [
             'Server:  % 16.0f FPS' % self.server_fps,
@@ -687,15 +688,12 @@ class HUD(object):
             
             egodict = defaultdict()
             actordict = defaultdict()
-
-            ##Emily's additions##
             peddict = defaultdict()
             lightdict = defaultdict()
             signdict = defaultdict()
             lanedict = defaultdict()
-            #correlate lane marking type to number
             lanedict = {'Current': waypoint.lane_type, 'LaneWidth': waypoint.lane_width, 'Right': waypoint.right_lane_marking.type, 'Left': waypoint.left_lane_marking.type}
-            ################
+            
             
             egodict = get_actor_attributes(world.player)
             
@@ -712,47 +710,52 @@ class HUD(object):
                         # actordict[vehicle.id]['yaw'] = int(vehicle.get_transform().rotation.yaw)
                         # actordict[vehicle.id]['name'] = get_actor_display_name(vehicle)
         
-            ###Emily's additions###
-            if len(pedestrians) > 1:
-                for p in pedestrians:
-                    if p.get_location().distance(world.player.get_location())<100:
-                        peddict[p.id]=get_actor_attributes(p)
+            for p in pedestrians:
+                if p.get_location().distance(world.player.get_location())<100:
+                    peddict[p.id]=get_actor_attributes(p)
 
-            if len(trafficlights) > 1:
-                for t in trafficlights:
-                    print(t.get_location())
-                    if t.get_location().distance(world.player.get_location())<100:
-                        lightdict[t.id]=get_actor_attributes(t)
+            for t in trafficlights:
+                print(t.get_location())
+                if t.get_location().distance(world.player.get_location())<100:
+                    lightdict[t.id]=get_actor_attributes(t)
 
-            if len(signs) > 1:
-                for s in signs:
-                    if s.get_location().distance(world.player.get_location())<100:
-                        signdict[s.id]=get_actor_attributes(s)
+            for s in signs:
+                if s.get_location().distance(world.player.get_location())<100:
+                    signdict[s.id]=get_actor_attributes(s)
 
-            #if len(peddict)>=100:
-            with open(output_dir + str(self.frame) + '_ped.txt', 'w') as file:
-                file.write(json.dumps(peddict))
-            peddict.clear()
+            self.framedict[self.frame]={"ego": egodict,"actors": actordict,"pedestrians": peddict,"trafficlights": lightdict,"signs": signdict,"lane": lanedict}
 
-            #if len(lightdict)>=100:
-            with open(output_dir + str(self.frame) + '_light.txt', 'w') as file:
-                file.write(json.dumps(lightdict))
-            lightdict.clear()
 
-            #if len(signdict)>=100:
-            with open(output_dir + str(self.frame) + '_sign.txt', 'w') as file:
-                file.write(json.dumps(signdict))
-            signdict.clear()
+            if len(self.framedict)==50:
+                with open(output_dir + str(list(self.framedict.keys())[0]) + '-' + str(list(self.framedict.keys())[len(self.framedict)-1])+'.txt', 'w') as file:
+                    file.write(json.dumps(self.framedict))
+                self.framedict.clear()
 
-            with open(output_dir + str(self.frame) + '_lane.txt', 'w') as file:
-                file.write(json.dumps(lanedict))
-            lanedict.clear()
-            ####################
 
-            with open(output_dir + str(self.frame) + '_ego.txt', 'w') as file:
-                file.write(json.dumps(egodict))
-            with open(output_dir + str(self.frame) + '_actor.txt', 'w') as file:
-                file.write(json.dumps(actordict))
+            # #if len(peddict)>=100:
+            # with open(output_dir + str(self.frame) + '_ped.txt', 'w') as file:
+            #     file.write(json.dumps(peddict))
+            # peddict.clear()
+
+            # #if len(lightdict)>=100:
+            # with open(output_dir + str(self.frame) + '_light.txt', 'w') as file:
+            #     file.write(json.dumps(lightdict))
+            # lightdict.clear()
+
+            # #if len(signdict)>=100:
+            # with open(output_dir + str(self.frame) + '_sign.txt', 'w') as file:
+            #     file.write(json.dumps(signdict))
+            # signdict.clear()
+
+            # with open(output_dir + str(self.frame) + '_lane.txt', 'w') as file:
+            #     file.write(json.dumps(lanedict))
+            # lanedict.clear()
+            # ####################
+
+            # with open(output_dir + str(self.frame) + '_ego.txt', 'w') as file:
+            #     file.write(json.dumps(egodict))
+            # with open(output_dir + str(self.frame) + '_actor.txt', 'w') as file:
+            #     file.write(json.dumps(actordict))
         #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         self._info_text += [
             '',

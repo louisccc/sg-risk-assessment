@@ -82,7 +82,7 @@ import time
 import weakref
 from collections import defaultdict
 import json
-        
+
 try:
     import pygame
     from pygame.locals import KMOD_CTRL
@@ -703,12 +703,6 @@ class HUD(object):
                     # TODO: change the 100m condition to field of view. 
                     if vehicle.id != world.player.id and distance(vehicle.get_location()) < 100:
                         actordict[vehicle.id] = get_actor_attributes(vehicle)
-                        # actordict[vehicle.id] = defaultdict()
-                        # actordict[vehicle.id]['velocity'] = int(velocity(vehicle.get_velocity()))
-                        # actordict[vehicle.id]['dv'] = int(dv(vehicle.get_velocity())) #delta v from ego
-                        # actordict[vehicle.id]['distance'] = int(distance(vehicle.get_location()))
-                        # actordict[vehicle.id]['yaw'] = int(vehicle.get_transform().rotation.yaw)
-                        # actordict[vehicle.id]['name'] = get_actor_display_name(vehicle)
         
             for p in pedestrians:
                 if p.get_location().distance(world.player.get_location())<100:

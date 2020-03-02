@@ -81,7 +81,8 @@ import re
 import time
 import weakref
 from collections import defaultdict
-
+import json
+        
 try:
     import pygame
     from pygame.locals import KMOD_CTRL
@@ -673,7 +674,6 @@ class HUD(object):
         velocity = lambda l: (3.6 * math.sqrt(l.x**2 + l.y**2 + l.z**2))
         dv = lambda l: (3.6 * math.sqrt((l.x-v.x)**2 + (l.y-v.y)**2 + (l.z-v.z)**2))
         distance = lambda l: math.sqrt((l.x - t.location.x)**2 + (l.y - t.location.y)**2 + (l.z - t.location.z)**2)
-        import json
         output_root_dir = "_out/"
         output_dir = "_out/data/"
         

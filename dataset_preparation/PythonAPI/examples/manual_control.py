@@ -175,6 +175,7 @@ class World(object):
         self.lane_invasion_sensor = None
         self.gnss_sensor = None
         self.camera_manager = None
+        self.camera_manager2 = None
         self._weather_presets = find_weather_presets()
         self._weather_index = 0
         self._actor_filter = args.filter
@@ -232,6 +233,9 @@ class World(object):
         self.camera_manager = CameraManager(self.player, self.hud, self._gamma)
         self.camera_manager.transform_index = cam_pos_index
         self.camera_manager.set_sensor(cam_index, notify=False)
+        self.camera_manager2 = CameraManager(self.player, self.hud, self._gamma)
+        self.camera_manager2.transform_index = cam_pos_index
+        self.camera_manager2.set_sensor(cam_index+5, notify=False)
         actor_type = get_actor_display_name(self.player)
         self.hud.notification(actor_type)
 
@@ -253,10 +257,14 @@ class World(object):
         self.camera_manager.sensor.destroy()
         self.camera_manager.sensor = None
         self.camera_manager.index = None
+        self.camera_manager2.sensor.destroy()
+        self.camera_manager2.sensor = None
+        self.camera_manager2.index = None
 
     def destroy(self):
         actors = [
             self.camera_manager.sensor,
+            self.camera_manager2.sensor,
             self.collision_sensor.sensor,
             self.lane_invasion_sensor.sensor,
             self.gnss_sensor.sensor,
@@ -310,6 +318,7 @@ class KeyboardControl(object):
                     world.camera_manager.set_sensor(event.key - 1 - K_0)
                 elif event.key == K_r and not (pygame.key.get_mods() & KMOD_CTRL):
                     world.camera_manager.toggle_recording()
+                    world.camera_manager2.toggle_recording()
                 elif event.key == K_r and (pygame.key.get_mods() & KMOD_CTRL):
                     if (world.recording_enabled):
                         client.stop_recorder()
@@ -715,7 +724,6 @@ class HUD(object):
                     peddict[p.id]=get_actor_attributes(p)
 
             for t in trafficlights:
-                print(t.get_location())
                 if t.get_location().distance(world.player.get_location())<100:
                     lightdict[t.id]=get_actor_attributes(t)
 
@@ -1078,7 +1086,11 @@ class CameraManager(object):
             array = array[:, :, ::-1]
             self.surface = pygame.surfarray.make_surface(array.swapaxes(0, 1))
         if self.recording:
-            image.save_to_disk('_out/raw_images/%08d' % image.frame)
+            if self.index == 0:
+                image.save_to_disk('_out/raw_images/%08d' % image.frame)
+            else:
+                image.save_to_disk('_out/ss_images/%08d' % image.frame)
+            #image.save_to_disk('_out/raw_images/%08d' % image.frame)
 
 
 # ==============================================================================

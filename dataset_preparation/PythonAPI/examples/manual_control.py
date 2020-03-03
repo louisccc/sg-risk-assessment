@@ -81,6 +81,7 @@ import re
 import time
 import weakref
 from collections import defaultdict
+import json
 
 try:
     import pygame
@@ -682,7 +683,6 @@ class HUD(object):
         velocity = lambda l: (3.6 * math.sqrt(l.x**2 + l.y**2 + l.z**2))
         dv = lambda l: (3.6 * math.sqrt((l.x-v.x)**2 + (l.y-v.y)**2 + (l.z-v.z)**2))
         distance = lambda l: math.sqrt((l.x - t.location.x)**2 + (l.y - t.location.y)**2 + (l.z - t.location.z)**2)
-        import json
         output_root_dir = "_out/"
         output_dir = "_out/data/"
         
@@ -712,12 +712,6 @@ class HUD(object):
                     # TODO: change the 100m condition to field of view. 
                     if vehicle.id != world.player.id and distance(vehicle.get_location()) < 100:
                         actordict[vehicle.id] = get_actor_attributes(vehicle)
-                        # actordict[vehicle.id] = defaultdict()
-                        # actordict[vehicle.id]['velocity'] = int(velocity(vehicle.get_velocity()))
-                        # actordict[vehicle.id]['dv'] = int(dv(vehicle.get_velocity())) #delta v from ego
-                        # actordict[vehicle.id]['distance'] = int(distance(vehicle.get_location()))
-                        # actordict[vehicle.id]['yaw'] = int(vehicle.get_transform().rotation.yaw)
-                        # actordict[vehicle.id]['name'] = get_actor_display_name(vehicle)
         
             for p in pedestrians:
                 if p.get_location().distance(world.player.get_location())<100:

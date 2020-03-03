@@ -121,6 +121,8 @@ class ChangeLane(BasicScenario):
         sequence_vw.add_child(brake)
         sequence_vw.add_child(Idle())
 
+        vehicles_behavior = py_trees.composites.Parallel("VechiclesBehavior",
+                                                  policy=py_trees.common.ParallelPolicy.SUCCESS_ON_ONE)
         # sequence tesla
         # make visible
         sequence_tesla = py_trees.composites.Sequence("Tesla")
@@ -141,8 +143,34 @@ class ChangeLane(BasicScenario):
         lane_change_atomic = LaneChange(self.other_actors[0], distance_other_lane=200)
         sequence_tesla.add_child(lane_change_atomic)
         sequence_tesla.add_child(Idle())
+        vehicles_behavior.add_child(sequence_tesla)
 
         # ego vehicle
+        sequence_ego = py_trees.composites.Sequence("Ego")
+        # ego_distance_to_vehicle0 = InTriggerDistanceToVehicle(
+        #     self.other_actors[0], self.ego_vehicles[0], self._trigger_distance)
+        # ego_brake = StopVehicle(self.other_actors[1], self._max_brake)
+        # sequence_ego.add_child(ego_distance_to_vehicle0)
+        # sequence_ego.add_child(ego_brake)
+        ego_drive = py_trees.composites.Parallel("EgoDriving",
+                                                  policy=py_trees.common.ParallelPolicy.SUCCESS_ON_ONE)
+        ego_driving_fast = WaypointFollower(self.ego_vehicles[0], self._fast_vehicle_velocity - 50, avoid_collision=True)
+        ego_drive.add_child(ego_driving_fast)
+        ego_distance_to_vehicle1 = InTriggerDistanceToVehicle(
+            self.other_actors[1], self.ego_vehicles[0], self._trigger_distance)
+        ego_drive.add_child(ego_distance_to_vehicle1)
+        sequence_ego.add_child(ego_drive)
+
+        # change lane
+        ego_lane_change_atomic = LaneChange(self.ego_vehicles[0], distance_other_lane=200)
+        sequence_ego.add_child(ego_lane_change_atomic)
+
+        # stop the vehicle 
+        brake = StopVehicle(self.ego_vehicles[0], self._max_brake)
+        sequence_ego.add_child(brake)
+        
+        vehicles_behavior.add_child(sequence_ego)
+
         # end condition
         
         endcondition = py_trees.composites.Parallel("Waiting for end position of ego vehicle",
@@ -159,6 +187,7 @@ class ChangeLane(BasicScenario):
         root = py_trees.composites.Parallel("Parallel Behavior", policy=py_trees.common.ParallelPolicy.SUCCESS_ON_ONE)
         root.add_child(sequence_vw)
         root.add_child(sequence_tesla)
+        root.add_child(sequence_ego)
         root.add_child(endcondition)
         return root
 

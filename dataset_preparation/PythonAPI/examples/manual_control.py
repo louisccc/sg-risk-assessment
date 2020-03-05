@@ -617,7 +617,8 @@ class HUD(object):
         self._show_info = True
         self._info_text = []
         self._server_clock = pygame.time.Clock()
-        self.framedict=defaultdict()
+        
+        self.scene_extractor = SceneGraphExtractor()
 
     def on_world_tick(self, timestamp):
         self._server_clock.tick()
@@ -642,13 +643,6 @@ class HUD(object):
         collision = [x / max_col for x in collision]
         vehicles = world.world.get_actors().filter('vehicle.*')
         
-       
-        pedestrians=world.world.get_actors().filter('walker.*')
-        trafficlights=world.world.get_actors().filter('traffic.traffic_light')
-        signs=world.world.get_actors().filter('traffic.traffic_sign')
-        waypoint = world.world.get_map().get_waypoint(world.player.get_location(),project_to_road=True, lane_type=(carla.LaneType.Driving | carla.LaneType.Shoulder | carla.LaneType.Sidewalk))
-        
-
         self._info_text = [
             'Server:  % 16.0f FPS' % self.server_fps,
             'Client:  % 16.0f FPS' % clock.get_fps(),
@@ -663,6 +657,7 @@ class HUD(object):
             'GNSS:% 24s' % ('(% 2.6f, % 3.6f)' % (world.gnss_sensor.lat, world.gnss_sensor.lon)),
             'Height:  % 18.0f m' % t.location.z,
             '']
+        
         if isinstance(c, carla.VehicleControl):
             self._info_text += [
                 ('Throttle:', c.throttle, 0.0, 1.0),
@@ -680,84 +675,10 @@ class HUD(object):
         #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~DATA EXPORT TO CSV FILE~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         #if camera is exporting images, then record CSV data at the same time.
         
-        velocity = lambda l: (3.6 * math.sqrt(l.x**2 + l.y**2 + l.z**2))
-        dv = lambda l: (3.6 * math.sqrt((l.x-v.x)**2 + (l.y-v.y)**2 + (l.z-v.z)**2))
-        distance = lambda l: math.sqrt((l.x - t.location.x)**2 + (l.y - t.location.y)**2 + (l.z - t.location.z)**2)
-        output_root_dir = "_out/"
-        output_dir = "_out/data/"
-        
-
         if world.camera_manager.recording:
-            # import pdb; pdb.set_trace()
-            # print("recording data for frame:" + str(self.frame))
-            if not os.path.exists(output_root_dir):
-                os.mkdir(output_root_dir)
-            if not os.path.exists(output_dir):
-                os.mkdir(output_dir)
+            self.scene_extractor.extract_frame(world, self.frame)
             
-            egodict = defaultdict()
-            actordict = defaultdict()
-            peddict = defaultdict()
-            lightdict = defaultdict()
-            signdict = defaultdict()
-            lanedict = defaultdict()
-            lanedict = {'Current': waypoint.lane_type, 'LaneWidth': waypoint.lane_width, 'Right': waypoint.right_lane_marking.type, 'Left': waypoint.left_lane_marking.type}
-            
-            
-            egodict = get_actor_attributes(world.player)
-            
-            #export data from surrounding vehicles
-            if len(vehicles) > 1:
-                for vehicle in vehicles:
-                    # TODO: change the 100m condition to field of view. 
-                    if vehicle.id != world.player.id and distance(vehicle.get_location()) < 100:
-                        actordict[vehicle.id] = get_actor_attributes(vehicle)
-        
-            for p in pedestrians:
-                if p.get_location().distance(world.player.get_location())<100:
-                    peddict[p.id]=get_actor_attributes(p)
 
-            for t in trafficlights:
-                if t.get_location().distance(world.player.get_location())<100:
-                    lightdict[t.id]=get_actor_attributes(t)
-
-            for s in signs:
-                if s.get_location().distance(world.player.get_location())<100:
-                    signdict[s.id]=get_actor_attributes(s)
-
-            self.framedict[self.frame]={"ego": egodict,"actors": actordict,"pedestrians": peddict,"trafficlights": lightdict,"signs": signdict,"lane": lanedict}
-
-
-            if len(self.framedict)==50:
-                with open(output_dir + str(list(self.framedict.keys())[0]) + '-' + str(list(self.framedict.keys())[len(self.framedict)-1])+'.txt', 'w') as file:
-                    file.write(json.dumps(self.framedict))
-                self.framedict.clear()
-
-
-            # #if len(peddict)>=100:
-            # with open(output_dir + str(self.frame) + '_ped.txt', 'w') as file:
-            #     file.write(json.dumps(peddict))
-            # peddict.clear()
-
-            # #if len(lightdict)>=100:
-            # with open(output_dir + str(self.frame) + '_light.txt', 'w') as file:
-            #     file.write(json.dumps(lightdict))
-            # lightdict.clear()
-
-            # #if len(signdict)>=100:
-            # with open(output_dir + str(self.frame) + '_sign.txt', 'w') as file:
-            #     file.write(json.dumps(signdict))
-            # signdict.clear()
-
-            # with open(output_dir + str(self.frame) + '_lane.txt', 'w') as file:
-            #     file.write(json.dumps(lanedict))
-            # lanedict.clear()
-            # ####################
-
-            # with open(output_dir + str(self.frame) + '_ego.txt', 'w') as file:
-            #     file.write(json.dumps(egodict))
-            # with open(output_dir + str(self.frame) + '_actor.txt', 'w') as file:
-            #     file.write(json.dumps(actordict))
         #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         self._info_text += [
             '',
@@ -822,6 +743,81 @@ class HUD(object):
         self._notifications.render(display)
         self.help.render(display)
 
+class SceneGraphExtractor(object):
+
+    def __init__(self):
+        
+        # self.world = world # This is carla world. 
+
+        # self.output_root_dir = output_root_dir
+        # self.output_dir = output_dir
+
+        self.output_root_dir = "_out/"
+        self.output_dir = "_out/data/"
+
+        if not os.path.exists(self.output_root_dir):
+            os.mkdir(self.output_root_dir)
+        if not os.path.exists(self.output_dir):
+            os.mkdir(self.output_dir)
+
+        self.framedict=defaultdict()
+
+    def extract_frame(self, world, frame):
+        # utilities
+        t = world.player.get_transform()
+
+        # velocity = lambda l: (3.6 * math.sqrt(l.x**2 + l.y**2 + l.z**2))
+        # dv = lambda l: (3.6 * math.sqrt((l.x-v.x)**2 + (l.y-v.y)**2 + (l.z-v.z)**2))
+        distance = lambda l: math.sqrt((l.x - t.location.x)**2 + (l.y - t.location.y)**2 + (l.z - t.location.z)**2)
+
+        vehicles = world.world.get_actors().filter('vehicle.*')
+        pedestrians=world.world.get_actors().filter('walker.*')
+        trafficlights=world.world.get_actors().filter('traffic.traffic_light')
+        signs=world.world.get_actors().filter('traffic.traffic_sign')
+
+        waypoint = world.world.get_map().get_waypoint(world.player.get_location(),
+                                                        project_to_road=True, 
+                                                        lane_type=(carla.LaneType.Driving | carla.LaneType.Shoulder | carla.LaneType.Sidewalk))
+      
+        egodict = defaultdict()
+        actordict = defaultdict()
+        peddict = defaultdict()
+        lightdict = defaultdict()
+        signdict = defaultdict()
+        lanedict = defaultdict()
+        lanedict = {'Current': waypoint.lane_type, 'LaneWidth': waypoint.lane_width, 'Right': waypoint.right_lane_marking.type, 'Left': waypoint.left_lane_marking.type}
+        
+        egodict = get_actor_attributes(world.player)
+        
+        #export data from surrounding vehicles
+        if len(vehicles) > 1:
+            for vehicle in vehicles:
+                # TODO: change the 100m condition to field of view. 
+                if vehicle.id != world.player.id and distance(vehicle.get_location()) < 100:
+                    actordict[vehicle.id] = get_actor_attributes(vehicle)
+    
+        for p in pedestrians:
+            if p.get_location().distance(world.player.get_location())<100:
+                peddict[p.id]=get_actor_attributes(p)
+
+        for t_light in trafficlights:
+            if t_light.get_location().distance(world.player.get_location())<100:
+                lightdict[t_light.id]=get_actor_attributes(t_light)
+
+        for s in signs:
+            if s.get_location().distance(world.player.get_location())<100:
+                signdict[s.id]=get_actor_attributes(s)
+
+        self.framedict[frame]={"ego": egodict,"actors": actordict,"pedestrians": peddict,"trafficlights": lightdict,"signs": signdict,"lane": lanedict}
+
+        self.export_data()
+        
+    def export_data(self):
+        if len(self.framedict)==50:
+            with open(self.output_dir + str(list(self.framedict.keys())[0]) + '-' + str(list(self.framedict.keys())[len(self.framedict)-1])+'.txt', 'w') as file:
+                file.write(json.dumps(self.framedict))
+            self.framedict.clear()
+        
 
 # ==============================================================================
 # -- FadingText ----------------------------------------------------------------

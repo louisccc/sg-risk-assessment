@@ -22,6 +22,9 @@ from srunner.scenariomanager.carla_data_provider import CarlaDataProvider, Carla
 from srunner.scenariomanager.result_writer import ResultOutputProvider
 from srunner.scenariomanager.timer import GameTime, TimeOut
 
+import os, math, carla, json
+from collections import defaultdict
+
 
 class Scenario(object):
 
@@ -321,11 +324,7 @@ class ScenarioManager(object):
 
         return failure or timeout
 
-import os
-import math
-from collections import defaultdict
-import carla
-import json
+
 class SceneGraphExtractor(object):
 
     def __init__(self, ego):

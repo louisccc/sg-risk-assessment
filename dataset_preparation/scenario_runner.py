@@ -81,6 +81,8 @@ from srunner.scenarios.route_scenario import RouteScenario
 from srunner.tools.scenario_config_parser import ScenarioConfigurationParser
 from srunner.tools.route_parser import RouteParser
 
+import sensors
+
 # Version of scenario_runner
 VERSION = 0.6
 
@@ -112,6 +114,10 @@ class ScenarioRunner(object):
 
     agent_instance = None
     module_agent = None
+
+    # camera properties
+    dimensions = [1280, 720]
+    gamma = 2.2
 
     def __init__(self, args):
         """
@@ -266,6 +272,23 @@ class ScenarioRunner(object):
         # sync state
         CarlaDataProvider.get_world().tick()
 
+    def _setup_sensors(self):
+        """
+        Spawn and attach sensors to ego vehicles
+        """
+        cam_index = 0
+        cam_pos_index = 1
+
+        self.collision_sensor = sensors.CollisionSensor(self.ego_vehicles[0])
+        self.lane_invasion_sensor = sensors.LaneInvasionSensor(self.ego_vehicles[0])
+        self.gnss_sensor = sensors.GnssSensor(self.ego_vehicles[0])
+        self.camera_manager = sensors.CameraManager(self.ego_vehicles[0], self.gamma, self.dimensions)
+        self.camera_manager.transform_index = cam_pos_index
+        self.camera_manager.set_sensor(cam_index, notify=False)
+        self.camera_manager2 = sensors.CameraManager(self.ego_vehicles[0], self.gamma, self.dimensions)
+        self.camera_manager2.transform_index = cam_pos_index
+        self.camera_manager2.set_sensor(cam_index+5, notify=False)
+
     def _analyze_scenario(self, config):
         """
         Provide feedback about success/failure of a scenario
@@ -361,6 +384,7 @@ class ScenarioRunner(object):
         print("Preparing scenario: " + config.name)
         try:
             self._prepare_ego_vehicles(config.ego_vehicles)
+            self._setup_sensors()
             if self._args.openscenario:
                 scenario = OpenScenario(world=self.world,
                                         ego_vehicles=self.ego_vehicles,

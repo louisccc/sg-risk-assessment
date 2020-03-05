@@ -48,5 +48,3 @@ class RelationExtractor:
         pass
     def extract_relations_lane_sign(actor1, actor2):
         pass
-    def extract_relations_lane_lane(actor1, actor2):
-        pass

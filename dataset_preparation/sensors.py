@@ -245,9 +245,10 @@ class CameraManager(object):
             array = array[:, :, :3]
             array = array[:, :, ::-1]
             self.surface = pygame.surfarray.make_surface(array.swapaxes(0, 1))
-        if self.recording:
-            if self.index == 0:
-                image.save_to_disk('_out/raw_images/%08d' % image.frame)
-            else:
-                image.save_to_disk('_out/ss_images/%08d' % image.frame)
+        
+        # if self.recording:
+        if self.index == 0:
+            image.save_to_disk('_out/raw_images/%08d' % image.frame)
+        else:
+            image.save_to_disk('_out/ss_images/%08d' % image.frame)
             #image.save_to_disk('_out/raw_images/%08d' % image.frame)

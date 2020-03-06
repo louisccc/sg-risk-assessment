@@ -52,14 +52,16 @@ class ActorType(Enum):
 class Relations(Enum):
     isIn = 0
     near = 1
-    
+    partOf = 2
+    instanceOf = 3
+        
 
 #This class extracts relations for every pair of entities in a scene
 class RelationExtractor:
 
     def get_actor_type(self, actor):
             
-        if "LaneWidth" in actor.keys():
+        if "lane_id" in actor.keys():
             return ActorType.LANE
         if actor["name"].split(" ")[0] in CAR_NAMES:
             return ActorType.CAR

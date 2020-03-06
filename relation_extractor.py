@@ -1,6 +1,21 @@
 #REFERENCE:
 #dict for lanes
-#lanedict = {'Current': waypoint.lane_type, 'LaneWidth': waypoint.lane_width, 'Right': waypoint.right_lane_marking.type, 'Left': waypoint.left_lane_marking.type}
+# single_lane_dict = {
+    # 'lane_id': lane.lane_id
+    # 'location': int(l_3d.x), int(l_3d.y), int(l_3d.z)
+    # 'rotation': int(r_3d.yaw), int(r_3d.roll), int(r_3d.pitch)
+    # 'lane_type': waypoint.lane_type, 
+    # 'lane_width': waypoint.lane_width, 
+    # 'right_lane_color': waypoint.right_lane_marking.color, 
+    # 'left_lane_color': waypoint.left_lane_marking.color,
+    # 'right_lane_marking_type': waypoint.right_lane_marking.type, 
+    # 'left_lane_marking_type': waypoint.left_lane_marking.type,
+    # 'lane_change': waypoint.lane_change
+    # 'left_lane_id': lane.get_left_lane.lane_id
+    # 'right_lane_id': lane.get_right_lane.lane_id
+    # 'is_junction': lane.is_junction
+# }
+
 
 #dict for all other entities
 # return_dict['velocity_abs'] = int(velocity(v_3d))
@@ -19,6 +34,10 @@ MOTO_NAMES = ["Harley-Davidson", "Kawasaki", "Yamaha"]
 BICYCLE_NAMES = ["Gazelle", "Diamondback", "Bh"]
 CAR_NAMES = ["Ford", "Bmw", "Toyota", "Nissan", "Mini", "Tesla", "Seat", "Lincoln", "Audi", "Carlamotors", "Citroen", "Mercedes-Benz", "Chevrolet", "Volkswagen", "Jeep", "Nissan", "Dodge"]
 
+CAR_PROXIMITY_THRESH = 10 # max number of feet between a car and another entity to build proximity relation
+
+
+
 #defines all types of actors which can exist
 #order of enum values is important as this determines which function is called. DO NOT CHANGE ENUM ORDER
 class ActorType(Enum):
@@ -29,7 +48,11 @@ class ActorType(Enum):
     LIGHT = 4
     SIGN = 5
     LANE = 6
-
+    
+class Relations(Enum):
+    isIn = 0
+    near = 1
+    
 
 #This class extracts relations for every pair of entities in a scene
 class RelationExtractor:
@@ -118,19 +141,41 @@ class RelationExtractor:
 #actor 1 corresponds to the first actor in the function name and actor2 the second
 
     def extract_relations_car_car(self, actor1, actor2):
-        return ["s", "r", "o"] #subject relation object triple
+        relation_list = []
+        if(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH):
+            relation_list.append([actor1, Relations.near, actor2])
+        return relation_list
+            
     def extract_relations_car_lane(self, actor1, actor2):
-        return ["s", "r", "o"] #subject relation object triple
+        relation_list = []
+        if(self.euclidean_distance(actor1, actor2) < actor2['lane_width']/2):
+            relation_list.append([actor1, Relations.isIn, actor2])
+        return relation_list 
+        
     def extract_relations_car_light(self, actor1, actor2):
-        return ["s", "r", "o"] #subject relation object triple
+        pass
+        
     def extract_relations_car_sign(self, actor1, actor2):
-        return ["s", "r", "o"] #subject relation object triple
+        pass
+        
     def extract_relations_car_ped(self, actor1, actor2):
-        return ["s", "r", "o"] #subject relation object triple
+        relation_list = []
+        if(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH):
+            relation_list.append([actor1, Relations.near, actor2])
+        return relation_list
+        
     def extract_relations_car_bicycle(self, actor1, actor2):
-        return ["s", "r", "o"] #subject relation object triple
+        relation_list = []
+        if(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH):
+            relation_list.append([actor1, Relations.near, actor2])
+        return relation_list
+        
     def extract_relations_car_moto(self, actor1, actor2):
-        return ["s", "r", "o"] #subject relation object triple
+        relation_list = []
+        if(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH):
+            relation_list.append([actor1, Relations.near, actor2])
+        return relation_list
+        
         
     def extract_relations_moto_moto(self, actor1, actor2):
         pass
@@ -139,31 +184,44 @@ class RelationExtractor:
     def extract_relations_moto_ped(self, actor1, actor2):
         pass
     def extract_relations_moto_lane(self, actor1, actor2):
-        pass
+        relation_list = []
+        if(self.euclidean_distance(actor1, actor2) < actor2['lane_width']/2):
+            relation_list.append([actor1, Relations.isIn, actor2])
+        return relation_list 
+        
     def extract_relations_moto_light(self, actor1, actor2):
         pass
     def extract_relations_moto_sign(self, actor1, actor2):
         pass
+
 
     def extract_relations_bicycle_bicycle(self, actor1, actor2):
         pass
     def extract_relations_bicycle_ped(self, actor1, actor2):
         pass
     def extract_relations_bicycle_lane(self, actor1, actor2):
-        pass
+        relation_list = []
+        if(self.euclidean_distance(actor1, actor2) < actor2['lane_width']/2):
+            relation_list.append([actor1, Relations.isIn, actor2])
+        return relation_list 
     def extract_relations_bicycle_light(self, actor1, actor2):
         pass
     def extract_relations_bicycle_sign(self, actor1, actor2):
         pass
         
+        
     def extract_relations_ped_ped(self, actor1, actor2):
         pass        
     def extract_relations_ped_lane(self, actor1, actor2):
-        pass
+        relation_list = []
+        if(self.euclidean_distance(actor1, actor2) < actor2['lane_width']/2):
+            relation_list.append([actor1, Relations.isIn, actor2])
+        return relation_list 
     def extract_relations_ped_light(self, actor1, actor2):
         pass
     def extract_relations_ped_sign(self, actor1, actor2):
         pass
+
 
     def extract_relations_lane_lane(self, actor1, actor2):
         pass
@@ -172,12 +230,22 @@ class RelationExtractor:
     def extract_relations_lane_sign(self, actor1, actor2):
         pass
         
+    
+    
+    #return euclidean distance between actors
+    def euclidean_distance(self, actor1, actor2):
+        l1 = actor1['location']
+        l2 = actor2['location']
+        return sqrt((l1[0] - l2[0])**2 + (l1[1]- l2[1])**2 + (l1[2] - l2[2])**2)
+    
+    
+    
 if __name__ == "__main__":
     #demo code
     d1 = defaultdict()
     d2 = defaultdict()
     d1['name'] = "Ford Mustang"
-    d2['name'] = "Kawasaki Mustang"
+    d2['name'] = "Kawasaki Ninja"
     r = RelationExtractor()
     l = r.extract_relations(d1,d2)
     print(l)

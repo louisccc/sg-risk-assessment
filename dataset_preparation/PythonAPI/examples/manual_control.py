@@ -785,36 +785,29 @@ class DataExtractor(object):
         waypoint = world.world.get_map().get_waypoint(world.player.get_location(),
                                                         project_to_road=True, 
                                                         lane_type=(carla.LaneType.Driving | carla.LaneType.Shoulder | carla.LaneType.Sidewalk))
-        
-        left_w = waypoint.get_left_lane()
-        right_w = waypoint.get_right_lane()
-        next_w = waypoint.next(10) #selecting a default 10 feet ahead for the next waypoint
-        loc_3d = waypoint.transform.location
-        rot_3d = waypoint.transform.rotation
-        l_loc_3d = left_w.transform.location
-        l_rot_3d = left_w.transform.rotation
-        r_loc_3d = right_w.transform.location
-        r_rot_3d = right_w.transform.rotation        
-        n_loc_3d = next_w.transform.location
-        n_rot_3d = next_w.transform.rotation
-        
-        lanedict = {
-            'location': int(l_3d.x), int(l_3d.y), int(l_3d.z)
-            'rotation': int(r_3d.yaw), int(r_3d.roll), int(r_3d.pitch)
-            'lane_type': waypoint.lane_type, 
-            'lane_width': waypoint.lane_width, 
-            'right_lane_color': waypoint.right_lane_marking.color, 
-            'left_lane_color': waypoint.left_lane_marking.color,
-            'right_lane_marking_type': waypoint.right_lane_marking.type, 
-            'left_lane_marking_type': waypoint.left_lane_marking.type,
-            'lane_change': waypoint.lane_change
-            'left_lane_loc': int(l_loc_3d.x), int(l_loc_3d.y), int(l_loc_3d.z)
-            'left_lane_rot': int(l_rot_3d.yaw), int(l_rot_3d.roll), int(l_rot_3d.pitch)
-            'right_lane_loc': int(r_loc_3d.x), int(r_loc_3d.y), int(r_loc_3d.z)
-            'right_lane_rot': int(r_rot_3d.yaw), int(r_rot_3d.roll), int(r_rot_3d.pitch)
-            'next_loc': int(n_loc_3d.x), int(n_loc_3d.y), int(n_loc_3d.z)
-            'next_rot': int(n_rot_3d.yaw), int(n_rot_3d.roll), int(n_rot_3d.pitch)
-        }
+        lanes = [("ego", waypoint), 
+                    ("left_lane", waypoint.get_left_lane()), 
+                    ("right_lane", waypoint.get_right_lane()), 
+                    ("next", waypoint.next(10))]  #selecting a default 10 feet ahead for the next waypoint
+        for name, lane in lanes: 
+            l_3d = waypoint.transform.location
+            r_3d = waypoint.transform.rotation
+            single_lane_dict = {
+                'lane_id': lane.lane_id
+                'location': int(l_3d.x), int(l_3d.y), int(l_3d.z)
+                'rotation': int(r_3d.yaw), int(r_3d.roll), int(r_3d.pitch)
+                'lane_type': waypoint.lane_type, 
+                'lane_width': waypoint.lane_width, 
+                'right_lane_color': waypoint.right_lane_marking.color, 
+                'left_lane_color': waypoint.left_lane_marking.color,
+                'right_lane_marking_type': waypoint.right_lane_marking.type, 
+                'left_lane_marking_type': waypoint.left_lane_marking.type,
+                'lane_change': waypoint.lane_change
+                'left_lane_id': lane.get_left_lane.lane_id
+                'right_lane_id': lane.get_right_lane.lane_id
+                'is_junction': lane.is_junction
+            }
+            lanedict[name] = single_lane_dict
         
         egodict = get_actor_attributes(world.player)
         

@@ -35,8 +35,9 @@ BICYCLE_NAMES = ["Gazelle", "Diamondback", "Bh"]
 CAR_NAMES = ["Ford", "Bmw", "Toyota", "Nissan", "Mini", "Tesla", "Seat", "Lincoln", "Audi", "Carlamotors", "Citroen", "Mercedes-Benz", "Chevrolet", "Volkswagen", "Jeep", "Nissan", "Dodge"]
 
 CAR_PROXIMITY_THRESH = 10 # max number of feet between a car and another entity to build proximity relation
-
-
+MOTO_PROXIMITY_THRESH = 10
+BICYCLE_PROXIMITY_THRESH = 10
+PED_PROXIMITY_THRESH = 10
 
 #defines all types of actors which can exist
 #order of enum values is important as this determines which function is called. DO NOT CHANGE ENUM ORDER
@@ -182,14 +183,20 @@ class RelationExtractor:
         
     def extract_relations_moto_moto(self, actor1, actor2):
         relation_list = []
+        if(self.euclidean_distance(actor1, actor2) < MOTO_PROXIMITY_THRESH):
+            relation_list.append([actor1, Relations.near, actor2])
         return relation_list
         
     def extract_relations_moto_bicycle(self, actor1, actor2):
         relation_list = []
+        if(self.euclidean_distance(actor1, actor2) < MOTO_PROXIMITY_THRESH):
+            relation_list.append([actor1, Relations.near, actor2])
         return relation_list
         
     def extract_relations_moto_ped(self, actor1, actor2):
         relation_list = []
+        if(self.euclidean_distance(actor1, actor2) < MOTO_PROXIMITY_THRESH):
+            relation_list.append([actor1, Relations.near, actor2])
         return relation_list
         
     def extract_relations_moto_lane(self, actor1, actor2):
@@ -209,10 +216,14 @@ class RelationExtractor:
 
     def extract_relations_bicycle_bicycle(self, actor1, actor2):
         relation_list = []
+        if(self.euclidean_distance(actor1, actor2) < BICYCLE_PROXIMITY_THRESH):
+            relation_list.append([actor1, Relations.near, actor2])
         return relation_list
         
     def extract_relations_bicycle_ped(self, actor1, actor2):
         relation_list = []
+        if(self.euclidean_distance(actor1, actor2) < MOTO_PROXIMITY_THRESH):
+            relation_list.append([actor1, Relations.near, actor2])
         return relation_list
         
     def extract_relations_bicycle_lane(self, actor1, actor2):
@@ -232,6 +243,8 @@ class RelationExtractor:
         
     def extract_relations_ped_ped(self, actor1, actor2):
         relation_list = []
+        if(self.euclidean_distance(actor1, actor2) < PED_PROXIMITY_THRESH):
+            relation_list.append([actor1, Relations.near, actor2])
         return relation_list
            
     def extract_relations_ped_lane(self, actor1, actor2):
@@ -242,6 +255,9 @@ class RelationExtractor:
         
     def extract_relations_ped_light(self, actor1, actor2):
         relation_list = []
+        #proximity relation could indicate ped waiting for crosswalk at a light
+        if(self.euclidean_distance(actor1, actor2) < PED_PROXIMITY_THRESH):
+            relation_list.append([actor1, Relations.near, actor2])
         return relation_list
         
     def extract_relations_ped_sign(self, actor1, actor2):

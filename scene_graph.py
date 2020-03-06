@@ -14,11 +14,14 @@ class Node:
 #class defining scene graph and its attributes. contains functions for construction and operations
 class SceneGraph:
     
-    def __init__(self):
+    #graph can be initialized with a framedict to load all objects at once
+    def __init__(self, framedict=None):
         self.g = nx.Graph() #initialize scenegraph as networkx graph
         self.relation_extractor = RelationExtractor()
         self.road_node = Node("road", None)
         self.add_node(self.road_node)   #adding the road as the root node
+        if framedict != None:
+            self.add_frame_dict(framedict)
         
     #add single node to graph. node can be any hashable datatype including objects.
     def add_node(self, node):
@@ -53,6 +56,18 @@ class SceneGraph:
             n = Node(lane_id, laneattr)
             self.add_node(n)
             self.add_relation([n, Relations.partOf, self.road_node])
+            
+    #add the contents of a whole framedict to the graph
+    def add_frame_dict(self, framedict):
+        for key, attrs in framedict.items()
+            if key == "ego":
+                self.add_node(Node(key, attrs))
+            elif key == "lane":
+                self.add_lane_dict(attrs)
+            else:
+                self.add_actor_dict(attrs)
+            
+                
             
     #calls RelationExtractor to build semantic relations between every pair of nodes in graph. call this function after all nodes have been added to graph.
     def extract_semantic_relations(self):

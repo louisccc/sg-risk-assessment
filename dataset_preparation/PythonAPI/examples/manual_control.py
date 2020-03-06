@@ -618,7 +618,7 @@ class HUD(object):
         self._info_text = []
         self._server_clock = pygame.time.Clock()
         
-        self.scene_extractor = SceneGraphExtractor()
+        self.data_extractor = DataExtractor()
 
     def on_world_tick(self, timestamp):
         self._server_clock.tick()
@@ -676,7 +676,7 @@ class HUD(object):
         #if camera is exporting images, then record CSV data at the same time.
         
         if world.camera_manager.recording:
-            self.scene_extractor.extract_frame(world, self.frame)
+            self.data_extractor.extract_frame(world, self.frame)
             
 
         #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -743,7 +743,7 @@ class HUD(object):
         self._notifications.render(display)
         self.help.render(display)
 
-class SceneGraphExtractor(object):
+class DataExtractor(object):
 
     def __init__(self):
         
@@ -774,18 +774,47 @@ class SceneGraphExtractor(object):
         pedestrians=world.world.get_actors().filter('walker.*')
         trafficlights=world.world.get_actors().filter('traffic.traffic_light')
         signs=world.world.get_actors().filter('traffic.traffic_sign')
-
-        waypoint = world.world.get_map().get_waypoint(world.player.get_location(),
-                                                        project_to_road=True, 
-                                                        lane_type=(carla.LaneType.Driving | carla.LaneType.Shoulder | carla.LaneType.Sidewalk))
-      
+        
         egodict = defaultdict()
         actordict = defaultdict()
         peddict = defaultdict()
         lightdict = defaultdict()
         signdict = defaultdict()
         lanedict = defaultdict()
-        lanedict = {'Current': waypoint.lane_type, 'LaneWidth': waypoint.lane_width, 'Right': waypoint.right_lane_marking.type, 'Left': waypoint.left_lane_marking.type}
+
+        waypoint = world.world.get_map().get_waypoint(world.player.get_location(),
+                                                        project_to_road=True, 
+                                                        lane_type=(carla.LaneType.Driving | carla.LaneType.Shoulder | carla.LaneType.Sidewalk))
+        
+        left_w = waypoint.get_left_lane()
+        right_w = waypoint.get_right_lane()
+        next_w = waypoint.next(10) #selecting a default 10 feet ahead for the next waypoint
+        loc_3d = waypoint.transform.location
+        rot_3d = waypoint.transform.rotation
+        l_loc_3d = left_w.transform.location
+        l_rot_3d = left_w.transform.rotation
+        r_loc_3d = right_w.transform.location
+        r_rot_3d = right_w.transform.rotation        
+        n_loc_3d = next_w.transform.location
+        n_rot_3d = next_w.transform.rotation
+        
+        lanedict = {
+            'location': int(l_3d.x), int(l_3d.y), int(l_3d.z)
+            'rotation': int(r_3d.yaw), int(r_3d.roll), int(r_3d.pitch)
+            'lane_type': waypoint.lane_type, 
+            'lane_width': waypoint.lane_width, 
+            'right_lane_color': waypoint.right_lane_marking.color, 
+            'left_lane_color': waypoint.left_lane_marking.color,
+            'right_lane_marking_type': waypoint.right_lane_marking.type, 
+            'left_lane_marking_type': waypoint.left_lane_marking.type,
+            'lane_change': waypoint.lane_change
+            'left_lane_loc': int(l_loc_3d.x), int(l_loc_3d.y), int(l_loc_3d.z)
+            'left_lane_rot': int(l_rot_3d.yaw), int(l_rot_3d.roll), int(l_rot_3d.pitch)
+            'right_lane_loc': int(r_loc_3d.x), int(r_loc_3d.y), int(r_loc_3d.z)
+            'right_lane_rot': int(r_rot_3d.yaw), int(r_rot_3d.roll), int(r_rot_3d.pitch)
+            'next_loc': int(n_loc_3d.x), int(n_loc_3d.y), int(n_loc_3d.z)
+            'next_rot': int(n_rot_3d.yaw), int(n_rot_3d.roll), int(n_rot_3d.pitch)
+        }
         
         egodict = get_actor_attributes(world.player)
         

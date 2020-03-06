@@ -111,9 +111,10 @@ class BasicScenario(object):
                                                                         ego_vehicle_route,
                                                                         start_location,
                                                                         5)
-            return conditions.InTimeToArrivalToLocation(self.ego_vehicles[0],
-                                                        2.0,
-                                                        start_location)
+            # return conditions.InTimeToArrivalToLocation(self.ego_vehicles[0],
+            #                                             2.0,
+            #                                             start_location)
+            return conditions.StandStill(self.ego_vehicles[0], "immediateStart")
 
         return None
 

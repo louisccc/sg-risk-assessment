@@ -21,7 +21,7 @@ from srunner.challenge.challenge_statistics_manager import ChallengeStatisticsMa
 from srunner.scenariomanager.carla_data_provider import CarlaDataProvider, CarlaActorPool
 from srunner.scenariomanager.result_writer import ResultOutputProvider
 from srunner.scenariomanager.timer import GameTime, TimeOut
-from srunner.scenariomanager.sgextractor import SceneGraphExtractor
+from srunner.scenariomanager.sgextractor import DataExtractor
 
 class Scenario(object):
 
@@ -191,7 +191,7 @@ class ScenarioManager(object):
         # To print the scenario tree uncomment the next line
         # py_trees.display.render_dot_tree(self.scenario_tree)
 
-        self.se = SceneGraphExtractor(self.ego_vehicles[0])
+        self.se = DataExtractor(self.ego_vehicles[0])
 
         if self._challenge_mode:
             ChallengeStatisticsManager.next_scenario(self.scenario)

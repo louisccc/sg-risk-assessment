@@ -7,7 +7,7 @@ import carla
 
 from sensors import get_actor_attributes
 
-class SceneGraphExtractor(object):
+class DataExtractor(object):
 
     def __init__(self, ego):
         
@@ -30,7 +30,7 @@ class SceneGraphExtractor(object):
     def extract_frame(self, world, frame):
         # utilities
         t = self.ego.get_transform()
-        # import pdb; pdb.set_trace()
+
         # velocity = lambda l: (3.6 * math.sqrt(l.x**2 + l.y**2 + l.z**2))
         # dv = lambda l: (3.6 * math.sqrt((l.x-v.x)**2 + (l.y-v.y)**2 + (l.z-v.z)**2))
         distance = lambda l: math.sqrt((l.x - t.location.x)**2 + (l.y - t.location.y)**2 + (l.z - t.location.z)**2)
@@ -39,18 +39,41 @@ class SceneGraphExtractor(object):
         pedestrians=world.get_actors().filter('walker.*')
         trafficlights=world.get_actors().filter('traffic.traffic_light')
         signs=world.get_actors().filter('traffic.traffic_sign')
-
-        waypoint = world.get_map().get_waypoint(self.ego.get_location(),
-                                                        project_to_road=True, 
-                                                        lane_type=(carla.LaneType.Driving | carla.LaneType.Shoulder | carla.LaneType.Sidewalk))
-      
+        
         egodict = defaultdict()
         actordict = defaultdict()
         peddict = defaultdict()
         lightdict = defaultdict()
         signdict = defaultdict()
         lanedict = defaultdict()
-        lanedict = {'Current': waypoint.lane_type, 'LaneWidth': waypoint.lane_width, 'Right': waypoint.right_lane_marking.type, 'Left': waypoint.left_lane_marking.type}
+
+        waypoint = world.get_map().get_waypoint(self.ego.get_location(),
+                                                        project_to_road=True, 
+                                                        lane_type=(carla.LaneType.Driving | carla.LaneType.Shoulder | carla.LaneType.Sidewalk))
+        lanes = [("ego_lane", waypoint), 
+                    ("left_lane", waypoint.get_left_lane()), 
+                    ("right_lane", waypoint.get_right_lane()), 
+                    ("next_waypoint", waypoint.next(10))]  #selecting a default 10 feet ahead for the next waypoint
+        for name, lane in lanes: 
+            l_3d = waypoint.transform.location
+            r_3d = waypoint.transform.rotation
+            import pdb; pdb.set_trace()
+            single_lane_dict = {
+                'lane_id': lane.lane_id,
+                'location': [int(l_3d.x), int(l_3d.y), int(l_3d.z)],
+                'rotation': [int(r_3d.yaw), int(r_3d.roll), int(r_3d.pitch)],
+                'lane_type': waypoint.lane_type, 
+                'lane_width': waypoint.lane_width, 
+                'right_lane_color': waypoint.right_lane_marking.color, 
+                'left_lane_color': waypoint.left_lane_marking.color,
+                'right_lane_marking_type': waypoint.right_lane_marking.type, 
+                'left_lane_marking_type': waypoint.left_lane_marking.type,
+                'lane_change': waypoint.lane_change,
+                'left_lane_id': lane.get_left_lane.lane_id,
+                'right_lane_id': lane.get_right_lane.lane_id,
+                'is_junction': lane.is_junction,
+            }
+            lanedict[name] = single_lane_dict
         
         egodict = get_actor_attributes(self.ego)
         
@@ -82,3 +105,4 @@ class SceneGraphExtractor(object):
             with open(self.output_dir + str(list(self.framedict.keys())[0]) + '-' + str(list(self.framedict.keys())[len(self.framedict)-1])+'.txt', 'w') as file:
                 file.write(json.dumps(self.framedict))
             self.framedict.clear()
+        

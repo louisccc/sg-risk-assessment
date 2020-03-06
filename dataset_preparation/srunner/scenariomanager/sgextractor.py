@@ -69,8 +69,8 @@ class DataExtractor(object):
                 'right_lane_marking_type': waypoint.right_lane_marking.type, 
                 'left_lane_marking_type': waypoint.left_lane_marking.type,
                 'lane_change': waypoint.lane_change,
-                'left_lane_id': lane.get_left_lane.lane_id,
-                'right_lane_id': lane.get_right_lane.lane_id,
+                'left_lane_id': lane.get_left_lane().lane_id,
+                'right_lane_id': lane.get_right_lane().lane_id,
                 'is_junction': lane.is_junction,
             }
             lanedict[name] = single_lane_dict

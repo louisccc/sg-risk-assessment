@@ -30,11 +30,12 @@ class SceneGraph:
     
     #add relation (edge) between nodes on graph. relation is a list containing [subject, relation, object]
     def add_relation(self, relation):
-        if relation[0] not in self.g.nodes:
-            self.add_node(relation[0])
-        if relation[2] not in self.g.nodes:
-            self.add_node(relation[2])
-        self.g.add_edge(relation[0], relation[2], object=relation[1])
+        if relation != []:
+            if relation[0] not in self.g.nodes:
+                self.add_node(relation[0])
+            if relation[2] not in self.g.nodes:
+                self.add_node(relation[2])
+            self.g.add_edge(relation[0], relation[2], object=relation[1])
         
     def add_relations(self, relations_list):
         for relation in relations_list:

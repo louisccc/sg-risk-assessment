@@ -54,7 +54,6 @@ class Relations(Enum):
     near = 1
     partOf = 2
     instanceOf = 3
-        
 
 #This class extracts relations for every pair of entities in a scene
 class RelationExtractor:
@@ -155,10 +154,12 @@ class RelationExtractor:
         return relation_list 
         
     def extract_relations_car_light(self, actor1, actor2):
-        pass
+        relation_list = []
+        return relation_list
         
     def extract_relations_car_sign(self, actor1, actor2):
-        pass
+        relation_list = []
+        return relation_list
         
     def extract_relations_car_ped(self, actor1, actor2):
         relation_list = []
@@ -180,11 +181,17 @@ class RelationExtractor:
         
         
     def extract_relations_moto_moto(self, actor1, actor2):
-        pass
+        relation_list = []
+        return relation_list
+        
     def extract_relations_moto_bicycle(self, actor1, actor2):
-        pass
+        relation_list = []
+        return relation_list
+        
     def extract_relations_moto_ped(self, actor1, actor2):
-        pass
+        relation_list = []
+        return relation_list
+        
     def extract_relations_moto_lane(self, actor1, actor2):
         relation_list = []
         if(self.euclidean_distance(actor1, actor2) < actor2['lane_width']/2):
@@ -192,48 +199,70 @@ class RelationExtractor:
         return relation_list 
         
     def extract_relations_moto_light(self, actor1, actor2):
-        pass
+        relation_list = []
+        return relation_list
+        
     def extract_relations_moto_sign(self, actor1, actor2):
-        pass
-
+        relation_list = []
+        return relation_list
+        
 
     def extract_relations_bicycle_bicycle(self, actor1, actor2):
-        pass
+        relation_list = []
+        return relation_list
+        
     def extract_relations_bicycle_ped(self, actor1, actor2):
-        pass
+        relation_list = []
+        return relation_list
+        
     def extract_relations_bicycle_lane(self, actor1, actor2):
         relation_list = []
         if(self.euclidean_distance(actor1, actor2) < actor2['lane_width']/2):
             relation_list.append([actor1, Relations.isIn, actor2])
         return relation_list 
+        
     def extract_relations_bicycle_light(self, actor1, actor2):
-        pass
+        relation_list = []
+        return relation_list
+        
     def extract_relations_bicycle_sign(self, actor1, actor2):
-        pass
+        relation_list = []
+        return relation_list
         
         
     def extract_relations_ped_ped(self, actor1, actor2):
-        pass        
+        relation_list = []
+        return relation_list
+           
     def extract_relations_ped_lane(self, actor1, actor2):
         relation_list = []
         if(self.euclidean_distance(actor1, actor2) < actor2['lane_width']/2):
             relation_list.append([actor1, Relations.isIn, actor2])
         return relation_list 
+        
     def extract_relations_ped_light(self, actor1, actor2):
-        pass
+        relation_list = []
+        return relation_list
+        
     def extract_relations_ped_sign(self, actor1, actor2):
-        pass
-
+        relation_list = []
+        return relation_list
+        
 
     def extract_relations_lane_lane(self, actor1, actor2):
-        pass
-    def extract_relations_lane_light(self, actor1, actor2):
-        pass
-    def extract_relations_lane_sign(self, actor1, actor2):
-        pass
+        relation_list = []
+        return relation_list
         
+    def extract_relations_lane_light(self, actor1, actor2):
+        relation_list = []
+        return relation_list
+        
+    def extract_relations_lane_sign(self, actor1, actor2):
+        relation_list = []
+        return relation_list
+
     
-    
+#~~~~~~~~~~~~~~~~~~UTILITY FUNCTIONS~~~~~~~~~~~~~~~~~~~~~~
     #return euclidean distance between actors
     def euclidean_distance(self, actor1, actor2):
         l1 = actor1['location']

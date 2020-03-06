@@ -785,10 +785,10 @@ class DataExtractor(object):
         waypoint = world.world.get_map().get_waypoint(world.player.get_location(),
                                                         project_to_road=True, 
                                                         lane_type=(carla.LaneType.Driving | carla.LaneType.Shoulder | carla.LaneType.Sidewalk))
-        lanes = [("ego", waypoint), 
+        lanes = [("ego_lane", waypoint), 
                     ("left_lane", waypoint.get_left_lane()), 
                     ("right_lane", waypoint.get_right_lane()), 
-                    ("next", waypoint.next(10))]  #selecting a default 10 feet ahead for the next waypoint
+                    ("next_waypoint", waypoint.next(10))]  #selecting a default 10 feet ahead for the next waypoint
         for name, lane in lanes: 
             l_3d = waypoint.transform.location
             r_3d = waypoint.transform.rotation

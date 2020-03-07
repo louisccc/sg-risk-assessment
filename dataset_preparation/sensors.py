@@ -88,6 +88,10 @@ class CollisionSensor(object):
         self.history.append((event.frame, intensity))
         if len(self.history) > 4000:
             self.history.pop(0)
+    
+    def destroy(self):
+        if self.sensor:
+            self.sensor.destroy()
 
 
 # ==============================================================================
@@ -114,6 +118,10 @@ class LaneInvasionSensor(object):
             return
         lane_types = set(x.type for x in event.crossed_lane_markings)
         text = ['%r' % str(x).split()[-1] for x in lane_types]
+    
+    def destroy(self):
+        if self.sensor:
+            self.sensor.destroy()
 
 # ==============================================================================
 # -- GnssSensor --------------------------------------------------------
@@ -141,6 +149,10 @@ class GnssSensor(object):
             return
         self.lat = event.latitude
         self.lon = event.longitude
+
+    def destroy(self):
+        if self.sensor:
+            self.sensor.destroy()
 
 
 # ==============================================================================
@@ -246,9 +258,13 @@ class CameraManager(object):
             array = array[:, :, ::-1]
             self.surface = pygame.surfarray.make_surface(array.swapaxes(0, 1))
         
-        # if self.recording:
-        if self.index == 0:
-            image.save_to_disk('_out/raw_images/%08d' % image.frame)
-        else:
-            image.save_to_disk('_out/ss_images/%08d' % image.frame)
-            #image.save_to_disk('_out/raw_images/%08d' % image.frame)
+        if self.recording:
+            if self.index == 0:
+                image.save_to_disk('_out/raw_images/%08d' % image.frame)
+            else:
+                image.save_to_disk('_out/ss_images/%08d' % image.frame)
+                #image.save_to_disk('_out/raw_images/%08d' % image.frame)
+
+    def destroy(self):
+        if self.sensor:
+            self.sensor.destroy()

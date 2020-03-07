@@ -100,6 +100,7 @@ class ScenarioRunner(object):
     """
 
     ego_vehicles = []
+    sensors = {}
 
     # Tunable parameters
     client_timeout = 30.0  # in seconds
@@ -232,6 +233,11 @@ class ScenarioRunner(object):
                 self.ego_vehicles[i] = None
         self.ego_vehicles = []
 
+        #TODO: Need to handle for cases with many egos. Link sensors with appropriate egos and destroy when egos are destroyed.
+        for _, sensor in self.sensors.items():
+            sensor.destroy()
+        self.sensors = {}
+
         if self.agent_instance:
             self.agent_instance.destroy()
             self.agent_instance = None
@@ -279,15 +285,15 @@ class ScenarioRunner(object):
         cam_index = 0
         cam_pos_index = 1
 
-        self.collision_sensor = sensors.CollisionSensor(self.ego_vehicles[0])
-        self.lane_invasion_sensor = sensors.LaneInvasionSensor(self.ego_vehicles[0])
-        self.gnss_sensor = sensors.GnssSensor(self.ego_vehicles[0])
-        self.camera_manager = sensors.CameraManager(self.ego_vehicles[0], self.gamma, self.dimensions)
-        self.camera_manager.transform_index = cam_pos_index
-        self.camera_manager.set_sensor(cam_index, notify=False)
-        self.camera_manager2 = sensors.CameraManager(self.ego_vehicles[0], self.gamma, self.dimensions)
-        self.camera_manager2.transform_index = cam_pos_index
-        self.camera_manager2.set_sensor(cam_index+5, notify=False)
+        self.sensors["collision_sensor"] = sensors.CollisionSensor(self.ego_vehicles[0])
+        self.sensors["lane_invasion_sensor"] = sensors.LaneInvasionSensor(self.ego_vehicles[0])
+        self.sensors["gnss_sensor"] = sensors.GnssSensor(self.ego_vehicles[0])
+        self.sensors["camera_manager"] = sensors.CameraManager(self.ego_vehicles[0], self.gamma, self.dimensions)
+        self.sensors["camera_manager"].transform_index = cam_pos_index
+        self.sensors["camera_manager"].set_sensor(cam_index, notify=False)
+        self.sensors["camera_manager2"] = sensors.CameraManager(self.ego_vehicles[0], self.gamma, self.dimensions)
+        self.sensors["camera_manager2"].transform_index = cam_pos_index
+        self.sensors["camera_manager2"].set_sensor(cam_index+5, notify=False)
 
     def _analyze_scenario(self, config):
         """

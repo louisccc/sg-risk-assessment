@@ -32,7 +32,7 @@ class BasicScenario(object):
         """
         self.other_actors = []
         if not self.timeout:     # pylint: disable=access-member-before-definition
-            self.timeout = 60    # If no timeout was provided, set it to 60 seconds
+            self.timeout = 120    # If no timeout was provided, set it to 60 seconds
 
         self.criteria_list = []  # List of evaluation criteria
         self.scenario = None

@@ -154,7 +154,7 @@ class ChangeLane(BasicScenario):
         # sequence_ego.add_child(ego_brake)
         ego_drive = py_trees.composites.Parallel("EgoDriving",
                                                   policy=py_trees.common.ParallelPolicy.SUCCESS_ON_ONE)
-        ego_driving_fast = WaypointFollower(self.ego_vehicles[0], self._fast_vehicle_velocity - 50, avoid_collision=True)
+        ego_driving_fast = WaypointFollower(self.ego_vehicles[0], self._fast_vehicle_velocity)
         ego_drive.add_child(ego_driving_fast)
         ego_distance_to_vehicle1 = InTriggerDistanceToVehicle(
             self.other_actors[1], self.ego_vehicles[0], self._trigger_distance)
@@ -185,6 +185,7 @@ class ChangeLane(BasicScenario):
 
         # build tree
         root = py_trees.composites.Parallel("Parallel Behavior", policy=py_trees.common.ParallelPolicy.SUCCESS_ON_ONE)
+        root.add_child(Idle(10))
         root.add_child(sequence_vw)
         root.add_child(sequence_tesla)
         root.add_child(sequence_ego)

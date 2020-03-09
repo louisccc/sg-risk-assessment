@@ -1,16 +1,21 @@
 
 import networkx as nx
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
 from relation_extractor import Relations, RelationExtractor
-import pdb
+import pdb, json, random
+from pathlib import Path
 
 #basic class for abstracting a node in the scene graph. this is mainly used for holding the data for each node.
 class Node:
-
     def __init__(self, name, attr):
         self.name = name
         self.attr = attr
+
+    def __repr__(self):
+        return "%s" % self.name 
     
-    
+
 #class defining scene graph and its attributes. contains functions for construction and operations
 class SceneGraph:
     
@@ -67,8 +72,6 @@ class SceneGraph:
             else:
                 self.add_actor_dict(attrs)
             
-                
-            
     #calls RelationExtractor to build semantic relations between every pair of nodes in graph. call this function after all nodes have been added to graph.
     def extract_semantic_relations(self):
         for node1 in self.g.nodes:
@@ -78,11 +81,69 @@ class SceneGraph:
                         self.add_relations(self.relation_extractor.extract_relations(node1.attr, node2.attr))
     
 
-if __name__ == '__main__':
-#demo code
-    sg = SceneGraph()
-    re = RelationExtractor()
-    import pdb; pdb.set_trace()
+class SceneGraphExtractor:
+    def __init__(self):
+        self.scenegraphs = {}
+        self.scene_images = {}
 
+        # For Visualization
+        self.fig, (self.ax_graph, self.ax_img) = plt.subplots(1, 2, figsize=(20, 12))
+        self.fig.canvas.set_window_title("Scene Graph Visualization")
+
+    def load(self, path):
+        with open(path, 'r') as f:
+            framedict = json.loads(f.read())
+            for frame, frame_dict in framedict.items():
+                scenegraph = SceneGraph()
+                scenegraph.add_frame_dict(frame_dict)
+                self.scenegraphs[frame] = scenegraph
+
+    def build_corresponding_images(self, path):
+        for frame, scenegraph in self.scenegraphs.items():
+            try:
+                print('catch %s/%.8d.png'%(path, int(frame)))
+                img = plt.imread('%s/%.8d.png'%(path, int(frame)))
+                self.scene_images[frame] = (scenegraph, img)
+            except Exception as e:
+                print(e)
+        
+    def store(self, path):
+        for frame, (scenegraph, image) in self.scene_images.items():
+            nx.draw(scenegraph.g, with_labels=True, ax=self.ax_graph)
+            self.ax_img.imshow(image)
+            self.ax_graph.set_title("Risk {}".format(random.random()))
+            self.ax_img.set_title("Frame {}".format(frame))
+            plt.savefig('%s/%s.png'%(path, frame))
+            self.ax_graph.clear()
+            self.ax_img.clear()
+
+    def update(self, num):
+        self.ax_graph.clear()
+        self.ax_img.clear()
+
+        frame = list(self.scene_images.keys())[num]
+        nx.draw(self.scene_images[frame][0].g, with_labels=True, ax=self.ax_graph)
+        self.ax_img.imshow(self.scene_images[frame][1])
+
+        # Set the title
+        self.ax_graph.set_title("Risk {}".format(random.random()))
+        self.ax_img.set_title("Frame {}".format(num))
+
+    def show_animation(self):
+        ani = animation.FuncAnimation(self.fig, self.update, frames=len(self.scene_images.keys()))
+        plt.show()
+
+if __name__ == '__main__':
+    # sg = SceneGraph()
+    # re = RelationExtractor()
+    txt_path = r".\input\_out\data\217071-217217.txt"
+    img_path = r".\input\_out\raw_images"
+    store_path = Path(r'.\input\_out\scenes')
+    store_path.mkdir(parents=True, exist_ok=True)
     
-    
+    sge = SceneGraphExtractor()
+    sge.load(txt_path)
+    sge.build_corresponding_images(img_path)
+    sge.store(store_path)
+    sge.show_animation()
+    pdb.set_trace()

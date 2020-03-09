@@ -22,7 +22,7 @@ from srunner.scenariomanager.carla_data_provider import CarlaDataProvider, Carla
 from srunner.scenariomanager.result_writer import ResultOutputProvider
 from srunner.scenariomanager.timer import GameTime, TimeOut
 from srunner.scenariomanager.sgextractor import DataExtractor
-
+import timeit
 class Scenario(object):
 
     """
@@ -209,18 +209,21 @@ class ScenarioManager(object):
 
         self._running = True
 
+        map1 = CarlaDataProvider.get_world().get_map()
         while self._running:
             timestamp = None
             world = CarlaDataProvider.get_world()
+
             if world:
                 snapshot = world.get_snapshot()
                 if snapshot:
                     timestamp = snapshot.timestamp
             if timestamp:
                 self._tick_scenario(timestamp)
-                ## world, timestamp 
-                self.se.extract_frame(world, timestamp.frame)
-
+                ## world, timestamp
+                # start_time = timeit.default_timer()
+                self.se.extract_frame(world, map1, timestamp.frame)
+                # print('[%.2f sec]'%(timeit.default_timer() - start_time))
 
 
         self.cleanup()

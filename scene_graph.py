@@ -59,7 +59,7 @@ class SceneGraph:
             
     #add the contents of a whole framedict to the graph
     def add_frame_dict(self, framedict):
-        for key, attrs in framedict.items()
+        for key, attrs in framedict.items():
             if key == "ego":
                 self.add_node(Node(key, attrs))
             elif key == "lane":
@@ -82,6 +82,7 @@ if __name__ == '__main__':
 #demo code
     sg = SceneGraph()
     re = RelationExtractor()
+    import pdb; pdb.set_trace()
 
     
     

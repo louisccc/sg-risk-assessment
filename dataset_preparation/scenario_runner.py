@@ -291,9 +291,9 @@ class ScenarioRunner(object):
         self.sensors["camera_manager"] = sensors.CameraManager(self.ego_vehicles[0], self.gamma, self.dimensions)
         self.sensors["camera_manager"].transform_index = cam_pos_index
         self.sensors["camera_manager"].set_sensor(cam_index, notify=False)
-        self.sensors["camera_manager2"] = sensors.CameraManager(self.ego_vehicles[0], self.gamma, self.dimensions)
-        self.sensors["camera_manager2"].transform_index = cam_pos_index
-        self.sensors["camera_manager2"].set_sensor(cam_index+5, notify=False)
+        self.sensors["camera_manager_ss"] = sensors.CameraManager(self.ego_vehicles[0], self.gamma, self.dimensions)
+        self.sensors["camera_manager_ss"].transform_index = cam_pos_index
+        self.sensors["camera_manager_ss"].set_sensor(cam_index+5, notify=False)
 
     def _analyze_scenario(self, config):
         """

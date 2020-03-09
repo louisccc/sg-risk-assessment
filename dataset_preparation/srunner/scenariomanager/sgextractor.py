@@ -27,10 +27,10 @@ class DataExtractor(object):
         self.framedict=defaultdict()
         self.ego = ego
 
-    def extract_frame(self, world, frame):
+    def extract_frame(self, world, map1, frame):
         # utilities
         t = self.ego.get_transform()
-
+        ego_location = self.ego.get_location()
         # velocity = lambda l: (3.6 * math.sqrt(l.x**2 + l.y**2 + l.z**2))
         # dv = lambda l: (3.6 * math.sqrt((l.x-v.x)**2 + (l.y-v.y)**2 + (l.z-v.z)**2))
         distance = lambda l: math.sqrt((l.x - t.location.x)**2 + (l.y - t.location.y)**2 + (l.z - t.location.z)**2)
@@ -47,17 +47,19 @@ class DataExtractor(object):
         signdict = defaultdict()
         lanedict = defaultdict()
 
-        waypoint = world.get_map().get_waypoint(self.ego.get_location(),
-                                                        project_to_road=True, 
-                                                        lane_type=(carla.LaneType.Driving | carla.LaneType.Shoulder | carla.LaneType.Sidewalk))
+        waypoint = map1.get_waypoint(ego_location, project_to_road=True, lane_type=(carla.LaneType.Driving | carla.LaneType.Shoulder | carla.LaneType.Sidewalk))
         lanes = [("ego_lane", waypoint), 
-                    ("left_lane", waypoint.get_left_lane()), 
-                    ("right_lane", waypoint.get_right_lane()), 
-                    ("next_waypoint", waypoint.next(10))]  #selecting a default 10 feet ahead for the next waypoint
-        for name, lane in lanes: 
+                 ("left_lane", waypoint.get_left_lane()), 
+                 ("right_lane", waypoint.get_right_lane()), 
+                 # ("next_waypoint", waypoint.next(10))
+                 ]  #selecting a default 10 feet ahead for the next waypoint
+        # import pdb; pdb.set_trace()
+
+        for name, lane in lanes:
+            # print(name, lane) 
             l_3d = waypoint.transform.location
             r_3d = waypoint.transform.rotation
-            import pdb; pdb.set_trace()
+            
             single_lane_dict = {
                 'lane_id': lane.lane_id,
                 'location': [int(l_3d.x), int(l_3d.y), int(l_3d.z)],

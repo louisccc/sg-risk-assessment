@@ -55,6 +55,7 @@ class Relations(Enum):
     near = 1
     partOf = 2
     instanceOf = 3
+    hasAttribute = 4
 
 #This class extracts relations for every pair of entities in a scene
 class RelationExtractor:

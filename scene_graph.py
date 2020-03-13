@@ -1,4 +1,4 @@
-
+import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
@@ -11,6 +11,7 @@ class Node:
     def __init__(self, name, attr):
         self.name = name
         self.attr = attr
+        self.label = name + "\n" + str(attr)
 
     def __repr__(self):
         return "%s" % self.name 
@@ -30,7 +31,7 @@ class SceneGraph:
         
     #add single node to graph. node can be any hashable datatype including objects.
     def add_node(self, node):
-        self.g.add_node(node)
+        self.g.add_node(node, attr=node.attr, label=node.label)
         
     #add multiple nodes to graph
     def add_nodes(self, nodes):
@@ -52,8 +53,8 @@ class SceneGraph:
     #parses actor dict and adds nodes to graph. this can be used for all actor types.
     def add_actor_dict(self, actordict):
         for actor_id, actorattr in actordict.items():
-            n = Node(actor_id, actorattr)   #using the actor key as the node name and the dict as its attributes.
-            self.add_node(n)
+            n = Node(actor_id, [])   #using the actor key as the node name and the dict as its attributes.
+            self.add_attributes(n, actorattr)
             
     #adds lanes and their dicts. constructs relation between each lane and the root road node.
     def add_lane_dict(self, lanedict):
@@ -61,12 +62,19 @@ class SceneGraph:
             n = Node(lane_id, laneattr)
             self.add_node(n)
             self.add_relation([n, Relations.partOf, self.road_node])
-            
+
+    #parses attributes of ego/actors
+    def add_attributes(self, node, attrdict):
+        for attr, values in attrdict.items():
+            n = Node(attr, values)
+            self.add_relation([node, Relations.hasAttribute, n])
+
     #add the contents of a whole framedict to the graph
     def add_frame_dict(self, framedict):
         for key, attrs in framedict.items():
             if key == "ego":
-                self.add_node(Node(key, attrs))
+                egoNode = Node(key, [])
+                self.add_attributes(egoNode, attrs)
             elif key == "lane":
                 self.add_lane_dict(attrs)
             else:
@@ -109,7 +117,8 @@ class SceneGraphExtractor:
         
     def store(self, path):
         for frame, (scenegraph, image) in self.scene_images.items():
-            nx.draw(scenegraph.g, with_labels=True, ax=self.ax_graph)
+            pos = nx.spring_layout(scenegraph.g, k=1.5*1/np.sqrt(len(scenegraph.g.nodes())))
+            nx.draw(scenegraph.g, labels=nx.get_node_attributes(scenegraph.g, 'label'), pos=pos, font_size=8, with_labels=True, ax=self.ax_graph)
             self.ax_img.imshow(image)
             self.ax_graph.set_title("Risk {}".format(random.random()))
             self.ax_img.set_title("Frame {}".format(frame))
@@ -122,7 +131,9 @@ class SceneGraphExtractor:
         self.ax_img.clear()
 
         frame = list(self.scene_images.keys())[num]
-        nx.draw(self.scene_images[frame][0].g, with_labels=True, ax=self.ax_graph)
+        scenegraph = self.scene_images[frame][0]
+        pos = nx.spring_layout(scenegraph.g, k=1.5*1/np.sqrt(len(scenegraph.g.nodes())))
+        nx.draw(scenegraph.g, labels=nx.get_node_attributes(scenegraph.g, 'label'), pos=pos, font_size=8, with_labels=True, ax=self.ax_graph)
         self.ax_img.imshow(self.scene_images[frame][1])
 
         # Set the title

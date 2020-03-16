@@ -100,7 +100,7 @@ class RelationExtractor:
             if high_type == ActorType.LANE:
                 return self.extract_relations_car_lane(actor1, actor2) if type1.value < type2.value else self.extract_relations_car_lane(actor2, actor1)
             if high_type == ActorType.LIGHT:
-                return self.extract_relations_car_light(actor1, actor2) if type1.value < type2.value else self.extract_relations_car_lane(actor2, actor1)
+                return self.extract_relations_car_light(actor1, actor2) if type1.value < type2.value else self.extract_relations_car_light(actor2, actor1)
             if high_type == ActorType.SIGN:
                 return self.extract_relations_car_sign(actor1, actor2) if type1.value < type2.value else self.extract_relations_car_sign(actor2, actor1)
             

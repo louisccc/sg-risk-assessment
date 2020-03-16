@@ -5,7 +5,7 @@ import json
 from collections import defaultdict
 import carla
 
-from sensors import get_actor_attributes
+from sensors import get_actor_attributes, get_vehicle_attributes
 
 class DataExtractor(object):
 
@@ -77,14 +77,14 @@ class DataExtractor(object):
             }
             lanedict[name] = single_lane_dict
         
-        egodict = get_actor_attributes(self.ego)
+        egodict = get_vehicle_attributes(self.ego)
         
         #export data from surrounding vehicles
         if len(vehicles) > 1:
             for vehicle in vehicles:
                 # TODO: change the 100m condition to field of view. 
                 if vehicle.id != self.ego.id and distance(vehicle.get_location()) < 100:
-                    actordict[vehicle.id] = get_actor_attributes(vehicle)
+                    actordict[vehicle.id] = get_vehicle_attributes(vehicle)
     
         for p in pedestrians:
             if p.get_location().distance(self.ego.get_location())<100:

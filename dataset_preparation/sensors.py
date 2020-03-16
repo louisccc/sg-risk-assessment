@@ -51,6 +51,15 @@ def get_actor_attributes(actor):
     return_dict['ang_velocity'] = int(a_3d.x), int(a_3d.y), int(a_3d.z)
     return_dict['name'] = get_actor_display_name(actor)
     return return_dict
+	
+def get_vehicle_attributes(vehicle):
+	return_dict = get_actor_attributes(vehicle)
+	light_state = vehicle.get_light_state()
+	#light_state variables are booleans
+	return_dict['left_blinker_on'] = light_state.LeftBlinker
+	return_dict['right_blinker_on'] = light_state.RightBlinker
+	return_dict['brake_light_on'] = light_state.Brake
+	return return_dict
 
 
 # ==============================================================================

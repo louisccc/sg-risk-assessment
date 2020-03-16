@@ -223,7 +223,7 @@ class RelationExtractor:
         
     def extract_relations_bicycle_ped(self, actor1, actor2):
         relation_list = []
-        if(self.euclidean_distance(actor1, actor2) < MOTO_PROXIMITY_THRESH):
+        if(self.euclidean_distance(actor1, actor2) < BICYCLE_PROXIMITY_THRESH):
             relation_list.append([actor1, Relations.near, actor2])
         return relation_list
         

@@ -52,6 +52,7 @@ def get_actor_attributes(actor):
     return_dict['name'] = get_actor_display_name(actor)
     return return_dict
 	
+#WILL ONLY WORK ON CARLA 0.9.8    
 def get_vehicle_attributes(vehicle):
 	return_dict = get_actor_attributes(vehicle)
 	light_state = vehicle.get_light_state()

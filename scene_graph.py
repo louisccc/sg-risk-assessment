@@ -62,13 +62,13 @@ class SceneGraph:
             n = Node(lane_id, laneattr)
             self.add_node(n)
             self.add_relation([n, Relations.partOf, self.road_node])
-			
-	#add signs as entities of the road.
-	def add_sign_dict(self, signdict):
-		for sign_id, signattr in signdict.items():
-			n = Node(sign_id, signattr)
-			self.add_node(n)
-			self.add_relation([n, Relations.partOf, self.road_node])
+            
+    #add signs as entities of the road.
+    def add_sign_dict(self, signdict):
+        for sign_id, signattr in signdict.items():
+            n = Node(sign_id, signattr)
+            self.add_node(n)
+            self.add_relation([n, Relations.partOf, self.road_node])
 
     #parses attributes of ego/actors
     def add_attributes(self, node, attrdict):
@@ -84,8 +84,8 @@ class SceneGraph:
                 self.add_attributes(egoNode, attrs)
             elif key == "lane":
                 self.add_lane_dict(attrs)
-			elif key == "sign":
-				self.add_sign_dict(attrs)
+            elif key == "sign":
+                self.add_sign_dict(attrs)
             else:
                 self.add_actor_dict(attrs)
             

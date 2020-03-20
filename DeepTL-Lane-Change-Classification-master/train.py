@@ -11,24 +11,24 @@ import pandas as pd
 
 def set_dataset(image_path, label_path, feature_extract_option=0, feature_path='/mit_resnet_train.pickle'):
 
-    # df = pd.read_csv(label_path, header=0, usecols=[3, 4])
+    df = pd.read_csv(label_path, header=0, usecols=[3, 4])
 
-    # target_data = np.zeros([len(df['no_event'].tolist()), 2])
-    # target_data[:, 0] = df['no_event'].tolist()
-    # target_data[:, 1] = df['critical'].tolist()
-    #sprint(image_path,label_path)
-    target_data = np.zeros([2,2])
-    #print(target_data[:,0])
-    #print(target_data[:,1])
-    target_data[0][0]=1
-    target_data[0][1]=0
-    if feature_path=='/mit_resnet_validation.pickle':
-        target_data[0][0]=0
-        target_data[0][1]=1
-    #print(target_data[:,0])
-    #print(target_data[:,1])
+    target_data = np.zeros([len(df['no_event'].tolist()), 2])
+    target_data[:, 0] = df['no_event'].tolist()
+    target_data[:, 1] = df['critical'].tolist()
+
+    # target_data = np.zeros([2,2])
+    # #print(target_data[:,0])
+    # #print(target_data[:,1])
+    # target_data[0][0]=1
+    # target_data[0][1]=0
+    # if feature_path=='/mit_resnet_validation.pickle':
+    #     target_data[0][0]=0
+    #     target_data[0][1]=1
+    # #print(target_data[:,0])
+    # #print(target_data[:,1])
     print(target_data)
-    #import pdb;pdb.set_trace()
+    # #import pdb;pdb.set_trace()
     data = DataSet()
     data.risk_one_hot = target_data
 

@@ -5,7 +5,7 @@ from keras.models import Model
 import os
 
 class_weight = {0: 0.05, 1: 0.95}
-training_to_all_data_ratio = 0.9
+training_to_all_data_ratio = 0.5
 nb_cross_val = 1
 nb_epoch = 1000
 batch_size = 32
@@ -22,11 +22,11 @@ data = DataSet()
 data.model = backbone_model
 data.extract_features(image_path, option='fixed frame amount', number_of_frames=50)
 data.read_risk_data("LCTable.csv")
-data.convert_risk_to_one_hot(risk_threshold=0.05)
+data.convert_risk_to_one_hot(risk_threshold=0.5)
 
 Data = data.video_features
 label = data.risk_one_hot
-
+#import pdb; pdb.set_trace()
 model = Models(nb_epoch=nb_epoch, batch_size=batch_size, class_weights=class_weight)
 model.build_transfer_LSTM_model(input_shape=Data.shape[1:])
 model.train_n_fold_cross_val(Data, label, training_to_all_data_ratio=training_to_all_data_ratio, n=nb_cross_val, print_option=0, plot_option=0, save_option=0)

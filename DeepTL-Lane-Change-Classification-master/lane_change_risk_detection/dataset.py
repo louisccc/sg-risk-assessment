@@ -72,14 +72,7 @@ class DataSet:
 
         foldernames = [f for f in os.listdir(img_path) if f.isnumeric() and not f.startswith('.')]
         int_foldernames = [int(f) for f in os.listdir(img_path) if f.isnumeric() and not f.startswith('.')]
-        # for f in os.listdir(img_path):
-        #     if f.isnumeric() and not f.startswith('.'): 
-        #         print('not numeric')
-        #     print(f)
-
-        # print(os.listdir(img_path))
-        # print(int_foldernames)
-
+   
         if option == 'fixed frame amount':
             self.video_features = np.zeros([max(int_foldernames), number_of_frames, feature_size])
         elif option == 'all frames':
@@ -139,8 +132,9 @@ class DataSet:
         df = pd.read_csv(file_path, header=None, usecols=[5], names=['risk_score'])
         self.risk_scores = df['risk_score'].tolist()
 
-    def convert_risk_to_one_hot(self, risk_threshold=0.05):
+    def convert_risk_to_one_hot(self, risk_threshold=0.5):
         indexes = [i[0] for i in sorted(enumerate(self.risk_scores), key=lambda x: x[1])]
+        #import pdb; pdb.set_trace()
         top_risky_threshold = int(len(indexes) * risk_threshold)
         self.risk_one_hot = np.zeros([len(indexes), 2])
 
@@ -149,6 +143,7 @@ class DataSet:
                 self.risk_one_hot[index, :] = [0, 1]
             else:
                 self.risk_one_hot[index, :] = [1, 0]
+        
 
     def decode_one_hot(self):
         self.risk_binary = np.zeros([self.risk_one_hot.shape[0], 1])

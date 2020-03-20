@@ -86,7 +86,8 @@ class Models:
         print(self.flops)
 
     def train_model(self, X_train, y_train, X_test, y_test, print_option=0, verbose=2):
-
+        print(X_train,y_train)
+        print(X_test,y_test)
         self.build_loss_history(X_train, y_train, X_test, y_test)
         self.model.fit(X_train, y_train,
                        batch_size=self.batch_size,

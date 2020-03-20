@@ -55,7 +55,11 @@ class DataSet:
 
         images = []
         index = 0
+        # print(self.image_seq)
+        # print(len(self.image_seq))
+        # print(number_of_frames)
         modulo = int(len(self.image_seq) / number_of_frames)
+        #print(modulo)
         for counter, img in enumerate(self.image_seq):
             if counter % modulo == 0 and index < number_of_frames:
                 images.append(img)
@@ -68,6 +72,13 @@ class DataSet:
 
         foldernames = [f for f in os.listdir(img_path) if f.isnumeric() and not f.startswith('.')]
         int_foldernames = [int(f) for f in os.listdir(img_path) if f.isnumeric() and not f.startswith('.')]
+        # for f in os.listdir(img_path):
+        #     if f.isnumeric() and not f.startswith('.'): 
+        #         print('not numeric')
+        #     print(f)
+
+        # print(os.listdir(img_path))
+        # print(int_foldernames)
 
         if option == 'fixed frame amount':
             self.video_features = np.zeros([max(int_foldernames), number_of_frames, feature_size])

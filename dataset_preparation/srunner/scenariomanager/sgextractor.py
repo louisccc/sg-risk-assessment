@@ -5,7 +5,7 @@ import json
 from collections import defaultdict
 import carla
 
-from sensors import get_actor_attributes
+from sensors import get_actor_attributes, get_vehicle_attributes
 
 class DataExtractor(object):
 

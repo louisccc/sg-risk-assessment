@@ -29,15 +29,16 @@
 from enum import Enum
 from collections import defaultdict
 import pdb
+import math
 
 MOTO_NAMES = ["Harley-Davidson", "Kawasaki", "Yamaha"]
 BICYCLE_NAMES = ["Gazelle", "Diamondback", "Bh"]
 CAR_NAMES = ["Ford", "Bmw", "Toyota", "Nissan", "Mini", "Tesla", "Seat", "Lincoln", "Audi", "Carlamotors", "Citroen", "Mercedes-Benz", "Chevrolet", "Volkswagen", "Jeep", "Nissan", "Dodge"]
 
-CAR_PROXIMITY_THRESH = 10 # max number of feet between a car and another entity to build proximity relation
-MOTO_PROXIMITY_THRESH = 10
-BICYCLE_PROXIMITY_THRESH = 10
-PED_PROXIMITY_THRESH = 10
+CAR_PROXIMITY_THRESH = 500 # max number of feet between a car and another entity to build proximity relation
+MOTO_PROXIMITY_THRESH = 500
+BICYCLE_PROXIMITY_THRESH = 500
+PED_PROXIMITY_THRESH = 500
 
 #defines all types of actors which can exist
 #order of enum values is important as this determines which function is called. DO NOT CHANGE ENUM ORDER
@@ -55,19 +56,20 @@ class Relations(Enum):
     near = 1
     partOf = 2
     instanceOf = 3
+    hasAttribute = 4
 
 #This class extracts relations for every pair of entities in a scene
 class RelationExtractor:
 
     def get_actor_type(self, actor):
             
-        if "lane_id" in actor.keys():
+        if "lane_id" in actor.attr.keys():
             return ActorType.LANE
-        if actor["name"].split(" ")[0] in CAR_NAMES:
+        if actor.attr["name"].split(" ")[0] in CAR_NAMES:
             return ActorType.CAR
-        if actor["name"].split(" ")[0] in MOTO_NAMES:
+        if actor.attr["name"].split(" ")[0] in MOTO_NAMES:
             return ActorType.MOTO
-        if actor["name"].split(" ")[0] in BICYCLE_NAMES:
+        if actor.attr["name"].split(" ")[0] in BICYCLE_NAMES:
             return ActorType.BICYCLE
         raise NameError("Actor name not found for actor with name: " + actor["name"])
             
@@ -99,7 +101,7 @@ class RelationExtractor:
             if high_type == ActorType.LANE:
                 return self.extract_relations_car_lane(actor1, actor2) if type1.value < type2.value else self.extract_relations_car_lane(actor2, actor1)
             if high_type == ActorType.LIGHT:
-                return self.extract_relations_car_light(actor1, actor2) if type1.value < type2.value else self.extract_relations_car_lane(actor2, actor1)
+                return self.extract_relations_car_light(actor1, actor2) if type1.value < type2.value else self.extract_relations_car_light(actor2, actor1)
             if high_type == ActorType.SIGN:
                 return self.extract_relations_car_sign(actor1, actor2) if type1.value < type2.value else self.extract_relations_car_sign(actor2, actor1)
             
@@ -150,7 +152,7 @@ class RelationExtractor:
             
     def extract_relations_car_lane(self, actor1, actor2):
         relation_list = []
-        if(self.euclidean_distance(actor1, actor2) < actor2['lane_width']/2):
+        if(self.euclidean_distance(actor1, actor2) < actor2.attr['lane_width']/2):
             relation_list.append([actor1, Relations.isIn, actor2])
         return relation_list 
         
@@ -201,7 +203,7 @@ class RelationExtractor:
         
     def extract_relations_moto_lane(self, actor1, actor2):
         relation_list = []
-        if(self.euclidean_distance(actor1, actor2) < actor2['lane_width']/2):
+        if(self.euclidean_distance(actor1, actor2) < actor2.attr['lane_width']/2):
             relation_list.append([actor1, Relations.isIn, actor2])
         return relation_list 
         
@@ -222,13 +224,13 @@ class RelationExtractor:
         
     def extract_relations_bicycle_ped(self, actor1, actor2):
         relation_list = []
-        if(self.euclidean_distance(actor1, actor2) < MOTO_PROXIMITY_THRESH):
+        if(self.euclidean_distance(actor1, actor2) < BICYCLE_PROXIMITY_THRESH):
             relation_list.append([actor1, Relations.near, actor2])
         return relation_list
         
     def extract_relations_bicycle_lane(self, actor1, actor2):
         relation_list = []
-        if(self.euclidean_distance(actor1, actor2) < actor2['lane_width']/2):
+        if(self.euclidean_distance(actor1, actor2) < actor2.attr['lane_width']/2):
             relation_list.append([actor1, Relations.isIn, actor2])
         return relation_list 
         
@@ -249,7 +251,7 @@ class RelationExtractor:
            
     def extract_relations_ped_lane(self, actor1, actor2):
         relation_list = []
-        if(self.euclidean_distance(actor1, actor2) < actor2['lane_width']/2):
+        if(self.euclidean_distance(actor1, actor2) < actor2.attr['lane_width']/2):
             relation_list.append([actor1, Relations.isIn, actor2])
         return relation_list 
         
@@ -281,9 +283,9 @@ class RelationExtractor:
 #~~~~~~~~~~~~~~~~~~UTILITY FUNCTIONS~~~~~~~~~~~~~~~~~~~~~~
     #return euclidean distance between actors
     def euclidean_distance(self, actor1, actor2):
-        l1 = actor1['location']
-        l2 = actor2['location']
-        return sqrt((l1[0] - l2[0])**2 + (l1[1]- l2[1])**2 + (l1[2] - l2[2])**2)
+        l1 = actor1.attr['location']
+        l2 = actor2.attr['location']
+        return math.sqrt((l1[0] - l2[0])**2 + (l1[1]- l2[1])**2 + (l1[2] - l2[2])**2)
     
     
     

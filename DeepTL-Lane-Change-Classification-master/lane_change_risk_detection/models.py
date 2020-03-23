@@ -113,7 +113,7 @@ class Models:
 
         for i in tqdm(range(n)):
 
-            #random.shuffle(rand_indexes)
+            random.shuffle(rand_indexes)
             # take
             #int(nb_samples * training_to_all_data_ratio) * 0.05
             X_train = Data[rand_indexes[0:int(nb_samples * training_to_all_data_ratio)], :]

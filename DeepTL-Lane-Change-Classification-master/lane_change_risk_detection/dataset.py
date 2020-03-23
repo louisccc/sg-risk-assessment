@@ -55,11 +55,10 @@ class DataSet:
 
         images = []
         index = 0
-        # print(self.image_seq)
-        # print(len(self.image_seq))
-        # print(number_of_frames)
+        
+        # length of image sequence must be greater than or equal to number_of_frames
+        # if number of frames is less than entire length of image sequence, takes every nth frame (n being modulo)
         modulo = int(len(self.image_seq) / number_of_frames)
-        #print(modulo)
         for counter, img in enumerate(self.image_seq):
             if counter % modulo == 0 and index < number_of_frames:
                 images.append(img)
@@ -70,15 +69,21 @@ class DataSet:
     def extract_features(self, img_path, feature_size=2048, option='fixed frame amount', number_of_frames=20,
                          max_number_of_frames=500):
 
+        # looks for folders with numeric names and doesnt start with .
         foldernames = [f for f in os.listdir(img_path) if f.isnumeric() and not f.startswith('.')]
         int_foldernames = [int(f) for f in os.listdir(img_path) if f.isnumeric() and not f.startswith('.')]
    
+        # fixed frame amount if specified to use only first n clips 
         if option == 'fixed frame amount':
             self.video_features = np.zeros([max(int_foldernames), number_of_frames, feature_size])
         elif option == 'all frames':
             self.video_features = np.zeros([max(int_foldernames), max_number_of_frames, feature_size])
             # shape: (n_vidoes, n_frames, im_height, im_width, channel)
+        #shape of video_features is # of videos, # of frames, feature size
+
         # todo convert this to a wrapper
+        # tqdm shows progress bar
+        # image_seq has the features of the images
         for foldername in tqdm(foldernames):
             if foldername.isnumeric:
                 self.image_seq = self.load_images_for_keras(img_path + "/" + foldername)
@@ -133,17 +138,19 @@ class DataSet:
         self.risk_scores = df['risk_score'].tolist()
 
     def convert_risk_to_one_hot(self, risk_threshold=0.5):
+        # sorting risk thresholds from least risky to most risky
         indexes = [i[0] for i in sorted(enumerate(self.risk_scores), key=lambda x: x[1])]
-        #import pdb; pdb.set_trace()
         top_risky_threshold = int(len(indexes) * risk_threshold)
         self.risk_one_hot = np.zeros([len(indexes), 2])
 
+        # assigning one hot vector [0,1] for risky and [1,0] for not risky
+        # if risk threshold is 0.5, 50% risky (upper half of indexes array) 50% not risky (lower half of indexes array)
         for counter, index in enumerate(indexes[::-1]):
             if counter < top_risky_threshold:
                 self.risk_one_hot[index, :] = [0, 1]
             else:
                 self.risk_one_hot[index, :] = [1, 0]
-        
+
 
     def decode_one_hot(self):
         self.risk_binary = np.zeros([self.risk_one_hot.shape[0], 1])
@@ -202,13 +209,17 @@ class DataSet:
 
         for filename in filenames:
 
+            # load image with default target size 224(image height)x224(image width)
+            # if image size differs from target size, uses nearest interpolation to resample image
+            # to create a batch of images need an additional dimension so np.expand_dims
+            # make image format compatible with model using preprocess_input
+            # return features of image, object identification
             img = image.load_img(os.path.join(img_path, filename), target_size=target_size)
             img = image.img_to_array(img)
             img = np.expand_dims(img, axis=0)
             img = preprocess_input(img)
 
             feature = self.model.predict(img)
-
             if img is not None:
                 features.append(feature)
 

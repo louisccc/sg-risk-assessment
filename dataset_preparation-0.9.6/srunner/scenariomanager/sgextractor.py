@@ -77,18 +77,20 @@ class DataExtractor(object):
             }
             lanedict[name] = single_lane_dict
         
-        egodict = get_actor_attributes(self.ego)
+        egodict = get_vehicle_attributes(self.ego, waypoint)
         
         #export data from surrounding vehicles
         if len(vehicles) > 1:
             for vehicle in vehicles:
                 # TODO: change the 100m condition to field of view. 
                 if vehicle.id != self.ego.id and distance(vehicle.get_location()) < 100:
-                    actordict[vehicle.id] = get_actor_attributes(vehicle)
+					vehicle_wp = map1.get_waypoint(vehicle.get_location(), project_to_road=True, lane_type=(carla.LaneType.Driving | carla.LaneType.Shoulder | carla.LaneType.Sidewalk))
+                    actordict[vehicle.id] = get_vehicle_attributes(vehicle, vehicle_wp)
     
         for p in pedestrians:
             if p.get_location().distance(self.ego.get_location())<100:
-                peddict[p.id]=get_actor_attributes(p)
+				ped_wp = map1.get_waypoint(ped.get_location(), project_to_road=True, lane_type=(carla.LaneType.Driving | carla.LaneType.Shoulder | carla.LaneType.Sidewalk))
+                peddict[p.id]=get_actor_attributes(p, ped_wp)
 
         for t_light in trafficlights:
             if t_light.get_location().distance(self.ego.get_location())<100:

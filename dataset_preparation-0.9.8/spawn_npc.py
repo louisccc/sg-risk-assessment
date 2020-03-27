@@ -108,6 +108,7 @@ def main():
     client = carla.Client(args.host, args.port)
     client.set_timeout(10.0)
 
+    world = client.load_world('Town04')
     try:
 
         traffic_manager = client.get_trafficmanager(args.tm_port)

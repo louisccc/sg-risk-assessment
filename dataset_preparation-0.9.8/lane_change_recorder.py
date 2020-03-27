@@ -49,7 +49,7 @@ class LaneChangeRecorder:
     def tick(self):
         self.tick_count += 1
 
-        if self.tick_count == 25:
+        if self.tick_count == 100:
             # stop recording and clean up sensors
             self.toggle_recording()
             print("Cleaning up sensors...")
@@ -57,7 +57,7 @@ class LaneChangeRecorder:
                 sensor.destroy()
             self.sensors_dict = {}
 
-        elif self.tick_count == 40:
+        elif self.tick_count == 150:
             # choose random vehicle and prepare for recording
             print("Attach sensors and start recording...")
             self.ego = self.carla_world.get_actor(random.choice(self.vehicles_list))
@@ -65,8 +65,9 @@ class LaneChangeRecorder:
             self.attach_sensors(new_path)
             self.dir_index += 1
 
-        elif self.tick_count >= 45:
+        elif self.tick_count >= 200:
             print("Changing Lane...")
             self.toggle_recording()
+            print(self.ego.get_velocity())
             self.traffic_manager.force_lane_change(self.ego, random.choice([True, False]))
             self.tick_count = 0

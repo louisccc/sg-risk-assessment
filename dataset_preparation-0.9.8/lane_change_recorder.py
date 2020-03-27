@@ -20,6 +20,7 @@ class LaneChangeRecorder:
         self.traffic_manager = traffic_manager
         self.sensors_dict = {}
         self.root_path = Path("./_out")
+        self.root_path.mkdir(exist_ok=True)
 
         self.num_of_existing_datapoints = len(list(self.root_path.glob('*')))
         self.dir_index = 0

@@ -53,6 +53,8 @@ class ActorType(Enum):
 	SIGN = 5
 	LANE = 6
 	
+ACTOR_NAMES=['car','moto','bicycle','ped','light','sign','lane']
+	
 class Relations(Enum):
 	isIn = 0
 	near = 1
@@ -80,68 +82,13 @@ class RelationExtractor:
 		type1 = self.get_actor_type(actor1)
 		type2 = self.get_actor_type(actor2)
 		
-		if type1 == type2:
-			if type1 == ActorType.CAR:
-				return self.extract_relations_car_car(actor1, actor2)
-			if type1 == ActorType.MOTO:
-				return self.extract_relations_moto_moto(actor1, actor2)
-			if type1 == ActorType.BICYCLE:
-				return self.extract_relations_bicycle_bicycle(actor1, actor2)
-			if type1 == ActorType.PED:
-				return self.extract_relations_ped_ped(actor1, actor2)
-		
 		low_type = min(type1.value, type2.value) #the lower of the two enums.
 		high_type = max(type1.value, type2.value)
-		
-		if low_type == ActorType.CAR.value:
-			if high_type == ActorType.MOTO.value:
-				return self.extract_relations_car_moto(actor1, actor2) if type1.value < type2.value else self.extract_relations_car_moto(actor2, actor1)
-			if high_type == ActorType.BICYCLE:
-				return self.extract_relations_car_bicycle(actor1, actor2) if type1.value < type2.value else self.extract_relations_car_bicycle(actor2, actor1)
-			if high_type == ActorType.PED:
-				return self.extract_relations_car_ped(actor1, actor2) if type1.value < type2.value else self.extract_relations_car_ped(actor2, actor1)
-			if high_type == ActorType.LANE:
-				return self.extract_relations_car_lane(actor1, actor2) if type1.value < type2.value else self.extract_relations_car_lane(actor2, actor1)
-			if high_type == ActorType.LIGHT:
-				return self.extract_relations_car_light(actor1, actor2) if type1.value < type2.value else self.extract_relations_car_light(actor2, actor1)
-			if high_type == ActorType.SIGN:
-				return self.extract_relations_car_sign(actor1, actor2) if type1.value < type2.value else self.extract_relations_car_sign(actor2, actor1)
-			
-		if low_type == ActorType.MOTO:
-			if high_type == ActorType.BICYCLE:
-				return self.extract_relations_moto_bicycle(actor1, actor2) if type1.value < type2.value else self.extract_relations_moto_bicycle(actor2, actor1)
-			if high_type == ActorType.PED:
-				return self.extract_relations_moto_ped(actor1, actor2) if type1.value < type2.value else self.extract_relations_moto_ped(actor2, actor1)
-			if high_type == ActorType.LANE:
-				return self.extract_relations_moto_lane(actor1, actor2) if type1.value < type2.value else self.extract_relations_moto_lane(actor2, actor1)
-			if high_type == ActorType.LIGHT:
-				return self.extract_relations_moto_light(actor1, actor2) if type1.value < type2.value else self.extract_relations_moto_light(actor2, actor1)
-			if high_type == ActorType.SIGN:
-				return self.extract_relations_moto_sign(actor1, actor2) if type1.value < type2.value else self.extract_relations_moto_sign(actor2, actor1)
-			
-		if low_type == ActorType.BICYCLE:
-			if high_type == ActorType.PED:
-				return self.extract_relations_bicycle_ped(actor1, actor2) if type1.value < type2.value else self.extract_relations_bicycle_ped(actor2, actor1)
-			if high_type == ActorType.LANE:
-				return self.extract_relations_bicycle_lane(actor1, actor2) if type1.value < type2.value else self.extract_relations_bicycle_lane(actor2, actor1)
-			if high_type == ActorType.LIGHT:
-				return self.extract_relations_bicycle_light(actor1, actor2) if type1.value < type2.value else self.extract_relations_bicycle_light(actor2, actor1)
-			if high_type == ActorType.SIGN:
-				return self.extract_relations_bicycle_sign(actor1, actor2) if type1.value < type2.value else self.extract_relations_bicycle_sign(actor2, actor1)
-				
-		if low_type == ActorType.PED:
-			if high_type == ActorType.LANE:
-				return self.extract_relations_ped_lane(actor1, actor2) if type1.value < type2.value else self.extract_relations_ped_lane(actor2, actor1)
-			if high_type == ActorType.LIGHT:
-				return self.extract_relations_ped_light(actor1, actor2) if type1.value < type2.value else self.extract_relations_ped_light(actor2, actor1)            
-			if high_type == ActorType.SIGN:
-				return self.extract_relations_ped_sign(actor1, actor2) if type1.value < type2.value else self.extract_relations_ped_sign(actor2, actor1)
-				
-		if low_type == ActorType.LANE:
-			if high_type == ActorType.LIGHT:
-				return self.extract_relations_lane_light(actor1, actor2) if type1.value < type2.value else self.extract_relations_lane_light(actor2, actor1)
-			if high_type == ActorType.SIGN:
-				return self.extract_relations_lane_sign(actor1, actor2) if type1.value < type2.value else self.extract_relations_lane_sign(actor2, actor1)                
+		#pdb.set_trace()
+		function_call = "self.extract_relations_"+ACTOR_NAMES[low_type]+"_"+ACTOR_NAMES[high_type]+"(actor1, actor2) if type1.value <= type2.value "\
+						"else self.extract_relations_"+ACTOR_NAMES[low_type]+"_"+ACTOR_NAMES[high_type]+"(actor2, actor1)"
+		return eval(function_call)
+		   
 
 #~~~~~~~~~specific relations for each pair of actors possible~~~~~~~~~~~~
 #actor 1 corresponds to the first actor in the function name and actor2 the second

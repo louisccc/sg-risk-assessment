@@ -86,18 +86,13 @@ class Models:
         print(self.flops)
 
     def train_model(self, X_train, y_train, X_test, y_test, print_option=0, verbose=2):
-        print(X_train,y_train)
-        print(X_test,y_test)
+        
         self.build_loss_history(X_train, y_train, X_test, y_test)
-        # import pdb; pdb.set_trace()
         self.model.fit(X_train, y_train,
                        batch_size=self.batch_size,
                        nb_epoch=self.nb_epoch,
                        validation_data=(X_test, y_test), class_weight=self.class_weights, verbose=verbose, callbacks=[self.history])
-        # self.model.fit(X_train, y_train,
-        #                batch_size=self.batch_size,
-        #                nb_epoch=self.nb_epoch,
-        #                class_weight=self.class_weights, verbose=verbose, callbacks=[self.history])
+        
         self.get_lastMpercent_loss()
 
         if print_option == 1:
@@ -113,9 +108,13 @@ class Models:
 
         for i in tqdm(range(n)):
 
+            # randomize how we split the videos
             random.shuffle(rand_indexes)
             # take
             #int(nb_samples * training_to_all_data_ratio) * 0.05
+            
+            # split videos into train and test i.e. first 2 videos for train last 2 for test
+            # then train model
             X_train = Data[rand_indexes[0:int(nb_samples * training_to_all_data_ratio)], :]
             y_train = label[rand_indexes[0:int(nb_samples * training_to_all_data_ratio)], :]
             X_test = Data[rand_indexes[int(nb_samples * training_to_all_data_ratio):], :]

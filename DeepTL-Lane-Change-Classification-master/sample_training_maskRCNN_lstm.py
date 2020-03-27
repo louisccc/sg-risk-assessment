@@ -1,6 +1,5 @@
-
-from lane_change_risk_detection.models import Models
-from lane_change_risk_detection.dataset import DataSet
+from models import Models
+from dataset import DataSet
 import os
 
 
@@ -52,7 +51,11 @@ def train_cnn_to_lstm(dataset):
 	model = Models(nb_epoch=nb_epoch, batch_size=batch_size, class_weights=class_weight)
 	model.build_cnn_to_lstm_model(input_shape=Data.shape[1:])
 	model.train_n_fold_cross_val(Data, label, training_to_all_data_ratio=training_to_all_data_ratio, n=nb_cross_val, print_option=0, plot_option=0, save_option=0)
-	model.model.save('maskRCNN_CNN_lstm_GPU.h5')
+	
+	if not os.path.exists('cache/'):
+		os.makedirs('cache/')
+
+	model.model.save('cache/maskRCNN_CNN_lstm_GPU.h5')
 
 
 if __name__ == "__main__":

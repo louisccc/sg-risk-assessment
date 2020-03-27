@@ -45,26 +45,7 @@ import argparse
 import logging
 import random
 
-import sensors
-
-def attach_sensors(sensor_dict, ego):
-    """
-    Spawn and attach sensors to ego vehicles
-    """
-    cam_index = 0
-    cam_pos_index = 1
-    dimensions = [1280, 720]
-    gamma = 2.2
-
-    sensor_dict["collision_sensor"] = sensors.CollisionSensor(ego)
-    sensor_dict["lane_invasion_sensor"] = sensors.LaneInvasionSensor(ego)
-    sensor_dict["gnss_sensor"] = sensors.GnssSensor(ego)
-    sensor_dict["camera_manager"] = sensors.CameraManager(ego, gamma, dimensions)
-    sensor_dict["camera_manager"].transform_index = cam_pos_index
-    sensor_dict["camera_manager"].set_sensor(cam_index, notify=False)
-    sensor_dict["camera_manager_ss"] = sensors.CameraManager(ego, gamma, dimensions)
-    sensor_dict["camera_manager_ss"].transform_index = cam_pos_index
-    sensor_dict["camera_manager_ss"].set_sensor(cam_index+5, notify=False)
+from lane_change_recorder import *
 
 def main():
     argparser = argparse.ArgumentParser(
@@ -279,9 +260,10 @@ def main():
         # disable auto lane change
         for v in vehicles_list:
             traffic_manager.auto_lane_change(world.get_actor(v), False)
-        
-        lane_change_direction = [True, False]
-        tick_count = 0
+
+        # if you want to trigger the recorder, run this file in synchronous mode
+        lanechangerecorder = LaneChangeRecorder(traffic_manager, world)
+        lanechangerecorder.set_vehicles_list(vehicles_list)
 
         while True:
             if args.sync and synchronous_master:
@@ -289,26 +271,7 @@ def main():
             else:
                 world.wait_for_tick()
 
-            if tick_count < 30:
-                tick_count += 1
-
-            if tick_count == 5:
-                # stop recording and clean up sensors
-                print("Cleaning up sensors...")
-                for _, sensor in sensors_dict.items():
-                    sensor.destroy()
-                sensors_dict = {}
-
-            if tick_count == 25:
-                # choose random vehicle and prepare for recording
-                print("Attach sensors and start recording...")
-                ego = world.get_actor(random.choice(vehicles_list))
-                attach_sensors(sensors_dict, ego)
-
-            if tick_count >= 30:
-                print("Changing Lane...")
-                traffic_manager.force_lane_change(ego, random.choice(lane_change_direction))
-                tick_count = 0
+            lanechangerecorder.tick()    
     
     finally:
 

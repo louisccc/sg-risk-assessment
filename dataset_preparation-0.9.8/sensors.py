@@ -20,7 +20,6 @@ import pygame
 # -- Global functions ----------------------------------------------------------
 # ==============================================================================
 
-
 def find_weather_presets():
     rgx = re.compile('.+?(?:(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])|$)')
     name = lambda x: ' '.join(m.group(0) for m in rgx.finditer(x))
@@ -32,7 +31,7 @@ def get_actor_display_name(actor, truncate=250):
     name = ' '.join(actor.type_id.replace('_', '.').title().split('.')[1:])
     return (name[:truncate - 1] + u'\u2026') if len(name) > truncate else name
 
-def get_actor_attributes(actor):
+def get_actor_attributes(actor, waypoint=None):
     velocity = lambda l: (3.6 * math.sqrt(l.x**2 + l.y**2 + l.z**2))
     # dv = lambda l: (3.6 * math.sqrt((l.x-v.x)**2 + (l.y-v.y)**2 + (l.z-v.z)**2))
     # distance = lambda l: math.sqrt((l.x - t.location.x)**2 + (l.y - t.location.y)**2 + (l.z - t.location.z)**2)
@@ -50,17 +49,23 @@ def get_actor_attributes(actor):
     return_dict['rotation'] =  int(r_3d.yaw), int(r_3d.roll), int(r_3d.pitch)
     return_dict['ang_velocity'] = int(a_3d.x), int(a_3d.y), int(a_3d.z)
     return_dict['name'] = get_actor_display_name(actor)
+    if(waypoint):
+        return_dict['lane_id'] = waypoint.lane_id
+        return_dict['road_id'] = waypoint.road_id
+        
     return return_dict
-	
-#WILL ONLY WORK ON CARLA 0.9.8    
-def get_vehicle_attributes(vehicle):
-	return_dict = get_actor_attributes(vehicle)
-	light_state = vehicle.get_light_state()
-	#light_state variables are booleans
-	return_dict['left_blinker_on'] = light_state.LeftBlinker
-	return_dict['right_blinker_on'] = light_state.RightBlinker
-	return_dict['brake_light_on'] = light_state.Brake
-	return return_dict
+    
+
+def get_vehicle_attributes(vehicle, waypoint=None):
+    return_dict = get_actor_attributes(vehicle, waypoint)
+    
+#WILL ONLY WORK ON CARLA 0.9.8:
+    # light_state = vehicle.get_light_state()
+    # #light_state variables are booleans
+    # return_dict['left_blinker_on'] = light_state.LeftBlinker
+    # return_dict['right_blinker_on'] = light_state.RightBlinker
+    # return_dict['brake_light_on'] = light_state.Brake
+    return return_dict
 
 # ==============================================================================
 # -- CollisionSensor -----------------------------------------------------------

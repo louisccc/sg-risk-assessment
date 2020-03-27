@@ -17,9 +17,9 @@ import sys
 import glob
 import os
 
-CARLA_API_PATH = r'C:\CARLA_0.9.8\PythonAPI' 
-CARLA_ROOT_PATH = r'C:\CARLA_0.9.8\PythonAPI\carla' 
-CARLA_DIST_PATH = r'C:\CARLA_0.9.8\PythonAPI\carla\dist'
+CARLA_API_PATH = r'C:\Users\louisccc\Downloads\CARLA_0.9.8\WindowsNoEditor\PythonAPI' 
+CARLA_ROOT_PATH = r'C:\Users\louisccc\Downloads\CARLA_0.9.8\WindowsNoEditor\PythonAPI\carla' 
+CARLA_DIST_PATH = r'C:\Users\louisccc\Downloads\CARLA_0.9.8\WindowsNoEditor\PythonAPI\carla\dist'
 
 try:
     sys.path.append(glob.glob('%s/carla-*%d.%d-%s.egg' % (

@@ -170,12 +170,13 @@ class GnssSensor(object):
 
 
 class CameraManager(object):
-    def __init__(self, parent_actor, gamma_correction, dimensions):
+    def __init__(self, parent_actor, gamma_correction, dimensions, storing_path):
         self.sensor = None
         self.surface = None
         self._parent = parent_actor
-        self.recording = True
+        self.recording = False
         self.dimensions = dimensions
+        self.storing_path = storing_path
         bound_y = 0.5 + self._parent.bounding_box.extent.y
         Attachment = carla.AttachmentType
         self._camera_transforms = [
@@ -269,10 +270,10 @@ class CameraManager(object):
         
         if self.recording:
             if self.index == 0:
-                image.save_to_disk('_out/raw_images/%08d' % image.frame)
+                image.save_to_disk('%s/raw_images/%08d' % (str(self.storing_path), image.frame))
             else:
-                image.save_to_disk('_out/ss_images/%08d' % image.frame)
-                #image.save_to_disk('_out/raw_images/%08d' % image.frame)
+                image.save_to_disk('%s/ss_images/%08d' % (str(self.storing_path), image.frame))
+
 
     def destroy(self):
         if self.sensor:

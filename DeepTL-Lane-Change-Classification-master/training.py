@@ -118,7 +118,7 @@ if __name__ == "__main__":
 	args=parser.parse_args()
 
 	if args.maskRCNN:
-		#preprocess()
+		preprocess()
 		data=load_masked_dataset()
 		train_cnn_to_lstm(data)
 

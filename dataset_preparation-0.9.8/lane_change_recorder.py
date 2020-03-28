@@ -49,6 +49,11 @@ class LaneChangeRecorder:
         self.sensors_dict["camera_manager_ss"] = sensors.CameraManager(self.ego, gamma, dimensions, root_path)
         self.sensors_dict["camera_manager_ss"].transform_index = cam_pos_index
         self.sensors_dict["camera_manager_ss"].set_sensor(cam_index+5, notify=False)
+
+    def destroy_sensors(self):
+        for _, sensor in self.sensors_dict.items():
+                sensor.destroy()
+        self.sensors_dict = {}
         
     def toggle_recording(self):
 
@@ -61,34 +66,50 @@ class LaneChangeRecorder:
     def tick(self, frame_num):
         self.tick_count += 1
 
-        if self.tick_count == 50:
+        if self.tick_count == 30:
             # choose random vehicle and prepare for recording
-            print("Attach sensors and start recording...")
+            print("Picking vehicle and attaching sensors...")
             self.ego = self.carla_world.get_actor(random.choice(self.vehicles_list))
-            self.carla_world.get_spectator().set_transform(self.ego.get_transform())
+            # self.carla_world.get_spectator().set_transform(self.ego.get_transform())
+
+            print("Attempting lane change...")
+            self.lane_change_dir = None
+            # check available lane changes
+            waypoint = self.map.get_waypoint(self.ego.get_location())
+            velocity = self.ego.get_velocity()
+            if (waypoint.lane_change == carla.LaneChange.NONE or (abs(velocity.x) <= 1.0 and abs(velocity.y) <= 1.0)):
+                print("Lane Change not available.")
+                self.tick_count = 0
+                return
+            elif (waypoint.lane_change == carla.LaneChange.Both):
+                print("Both")
+                self.lane_change_dir = random.choice([True, False])
+            elif (waypoint.lane_change == carla.LaneChange.Left):
+                print("Left")
+                self.lane_change_dir = True
+            else:
+                print("Right")
+                self.lane_change_dir = False
+
+            print("Start Recording...")
             new_path = "%s/%s" % (str(self.root_path), self.num_of_existing_datapoints + self.dir_index)
             self.extractor = DataExtractor(self.ego, new_path)
             self.attach_sensors(new_path)
             self.dir_index += 1
-
-        elif self.tick_count == 100:
-            print("Changing Lane...")
             self.toggle_recording()
             self.is_recording = True
-            print(self.ego.get_velocity())
-            self.traffic_manager.force_lane_change(self.ego, random.choice([True, False]))
+
+        elif self.tick_count == 50:
+            self.traffic_manager.force_lane_change(self.ego, self.lane_change_dir)
         
         elif self.tick_count >= 200:
             # stop recording and clean up sensors
             self.toggle_recording()
-            print("Cleaning up sensors...")
-            for _, sensor in self.sensors_dict.items():
-                sensor.destroy()
-            self.sensors_dict = {}
-            self.tick_count = 0
             self.is_recording = False
-
-
+            print("Cleaning up sensors...")
+            self.destroy_sensors()
+            self.tick_count = 0
+            
         if self.is_recording:
             self.extractor.extract_frame(self.carla_world, self.map, frame_num)
 

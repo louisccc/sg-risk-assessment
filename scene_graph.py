@@ -88,6 +88,7 @@ class SceneGraph:
     #add the contents of a whole framedict to the graph
     def add_frame_dict(self, framedict):
         for key, attrs in framedict.items():
+            import pdb; pdb.set_trace()
             if key == "ego":
                 egoNode = Node(key, attrs, True)
                 self.add_node(egoNode)
@@ -98,6 +99,7 @@ class SceneGraph:
                 self.add_sign_dict(attrs)
             else:
                 self.add_actor_dict(attrs)
+
             
     #calls RelationExtractor to build semantic relations between every pair of entity nodes in graph. call this function after all nodes have been added to graph.
     def extract_semantic_relations(self):

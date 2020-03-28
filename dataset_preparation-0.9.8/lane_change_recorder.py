@@ -163,7 +163,8 @@ class DataExtractor(object):
             
         lanes = left_lanes[::-1] + lanes + right_lanes
         
-        for name, lane in lanes:        
+        lanedict['left_lanes'] = []
+        for name, lane in left_lanes:
             single_lane_dict = {
                 'lane_id': lane.lane_id,
                 'lane_type': waypoint.lane_type, 
@@ -175,7 +176,38 @@ class DataExtractor(object):
                 'lane_change': waypoint.lane_change,
                 'is_junction': lane.is_junction,
             }
-            lanedict[name] = single_lane_dict
+            lanedict['left_lanes'].append(single_lane_dict)
+        
+        for name, lane in lanes:
+            single_lane_dict = {
+                'lane_id': lane.lane_id,
+                'lane_type': waypoint.lane_type, 
+                'lane_width': waypoint.lane_width, 
+                'right_lane_color': waypoint.right_lane_marking.color, 
+                'left_lane_color': waypoint.left_lane_marking.color,
+                'right_lane_marking_type': waypoint.right_lane_marking.type, 
+                'left_lane_marking_type': waypoint.left_lane_marking.type,
+                'lane_change': waypoint.lane_change,
+                'is_junction': lane.is_junction,
+            }
+            lanedict['ego_lane'] = single_lane_dict
+
+        lanedict['right_lanes'] = []
+        
+        for name, lane in right_lanes:        
+            single_lane_dict = {
+                'lane_id': lane.lane_id,
+                'lane_type': waypoint.lane_type, 
+                'lane_width': waypoint.lane_width, 
+                'right_lane_color': waypoint.right_lane_marking.color, 
+                'left_lane_color': waypoint.left_lane_marking.color,
+                'right_lane_marking_type': waypoint.right_lane_marking.type, 
+                'left_lane_marking_type': waypoint.left_lane_marking.type,
+                'lane_change': waypoint.lane_change,
+                'is_junction': lane.is_junction,
+            }
+            lanedict['right_lanes'].append(single_lane_dict)
+
         lanedict['road_id'] = waypoint.road_id
         egodict = get_vehicle_attributes(self.ego, waypoint)
         

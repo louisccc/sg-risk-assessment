@@ -139,7 +139,7 @@ class DataExtractor(object):
             if lane is None:
                 break 
             left_lanes.append(("lane", lane))
-            print("left", lane.lane_type, lane.lane_change, lane.lane_id)
+            # print("left", lane.lane_type, lane.lane_change, lane.lane_id)
             if lane.lane_type in [carla.LaneType.Shoulder, carla.LaneType.Sidewalk]:
                 break
             if left_lane.lane_id * lane.lane_id < 0: ## special handling.

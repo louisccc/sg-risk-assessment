@@ -69,12 +69,15 @@ class RelationExtractor:
 			
 		if "lane_type" in actor.attr.keys():
 			return ActorType.LANE
+		if actor.attr["name"] == "Traffic Light":
+			return ActorType.LIGHT
 		if actor.attr["name"].split(" ")[0] in CAR_NAMES:
 			return ActorType.CAR
 		if actor.attr["name"].split(" ")[0] in MOTO_NAMES:
 			return ActorType.MOTO
 		if actor.attr["name"].split(" ")[0] in BICYCLE_NAMES:
 			return ActorType.BICYCLE
+		print(actor.attr)
 		raise NameError("Actor name not found for actor with name: " + actor["name"])
 			
 	#takes in two entities and extracts all relations between those two entities. extracted relations are bidirectional    
@@ -225,6 +228,10 @@ class RelationExtractor:
 		return relation_list
 		
 	def extract_relations_lane_sign(self, actor1, actor2):
+		relation_list = []
+		return relation_list
+
+	def extract_relations_light_light(self, actor1, actor2):
 		relation_list = []
 		return relation_list
 

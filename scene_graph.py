@@ -66,8 +66,19 @@ class SceneGraph:
             
     #adds lanes and their dicts. constructs relation between each lane and the root road node.
     def add_lane_dict(self, lanedict):
-        for lane_id, laneattr in lanedict.items():
-            n = Node(lane_id, laneattr, False) #todo: change to true when lanedict entry is complete
+        
+        n = Node(str(lanedict['ego_lane']['lane_id']), lanedict['ego_lane'], False) #todo: change to true when lanedict entry is complete
+        self.add_node(n)
+        self.add_relation([n, Relations.partOf, self.road_node])
+
+        for lane in lanedict['left_lanes']:
+            # for lane_id, laneattr in lane.items():
+            n = Node(str(lane['lane_id']), lane, False) #todo: change to true when lanedict entry is complete
+            self.add_node(n)
+            self.add_relation([n, Relations.partOf, self.road_node])
+
+        for lane in lanedict['right_lanes']:
+            n = Node(str(lane['lane_id']), lane, False) #todo: change to true when lanedict entry is complete
             self.add_node(n)
             self.add_relation([n, Relations.partOf, self.road_node])
             
@@ -88,7 +99,7 @@ class SceneGraph:
     #add the contents of a whole framedict to the graph
     def add_frame_dict(self, framedict):
         for key, attrs in framedict.items():
-            import pdb; pdb.set_trace()
+            # import pdb; pdb.set_trace()
             if key == "ego":
                 egoNode = Node(key, attrs, True)
                 self.add_node(egoNode)

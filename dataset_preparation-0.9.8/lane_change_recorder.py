@@ -65,6 +65,7 @@ class LaneChangeRecorder:
             # choose random vehicle and prepare for recording
             print("Attach sensors and start recording...")
             self.ego = self.carla_world.get_actor(random.choice(self.vehicles_list))
+            self.carla_world.get_spectator().set_transform(self.ego.get_transform())
             new_path = "%s/%s" % (str(self.root_path), self.num_of_existing_datapoints + self.dir_index)
             self.extractor = DataExtractor(self.ego, new_path)
             self.attach_sensors(new_path)
@@ -95,11 +96,6 @@ class DataExtractor(object):
 
     def __init__(self, ego, store_path):
         
-        # self.world = world # This is carla world. 
-
-        # self.output_root_dir = output_root_dir
-        # self.output_dir = output_dir
-
         self.output_root_dir = Path(store_path).resolve()
         self.output_dir = (Path(store_path) / 'scene_raw').resolve()
 
@@ -130,21 +126,46 @@ class DataExtractor(object):
         lanedict = defaultdict()
 
         waypoint = map1.get_waypoint(ego_location, project_to_road=True, lane_type=(carla.LaneType.Driving | carla.LaneType.Shoulder | carla.LaneType.Sidewalk))
-        lanes = [("ego_lane", waypoint), 
-                 # ("left_lane", waypoint.get_left_lane()), 
-                 # ("right_lane", waypoint.get_right_lane()), 
+
+        lanes = [("ego_lane", waypoint),
                  # ("next_waypoint", waypoint.next(10))
                  ]  #selecting a default 10 feet ahead for the next waypoint
-
-        for name, lane in lanes:
-            # print(name, lane) 
-            l_3d = waypoint.transform.location
-            r_3d = waypoint.transform.rotation
+        left_lanes = []
+        right_lanes = [] 
+        
+        left_lane = waypoint 
+        while True: 
+            lane = left_lane.get_left_lane()
+            if lane is None:
+                break 
+            left_lanes.append(("lane", lane))
+            print("left", lane.lane_type, lane.lane_change, lane.lane_id)
+            if lane.lane_type in [carla.LaneType.Shoulder, carla.LaneType.Sidewalk]:
+                break
+            if left_lane.lane_id * lane.lane_id < 0: ## special handling.
+                break
+            left_lane = lane
             
+        right_lane = waypoint
+        while True:
+            lane = right_lane.get_right_lane()
+            if lane is None:
+                break
+            right_lanes.append(("lane", lane))
+            # print("right", lane.lane_type, lane.lane_change, lane.lane_id)
+
+
+            if lane.lane_type in [carla.LaneType.Shoulder, carla.LaneType.Sidewalk]:
+                break
+            if right_lane.lane_id * lane.lane_id < 0:
+                break
+            right_lane = lane
+            
+        lanes = left_lanes[::-1] + lanes + right_lanes
+        
+        for name, lane in lanes:        
             single_lane_dict = {
                 'lane_id': lane.lane_id,
-                'location': [int(l_3d.x), int(l_3d.y), int(l_3d.z)],
-                'rotation': [int(r_3d.yaw), int(r_3d.roll), int(r_3d.pitch)],
                 'lane_type': waypoint.lane_type, 
                 'lane_width': waypoint.lane_width, 
                 'right_lane_color': waypoint.right_lane_marking.color, 
@@ -152,12 +173,10 @@ class DataExtractor(object):
                 'right_lane_marking_type': waypoint.right_lane_marking.type, 
                 'left_lane_marking_type': waypoint.left_lane_marking.type,
                 'lane_change': waypoint.lane_change,
-                # 'left_lane_id': lane.get_left_lane().lane_id,
-                # 'right_lane_id': lane.get_right_lane().lane_id,
                 'is_junction': lane.is_junction,
             }
             lanedict[name] = single_lane_dict
-        
+        lanedict['road_id'] = waypoint.road_id
         egodict = get_vehicle_attributes(self.ego, waypoint)
         
         #export data from surrounding vehicles

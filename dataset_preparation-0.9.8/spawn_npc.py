@@ -106,8 +106,10 @@ def main():
     sensors_dict = dict()
     all_id = []
     client = carla.Client(args.host, args.port)
-    client.set_timeout(10.0)
+    client.set_timeout(20.0)
 
+    world = client.load_world('Town04')
+    
     try:
 
         traffic_manager = client.get_trafficmanager(args.tm_port)
@@ -266,12 +268,21 @@ def main():
         lanechangerecorder.set_vehicles_list(vehicles_list)
 
         while True:
+
+            timestamp = None
+
             if args.sync and synchronous_master:
                 world.tick()
             else:
                 world.wait_for_tick()
 
-            lanechangerecorder.tick()    
+            if world: 
+                snapshot = world.get_snapshot()
+                if snapshot:
+                    timestamp = snapshot.timestamp
+
+            lanechangerecorder.tick(timestamp.frame)
+
     
     finally:
 

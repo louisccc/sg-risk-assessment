@@ -5,8 +5,10 @@ import matplotlib.animation as animation
 from relation_extractor import Relations, RelationExtractor
 import pdb, json, random
 from pathlib import Path
-
+from glob import glob
 #basic class for abstracting a node in the scene graph. this is mainly used for holding the data for each node.
+
+
 class Node:
     def __init__(self, name, attr, is_entity=False):
         self.name = name
@@ -115,13 +117,14 @@ class SceneGraphExtractor:
         self.fig.canvas.set_window_title("Scene Graph Visualization")
 
     def load(self, path):
-        with open(path, 'r') as f:
-            framedict = json.loads(f.read())
-            for frame, frame_dict in framedict.items():
-                scenegraph = SceneGraph()
-                scenegraph.add_frame_dict(frame_dict)
-                scenegraph.extract_semantic_relations()
-                self.scenegraphs[frame] = scenegraph
+        for txt_path in glob("%s/**/*.txt" % str(path), recursive=True):
+            with open(txt_path, 'r') as f:
+                framedict = json.loads(f.read())
+                for frame, frame_dict in framedict.items():
+                    scenegraph = SceneGraph()
+                    scenegraph.add_frame_dict(frame_dict)
+                    scenegraph.extract_semantic_relations()
+                    self.scenegraphs[frame] = scenegraph
 
     def build_corresponding_images(self, path):
         for frame, scenegraph in self.scenegraphs.items():
@@ -164,9 +167,9 @@ class SceneGraphExtractor:
 if __name__ == '__main__':
     # sg = SceneGraph()
     # re = RelationExtractor()
-    txt_path = r".\input\_out\data\217071-217217.txt"
-    img_path = r".\input\_out\raw_images"
-    store_path = Path(r'.\input\_out\scenes')
+    txt_path = r".\input\lane-change-9.8\scene_raw"
+    img_path = r".\input\lane-change-9.8\raw_images"
+    store_path = Path(r'.\input\lane-change-9.8\scenes')
     store_path.mkdir(parents=True, exist_ok=True)
     
     sge = SceneGraphExtractor()

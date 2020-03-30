@@ -70,14 +70,16 @@ class LaneChangeRecorder:
             # choose random vehicle and prepare for recording
             print("Picking vehicle and attaching sensors...")
             self.ego = self.carla_world.get_actor(random.choice(self.vehicles_list))
-            # self.carla_world.get_spectator().set_transform(self.ego.get_transform())
+            self.carla_world.get_spectator().set_transform(self.ego.get_transform())
 
             print("Attempting lane change...")
             self.lane_change_dir = None
             # check available lane changes
             waypoint = self.map.get_waypoint(self.ego.get_location())
             velocity = self.ego.get_velocity()
-            if (waypoint.lane_change == carla.LaneChange.NONE or (abs(velocity.x) <= 1.0 and abs(velocity.y) <= 1.0)):
+            if ( waypoint.lane_change == carla.LaneChange.NONE or 
+                (abs(velocity.x) <= 1.0 and abs(velocity.y) <= 1.0) or
+                self.ego.is_at_traffic_light() ):
                 print("Lane Change not available.")
                 self.tick_count = 0
                 return
@@ -99,6 +101,9 @@ class LaneChangeRecorder:
             self.toggle_recording()
             self.is_recording = True
 
+            self.traffic_manager.ignore_vehicles_percentage(self.ego, 100)
+            self.traffic_manager.ignore_walkers_percentage(self.ego, 100)
+
         elif self.tick_count == 50:
             self.traffic_manager.force_lane_change(self.ego, self.lane_change_dir)
         
@@ -108,6 +113,9 @@ class LaneChangeRecorder:
             self.is_recording = False
             print("Cleaning up sensors...")
             self.destroy_sensors()
+
+            self.traffic_manager.ignore_vehicles_percentage(self.ego, 0)
+            self.traffic_manager.ignore_walkers_percentage(self.ego, 0)
             self.tick_count = 0
             
         if self.is_recording:

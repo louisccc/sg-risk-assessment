@@ -259,8 +259,8 @@ def main():
         traffic_manager.global_percentage_speed_difference(30.0)
 
         # disable auto lane change
-        for v in vehicles_list:
-            traffic_manager.auto_lane_change(world.get_actor(v), False)
+        # for v in vehicles_list:
+        #     traffic_manager.auto_lane_change(world.get_actor(v), False)
 
         # if you want to trigger the recorder, run this file in synchronous mode
         lanechangerecorder = LaneChangeRecorder(traffic_manager, world)

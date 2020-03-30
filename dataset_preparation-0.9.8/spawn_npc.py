@@ -263,7 +263,7 @@ def main():
         #     traffic_manager.auto_lane_change(world.get_actor(v), False)
 
         # if you want to trigger the recorder, run this file in synchronous mode
-        lanechangerecorder = LaneChangeRecorder(traffic_manager, world)
+        lanechangerecorder = LaneChangeRecorder(traffic_manager, world, client)
         lanechangerecorder.set_vehicles_list(vehicles_list)
 
         while True:

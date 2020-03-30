@@ -7,10 +7,12 @@ from collections import defaultdict
 import carla
 
 from sensors import get_actor_attributes, get_vehicle_attributes
+from agents.navigation.basic_agent import BasicAgent 
+from agents.navigation.local_planner import RoadOption
 
 class LaneChangeRecorder:
 
-    def __init__(self, traffic_manager, carla_world):
+    def __init__(self, traffic_manager, carla_world, client):
         # It has Idle, 
         self.state = "Idle"
         self.tick_count = 0
@@ -26,6 +28,10 @@ class LaneChangeRecorder:
         self.dir_index = 0
 
         self.is_recording = False
+        self.lane_changing= False
+
+        self.agent = None
+        self.client = client
        
     def set_vehicles_list(self, vehicles_list):
         self.vehicles_list = vehicles_list
@@ -52,11 +58,10 @@ class LaneChangeRecorder:
 
     def destroy_sensors(self):
         for _, sensor in self.sensors_dict.items():
-                sensor.destroy()
+            sensor.destroy()
         self.sensors_dict = {}
         
     def toggle_recording(self):
-
         if 'camera_manager' in self.sensors_dict:
             self.sensors_dict["camera_manager"].toggle_recording()
 
@@ -65,7 +70,8 @@ class LaneChangeRecorder:
 
     def tick(self, frame_num):
         self.tick_count += 1
-
+        abs_velocity = lambda l: (3.6 * math.sqrt(l.x**2 + l.y**2 + l.z**2))
+        
         if self.tick_count == 30:
             # choose random vehicle and prepare for recording
             print("Picking vehicle and attaching sensors...")
@@ -73,10 +79,13 @@ class LaneChangeRecorder:
             self.carla_world.get_spectator().set_transform(self.ego.get_transform())
 
             print("Attempting lane change...")
-            self.lane_change_dir = None
+            self.lane_change_direction = None
+            
             # check available lane changes
             waypoint = self.map.get_waypoint(self.ego.get_location())
             velocity = self.ego.get_velocity()
+            scalar_velocity = int(abs_velocity(velocity))
+
             if ( waypoint.lane_change == carla.LaneChange.NONE or 
                 (abs(velocity.x) <= 1.0 and abs(velocity.y) <= 1.0) or
                 self.ego.is_at_traffic_light() ):
@@ -85,41 +94,67 @@ class LaneChangeRecorder:
                 return
             elif (waypoint.lane_change == carla.LaneChange.Both):
                 print("Both")
-                self.lane_change_dir = random.choice([True, False])
+                self.lane_change_direction = random.choice([True, False])
             elif (waypoint.lane_change == carla.LaneChange.Left):
                 print("Left")
-                self.lane_change_dir = True
+                self.lane_change_direction = True
             else:
                 print("Right")
-                self.lane_change_dir = False
+                self.lane_change_direction = False
 
-            print("Start Recording...")
+            print("Start Lane Changing and Recording...")
+            self.is_recording = True
+            self.lane_changing= True 
+
             new_path = "%s/%s" % (str(self.root_path), self.num_of_existing_datapoints + self.dir_index)
             self.extractor = DataExtractor(self.ego, new_path)
             self.attach_sensors(new_path)
             self.dir_index += 1
             self.toggle_recording()
-            self.is_recording = True
 
-            self.traffic_manager.ignore_vehicles_percentage(self.ego, 100)
-            self.traffic_manager.ignore_walkers_percentage(self.ego, 100)
+            ## setting 
+            if self.lane_change_direction: # left lane change
+                wp_left = waypoint.get_left_lane()
+                next_wp = wp_left.next(scalar_velocity)[0]
+            else:
+                wp_right = waypoint.get_right_lane()
+                next_wp = wp_right.next(scalar_velocity)[0]
 
-        elif self.tick_count == 50:
-            self.traffic_manager.force_lane_change(self.ego, self.lane_change_dir)
-        
-        elif self.tick_count >= 200:
-            # stop recording and clean up sensors
-            self.toggle_recording()
-            self.is_recording = False
-            print("Cleaning up sensors...")
-            self.destroy_sensors()
-
-            self.traffic_manager.ignore_vehicles_percentage(self.ego, 0)
-            self.traffic_manager.ignore_walkers_percentage(self.ego, 0)
-            self.tick_count = 0
+            self.client.apply_batch_sync([carla.command.SetAutopilot(self.ego, False)], True)
+            if self.agent: ## avoid the vehicle being destroyed.
+                self.agent._local_planner.reset_vehicle() 
+            self.agent = BasicAgent(self.ego, target_speed=scalar_velocity)
+            self.agent.set_destination((next_wp.transform.location.x, next_wp.transform.location.y, next_wp.transform.location.z))
+              
             
         if self.is_recording:
             self.extractor.extract_frame(self.carla_world, self.map, frame_num)
+            waypoint = self.map.get_waypoint(self.ego.get_location())
+            velocity = self.ego.get_velocity()
+            scalar_velocity = int(abs_velocity(velocity))
+            print(scalar_velocity, waypoint.is_junction, waypoint.lane_type, waypoint.lane_change)
+
+            if self.lane_changing:
+                if self.agent.done():
+                    next_wp = self.map.get_waypoint(self.ego.get_location()).next(scalar_velocity)[0]
+                    self.agent.set_destination((next_wp.transform.location.x, next_wp.transform.location.y, next_wp.transform.location.z))
+                    self.lane_changing = False
+            else:
+                if self.agent.done():
+                    print('set set_autopilot back to true')
+                    self.client.apply_batch_sync([carla.command.SetAutopilot(self.ego, True)], True)
+                    self.toggle_recording()
+                    self.is_recording = False
+                    print("Cleaning up sensors...")
+                    self.destroy_sensors()
+
+                    self.tick_count = 0
+
+        if self.agent:
+            control = self.agent.run_step(debug=True)
+            control.manual_gear_shift = False
+            self.ego.apply_control(control)
+
 
 class DataExtractor(object):
 
@@ -270,4 +305,3 @@ class DataExtractor(object):
             with open(self.output_dir / (str(list(self.framedict.keys())[0]) + '-' + str(list(self.framedict.keys())[len(self.framedict)-1])+'.txt'), 'w') as file:
                 file.write(json.dumps(self.framedict))
             self.framedict.clear()
-        

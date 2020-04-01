@@ -47,6 +47,10 @@ import random
 
 from lane_change_recorder import *
 
+SRUNNER_PATH = r'.\scenario_runner'
+sys.path.append(SRUNNER_PATH)
+from srunner.scenariomanager.carla_data_provider import CarlaDataProvider
+
 def main():
     argparser = argparse.ArgumentParser(
         description=__doc__)
@@ -108,6 +112,7 @@ def main():
     client.set_timeout(20.0)
 
     world = client.load_world('Town04')
+    CarlaDataProvider.set_world(world)
     
     try:
 

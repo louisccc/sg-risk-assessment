@@ -1,5 +1,6 @@
 import random
 import sensors
+import sys
 from pathlib import Path
 
 import os, math, json
@@ -9,6 +10,10 @@ import carla
 from sensors import get_actor_attributes, get_vehicle_attributes
 from agents.navigation.basic_agent import BasicAgent 
 from agents.navigation.local_planner import RoadOption
+
+from srunner.scenariomanager.scenarioatomics.atomic_behaviors import LaneChange
+
+import py_trees
 
 class LaneChangeRecorder:
 
@@ -114,19 +119,33 @@ class LaneChangeRecorder:
 
             ## setting 
             if self.lane_change_direction: # left lane change
-                wp_left = waypoint.get_left_lane()
-                next_wp = wp_left.next(scalar_velocity)[0]
+                # wp_left = waypoint.get_left_lane()
+                # next_wp = wp_left.next(25)[0]
+                self.lane_change_controller = LaneChange(self.ego, direction='left')
             else:
-                wp_right = waypoint.get_right_lane()
-                next_wp = wp_right.next(scalar_velocity)[0]
+                # wp_right = waypoint.get_right_lane()
+                # next_wp = wp_right.next(25)[0]
+                self.lane_change_controller = LaneChange(self.ego, direction='right')
+            self.lane_change_controller.initialise()
 
             self.client.apply_batch_sync([carla.command.SetAutopilot(self.ego, False)], True)
-            if self.agent: ## avoid the vehicle being destroyed.
-                self.agent._local_planner.reset_vehicle() 
-            self.agent = BasicAgent(self.ego, target_speed=scalar_velocity)
-            self.agent.set_destination((next_wp.transform.location.x, next_wp.transform.location.y, next_wp.transform.location.z))
+            # if self.agent: ## avoid the vehicle being destroyed.
+            #     self.agent._local_planner.reset_vehicle() 
+            # self.agent = BasicAgent(self.ego, target_speed=scalar_velocity)
+            # self.agent.set_destination((next_wp.transform.location.x, next_wp.transform.location.y, next_wp.transform.location.z))
               
-            
+        if self.lane_changing:
+            success = self.lane_change_controller.update()
+            if success == py_trees.common.Status.SUCCESS:
+                self.lane_changing = False
+                print('set set_autopilot back to true')
+                self.client.apply_batch_sync([carla.command.SetAutopilot(self.ego, True)], True)
+                self.toggle_recording()
+                self.is_recording = False
+                print("Cleaning up sensors...")
+                self.destroy_sensors()
+                self.tick_count = 0
+
         if self.is_recording:
             self.extractor.extract_frame(self.carla_world, self.map, frame_num)
             waypoint = self.map.get_waypoint(self.ego.get_location())
@@ -134,26 +153,26 @@ class LaneChangeRecorder:
             scalar_velocity = int(abs_velocity(velocity))
             print(scalar_velocity, waypoint.is_junction, waypoint.lane_type, waypoint.lane_change)
 
-            if self.lane_changing:
-                if self.agent.done():
-                    next_wp = self.map.get_waypoint(self.ego.get_location()).next(scalar_velocity)[0]
-                    self.agent.set_destination((next_wp.transform.location.x, next_wp.transform.location.y, next_wp.transform.location.z))
-                    self.lane_changing = False
-            else:
-                if self.agent.done():
-                    print('set set_autopilot back to true')
-                    self.client.apply_batch_sync([carla.command.SetAutopilot(self.ego, True)], True)
-                    self.toggle_recording()
-                    self.is_recording = False
-                    print("Cleaning up sensors...")
-                    self.destroy_sensors()
+            # if self.lane_changing:
+            #     if self.agent.done():
+            #         next_wp = self.map.get_waypoint(self.ego.get_location()).next(scalar_velocity)[0]
+            #         self.agent.set_destination((next_wp.transform.location.x, next_wp.transform.location.y, next_wp.transform.location.z))
+            #         self.lane_changing = False
+            # else:
+            #     if self.agent.done():
+            #         print('set set_autopilot back to true')
+            #         self.client.apply_batch_sync([carla.command.SetAutopilot(self.ego, True)], True)
+            #         self.toggle_recording()
+            #         self.is_recording = False
+            #         print("Cleaning up sensors...")
+            #         self.destroy_sensors()
 
-                    self.tick_count = 0
+            #         self.tick_count = 0
 
-        if self.agent:
-            control = self.agent.run_step(debug=True)
-            control.manual_gear_shift = False
-            self.ego.apply_control(control)
+        # if self.agent:
+        #     control = self.agent.run_step(debug=True)
+        #     control.manual_gear_shift = False
+        #     self.ego.apply_control(control)
 
 
 class DataExtractor(object):

@@ -47,8 +47,6 @@ import random
 
 from lane_change_recorder import *
 
-SRUNNER_PATH = r'.\scenario_runner'
-sys.path.append(SRUNNER_PATH)
 from srunner.scenariomanager.carla_data_provider import CarlaDataProvider
 
 def main():

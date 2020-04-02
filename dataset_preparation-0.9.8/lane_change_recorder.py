@@ -11,6 +11,8 @@ from sensors import get_actor_attributes, get_vehicle_attributes
 from agents.navigation.basic_agent import BasicAgent 
 from agents.navigation.local_planner import RoadOption
 
+SRUNNER_PATH = r'./scenario_runner'
+sys.path.append(SRUNNER_PATH)
 from srunner.scenariomanager.scenarioatomics.atomic_behaviors import LaneChange
 
 import py_trees
@@ -32,10 +34,9 @@ class LaneChangeRecorder:
         self.num_of_existing_datapoints = len(list(self.root_path.glob('*')))
         self.dir_index = 0
 
-        self.is_recording = False
+        # This indicates the state of ego's lane change behavior
         self.lane_changing= False
 
-        self.agent = None
         self.client = client
        
     def set_vehicles_list(self, vehicles_list):
@@ -51,9 +52,6 @@ class LaneChangeRecorder:
         dimensions = [640, 360]
         gamma = 2.2
 
-        # self.sensors_dict["collision_sensor"] = sensors.CollisionSensor(self.ego)
-        # self.sensors_dict["lane_invasion_sensor"] = sensors.LaneInvasionSensor(self.ego)
-        # self.sensors_dict["gnss_sensor"] = sensors.GnssSensor(self.ego)
         self.sensors_dict["camera_manager"] = sensors.CameraManager(self.ego, gamma, dimensions, root_path)
         self.sensors_dict["camera_manager"].transform_index = cam_pos_index
         self.sensors_dict["camera_manager"].set_sensor(cam_index, notify=False)
@@ -75,9 +73,8 @@ class LaneChangeRecorder:
 
     def tick(self, frame_num):
         self.tick_count += 1
-        abs_velocity = lambda l: (3.6 * math.sqrt(l.x**2 + l.y**2 + l.z**2))
         
-        if self.tick_count == 30:
+        if self.tick_count == 100:
             # choose random vehicle and prepare for recording
             print("Picking vehicle and attaching sensors...")
             self.ego = self.carla_world.get_actor(random.choice(self.vehicles_list))
@@ -89,26 +86,23 @@ class LaneChangeRecorder:
             # check available lane changes
             waypoint = self.map.get_waypoint(self.ego.get_location())
             velocity = self.ego.get_velocity()
-            scalar_velocity = int(abs_velocity(velocity))
 
             if ( waypoint.lane_change == carla.LaneChange.NONE or 
-                (abs(velocity.x) <= 1.0 and abs(velocity.y) <= 1.0) or
-                self.ego.is_at_traffic_light() ):
+                (abs(velocity.x) <= 1.0 and abs(velocity.y) <= 1.0) ):
                 print("Lane Change not available.")
                 self.tick_count = 0
                 return
             elif (waypoint.lane_change == carla.LaneChange.Both):
                 print("Both")
-                self.lane_change_direction = random.choice([True, False])
+                self.lane_change_direction = random.choice(['left', 'right'])
             elif (waypoint.lane_change == carla.LaneChange.Left):
                 print("Left")
-                self.lane_change_direction = True
+                self.lane_change_direction = 'left'
             else:
                 print("Right")
-                self.lane_change_direction = False
+                self.lane_change_direction = 'right'
 
             print("Start Lane Changing and Recording...")
-            self.is_recording = True
             self.lane_changing= True 
 
             new_path = "%s/%s" % (str(self.root_path), self.num_of_existing_datapoints + self.dir_index)
@@ -118,62 +112,22 @@ class LaneChangeRecorder:
             self.toggle_recording()
 
             ## setting 
-            if self.lane_change_direction: # left lane change
-                # wp_left = waypoint.get_left_lane()
-                # next_wp = wp_left.next(25)[0]
-                self.lane_change_controller = LaneChange(self.ego, direction='left')
-            else:
-                # wp_right = waypoint.get_right_lane()
-                # next_wp = wp_right.next(25)[0]
-                self.lane_change_controller = LaneChange(self.ego, direction='right')
+            self.lane_change_controller = LaneChange(self.ego, direction=self.lane_change_direction)
             self.lane_change_controller.initialise()
 
             self.client.apply_batch_sync([carla.command.SetAutopilot(self.ego, False)], True)
-            # if self.agent: ## avoid the vehicle being destroyed.
-            #     self.agent._local_planner.reset_vehicle() 
-            # self.agent = BasicAgent(self.ego, target_speed=scalar_velocity)
-            # self.agent.set_destination((next_wp.transform.location.x, next_wp.transform.location.y, next_wp.transform.location.z))
               
         if self.lane_changing:
+            self.extractor.extract_frame(self.carla_world, self.map, frame_num)
             success = self.lane_change_controller.update()
             if success == py_trees.common.Status.SUCCESS:
                 self.lane_changing = False
                 print('set set_autopilot back to true')
                 self.client.apply_batch_sync([carla.command.SetAutopilot(self.ego, True)], True)
                 self.toggle_recording()
-                self.is_recording = False
                 print("Cleaning up sensors...")
                 self.destroy_sensors()
                 self.tick_count = 0
-
-        if self.is_recording:
-            self.extractor.extract_frame(self.carla_world, self.map, frame_num)
-            waypoint = self.map.get_waypoint(self.ego.get_location())
-            velocity = self.ego.get_velocity()
-            scalar_velocity = int(abs_velocity(velocity))
-            print(scalar_velocity, waypoint.is_junction, waypoint.lane_type, waypoint.lane_change)
-
-            # if self.lane_changing:
-            #     if self.agent.done():
-            #         next_wp = self.map.get_waypoint(self.ego.get_location()).next(scalar_velocity)[0]
-            #         self.agent.set_destination((next_wp.transform.location.x, next_wp.transform.location.y, next_wp.transform.location.z))
-            #         self.lane_changing = False
-            # else:
-            #     if self.agent.done():
-            #         print('set set_autopilot back to true')
-            #         self.client.apply_batch_sync([carla.command.SetAutopilot(self.ego, True)], True)
-            #         self.toggle_recording()
-            #         self.is_recording = False
-            #         print("Cleaning up sensors...")
-            #         self.destroy_sensors()
-
-            #         self.tick_count = 0
-
-        # if self.agent:
-        #     control = self.agent.run_step(debug=True)
-        #     control.manual_gear_shift = False
-        #     self.ego.apply_control(control)
-
 
 class DataExtractor(object):
 

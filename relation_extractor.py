@@ -32,6 +32,8 @@ from enum import Enum
 from collections import defaultdict
 import pdb
 import math
+import scene_graph
+import json
 
 MOTO_NAMES = ["Harley-Davidson", "Kawasaki", "Yamaha"]
 BICYCLE_NAMES = ["Gazelle", "Diamondback", "Bh"]
@@ -261,11 +263,11 @@ class RelationExtractor:
     
     
 if __name__ == "__main__":
-    #demo code
-    d1 = defaultdict()
-    d2 = defaultdict()
-    d1['name'] = "Ford Mustang"
-    d2['name'] = "Kawasaki Ninja"
-    r = RelationExtractor()
-    l = r.extract_relations(d1,d2)
-    print(l)
+    txt_path = r".\input\lane-change-9.8\scene_raw\1503183-1503184.txt"
+    with open(txt_path, 'rb') as f:
+        framedict = json.loads(f.read())
+    for frame, frame_dict in framedict.items():
+        sg = scene_graph.SceneGraph(frame_dict)
+        pdb.set_trace()
+    #r = RelationExtractor()
+    #print(l)

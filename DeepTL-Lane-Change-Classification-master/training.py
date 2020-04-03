@@ -42,7 +42,7 @@ def load_dataset(backbone_model):
 
 	data = DataSet()
 	data.model = backbone_model
-	data.extract_features(image_path, option='fixed frame amount', number_of_frames=50)
+	data.extract_features(image_path, option='fixed frame amount', number_of_frames=157)
 	data.read_risk_data("data/LCTable.csv")
 	data.convert_risk_to_one_hot(risk_threshold=0.5)
 

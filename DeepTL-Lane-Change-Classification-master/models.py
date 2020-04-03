@@ -102,6 +102,7 @@ class Models:
                                save_option=0, save_path='results/test1.png', epoch_resolution=100, verbose=2):
 
         nb_samples = Data.shape[0]
+        #import pdb; pdb.set_trace()
         rand_indexes = list(range(0, nb_samples))
         # get the initial random model weights
         w_save = self.model.get_weights()

@@ -75,9 +75,9 @@ class DataSet:
    
         # fixed frame amount if specified to use only first n clips 
         if option == 'fixed frame amount':
-            self.video_features = np.zeros([max(int_foldernames), number_of_frames, feature_size])
+            self.video_features = np.zeros([max(int_foldernames)+1, number_of_frames, feature_size])
         elif option == 'all frames':
-            self.video_features = np.zeros([max(int_foldernames), max_number_of_frames, feature_size])
+            self.video_features = np.zeros([max(int_foldernames)+1, max_number_of_frames, feature_size])
             # shape: (n_vidoes, n_frames, im_height, im_width, channel)
         #shape of video_features is # of videos, # of frames, feature size
 
@@ -86,12 +86,12 @@ class DataSet:
         # image_seq has the features of the images
         for foldername in tqdm(foldernames):
             if foldername.isnumeric:
-                self.image_seq = self.load_images_for_keras(img_path + "/" + foldername)
+                self.image_seq = self.load_images_for_keras(img_path + "/" + foldername + "/raw_images")
                 if not len(self.image_seq) == 0:
                     if option == 'fixed frame amount':
-                        self.video_features[int(foldername)-1, :, :] = self._read_video_helper(number_of_frames=number_of_frames)
+                        self.video_features[int(foldername), :, :] = self._read_video_helper(number_of_frames=number_of_frames)
                     elif option == 'all frames':
-                        self.video_features[int(foldername)-1, 0:len(self.image_seq), :] = self.image_seq
+                        self.video_features[int(foldername), 0:len(self.image_seq), :] = self.image_seq
 
     def read_features(self, feature_path, feature_size=2048, option='fixed frame amount', number_of_frames=20,
                       max_number_of_frames=500):

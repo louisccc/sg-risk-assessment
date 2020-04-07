@@ -6,7 +6,9 @@ Copyright (c) 2017 Matterport, Inc.
 Licensed under the MIT License (see LICENSE for details)
 Written by Waleed Abdulla
 """
-
+from PIL import Image, ImageEnhance
+from skimage import exposure
+from skimage.viewer import ImageViewer
 import random
 import itertools
 import colorsys
@@ -106,6 +108,10 @@ def display_instances(image, boxes, masks, class_ids, class_names,
     ax.set_title(title)
 
     masked_image = image.astype(np.uint32).copy()
+    # view = ImageViewer(masked_image)
+    # view.show()
+    # import pdb; pdb.set_trace()
+
     for i in range(N):
         print(class_ids[i])
         if class_ids[i] == 3: # 3 is car
@@ -145,6 +151,10 @@ def display_instances(image, boxes, masks, class_ids, class_names,
         mask = masks[:, :, i]
         masked_image = apply_mask(masked_image, mask, color)
 
+        # view = ImageViewer(masked_image)
+        # view.show()
+        # import pdb; pdb.set_trace()
+
         # Mask Polygon
         # Pad to ensure proper polygons for masks that touch image edges.
         padded_mask = np.zeros(
@@ -156,6 +166,7 @@ def display_instances(image, boxes, masks, class_ids, class_names,
             verts = np.fliplr(verts) - 1
             p = Polygon(verts, facecolor="none", edgecolor=color)
             ax.add_patch(p)
+
     if save_option == 1:
         plt.imsave(save_path, masked_image.astype(np.uint8))
     elif save_option == 0:

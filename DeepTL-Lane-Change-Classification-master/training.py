@@ -42,7 +42,7 @@ def load_dataset(backbone_model):
 
 	data = DataSet()
 	data.model = backbone_model
-	data.extract_features(image_path, option='fixed frame amount', number_of_frames=157)
+	data.extract_features(image_path, option='fixed frame amount', number_of_frames=87)
 	data.read_risk_data("data/LCTable.csv")
 	data.convert_risk_to_one_hot(risk_threshold=0.5)
 
@@ -58,7 +58,7 @@ def load_masked_dataset():
 	masked_image_path =os.path.join(dir_name, 'data/masked_images/')
 
 	data = DataSet()
-	data.read_video(masked_image_path, option='fixed frame amount', number_of_frames=50, scaling='scale', scale_x=0.1, scale_y=0.1)
+	data.read_video(masked_image_path, option='fixed frame amount', number_of_frames=5, scaling='scale', scale_x=0.1, scale_y=0.1)
 	data.read_risk_data("data/LCTable.csv")
 	data.convert_risk_to_one_hot(risk_threshold=0.5)
 
@@ -118,7 +118,7 @@ if __name__ == "__main__":
 	args=parser.parse_args()
 
 	if args.maskRCNN:
-		preprocess()
+		#preprocess()
 		data=load_masked_dataset()
 		train_cnn_to_lstm(data)
 

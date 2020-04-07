@@ -128,7 +128,8 @@ class Models:
             c1 = round(y_train[y_train[:, 1] == 0, :].shape[0] / y_train.shape[0], 2)
             c2 = 1 - c1
             self.class_weights = {0: c2, 1: c1}
-
+            print (X_train,y_train)
+            print(X_test,y_test)
             self.train_model(X_train, y_train, X_test, y_test, print_option=print_option, verbose=verbose)
 
             if plot_option == 1:

@@ -1,6 +1,8 @@
 import os
 import sys
 import skimage.io
+import skimage.color
+from skimage.viewer import ImageViewer
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -63,16 +65,21 @@ class DetectObjects:
         for foldername in foldernames:
             print(foldername)
             if 1:
-                CURRENT_IMAGE_DIR = IMAGE_DIR + foldername + '/'
+                CURRENT_IMAGE_DIR = IMAGE_DIR + foldername + '/raw_images/'
                 CURRENT_OUTPUT_DIR = OUTPUT_DIR + foldername + '/'
                 if not os.path.isdir(CURRENT_OUTPUT_DIR):
                     os.mkdir(CURRENT_OUTPUT_DIR)
                 filenames = sorted(os.listdir(CURRENT_IMAGE_DIR))
                 for filename in filenames:
-                    print(filename)
                     if not filename.startswith('.'):
-                        img = skimage.io.imread(CURRENT_IMAGE_DIR + filename)
+                        img_rgba = skimage.io.imread(CURRENT_IMAGE_DIR + filename)
+                        img = skimage.color.rgba2rgb(img_rgba)
+                        img=img*255
+                        # view = ImageViewer(img)
+                        # view.show()
+                        # import pdb; pdb.set_trace()
                         results = model.detect([img], verbose=1)
+                        # import pdb; pdb.set_trace()
                         # Visualize results
                         r = results[0]
                         r['masks'], r['rois'], r['class_ids'], r['scores'] = self.filter_masks(r['masks'], r['rois'], r['class_ids'], r['scores'])

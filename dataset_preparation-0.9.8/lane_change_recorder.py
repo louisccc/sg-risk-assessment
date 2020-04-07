@@ -164,9 +164,7 @@ class DataExtractor(object):
 
         waypoint = map1.get_waypoint(ego_location, project_to_road=True, lane_type=(carla.LaneType.Driving | carla.LaneType.Shoulder | carla.LaneType.Sidewalk))
 
-        lanes = [("ego_lane", waypoint),
-                 # ("next_waypoint", waypoint.next(10))
-                 ]  #selecting a default 10 feet ahead for the next waypoint
+        ego_lane = waypoint
         left_lanes = []
         right_lanes = [] 
         
@@ -191,56 +189,51 @@ class DataExtractor(object):
             right_lanes.append(("lane", lane))
             # print("right", lane.lane_type, lane.lane_change, lane.lane_id)
 
-
             if lane.lane_type in [carla.LaneType.Shoulder, carla.LaneType.Sidewalk]:
                 break
             if right_lane.lane_id * lane.lane_id < 0:
                 break
             right_lane = lane
-            
-        lanes = left_lanes[::-1] + lanes + right_lanes
-        
+                    
         lanedict['left_lanes'] = []
         for name, lane in left_lanes:
             single_lane_dict = {
                 'lane_id': lane.lane_id,
-                'lane_type': waypoint.lane_type, 
-                'lane_width': waypoint.lane_width, 
-                'right_lane_color': waypoint.right_lane_marking.color, 
-                'left_lane_color': waypoint.left_lane_marking.color,
-                'right_lane_marking_type': waypoint.right_lane_marking.type, 
-                'left_lane_marking_type': waypoint.left_lane_marking.type,
-                'lane_change': waypoint.lane_change,
+                'lane_type': lane.lane_type, 
+                'lane_width': lane.lane_width, 
+                'right_lane_color': lane.right_lane_marking.color, 
+                'left_lane_color': lane.left_lane_marking.color,
+                'right_lane_marking_type': lane.right_lane_marking.type, 
+                'left_lane_marking_type': lane.left_lane_marking.type,
+                'lane_change': lane.lane_change,
                 'is_junction': lane.is_junction,
             }
             lanedict['left_lanes'].append(single_lane_dict)
         
-        for name, lane in lanes:
-            single_lane_dict = {
-                'lane_id': lane.lane_id,
-                'lane_type': waypoint.lane_type, 
-                'lane_width': waypoint.lane_width, 
-                'right_lane_color': waypoint.right_lane_marking.color, 
-                'left_lane_color': waypoint.left_lane_marking.color,
-                'right_lane_marking_type': waypoint.right_lane_marking.type, 
-                'left_lane_marking_type': waypoint.left_lane_marking.type,
-                'lane_change': waypoint.lane_change,
-                'is_junction': lane.is_junction,
-            }
-            lanedict['ego_lane'] = single_lane_dict
+        lanedict['ego_lane'] = {
+            'lane_id': ego_lane.lane_id,
+            'lane_type': ego_lane.lane_type, 
+            'lane_width': ego_lane.lane_width, 
+            'right_lane_color': ego_lane.right_lane_marking.color, 
+            'left_lane_color': ego_lane.left_lane_marking.color,
+            'right_lane_marking_type': ego_lane.right_lane_marking.type, 
+            'left_lane_marking_type': ego_lane.left_lane_marking.type,
+            'lane_change': ego_lane.lane_change,
+            'is_junction': ego_lane.is_junction,
+        }
 
         lanedict['right_lanes'] = []
         
         for name, lane in right_lanes:        
             single_lane_dict = {
                 'lane_id': lane.lane_id,
-                'lane_type': waypoint.lane_type, 
-                'lane_width': waypoint.lane_width, 
-                'right_lane_color': waypoint.right_lane_marking.color, 
-                'left_lane_color': waypoint.left_lane_marking.color,
-                'right_lane_marking_type': waypoint.right_lane_marking.type, 
-                'left_lane_marking_type': waypoint.left_lane_marking.type,
-                'lane_change': waypoint.lane_change,
+                'lane_type': lane.lane_type, 
+                'lane_width': lane.lane_width, 
+                'right_lane_color': lane.right_lane_marking.color, 
+                'left_lane_color': lane.left_lane_marking.color,
+                'right_lane_marking_type': lane.right_lane_marking.type, 
+                'left_lane_marking_type': lane.left_lane_marking.type,
+                'lane_change': lane.lane_change,
                 'is_junction': lane.is_junction,
             }
             lanedict['right_lanes'].append(single_lane_dict)

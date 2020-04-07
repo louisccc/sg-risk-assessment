@@ -61,9 +61,9 @@ def get_vehicle_attributes(vehicle, waypoint=None):
     
     light_state = vehicle.get_light_state()
     #light_state variables are booleans
-    return_dict['left_blinker_on'] = light_state.LeftBlinker
-    return_dict['right_blinker_on'] = light_state.RightBlinker
-    return_dict['brake_light_on'] = light_state.Brake
+    return_dict['left_blinker_on'] = True if (light_state.LeftBlinker & carla.VehicleLightState.LeftBlinker > 0) else False
+    return_dict['right_blinker_on'] = True if (light_state.RightBlinker & carla.VehicleLightState.LeftBlinker > 0) else False
+    return_dict['brake_light_on'] = True if (light_state.Brake & carla.VehicleLightState.Brake > 0) else False
     return return_dict
 
 

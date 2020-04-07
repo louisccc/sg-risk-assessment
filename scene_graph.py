@@ -13,7 +13,7 @@ class Node:
     def __init__(self, name, attr, is_entity=False):
         self.name = name
         self.attr = attr
-        self.label = name + "\n" + str(attr)
+        self.label = name #+ "\n" + str(attr)
         self.is_entity = is_entity
 
     def __repr__(self):
@@ -67,18 +67,18 @@ class SceneGraph:
     #adds lanes and their dicts. constructs relation between each lane and the root road node.
     def add_lane_dict(self, lanedict):
         
-        n = Node(str(lanedict['ego_lane']['lane_id']), lanedict['ego_lane'], False) #todo: change to true when lanedict entry is complete
+        n = Node(str(lanedict['ego_lane']['lane_id']), lanedict['ego_lane'], True) #todo: change to true when lanedict entry is complete
         self.add_node(n)
         self.add_relation([n, Relations.partOf, self.road_node])
 
         for lane in lanedict['left_lanes']:
             # for lane_id, laneattr in lane.items():
-            n = Node(str(lane['lane_id']), lane, False) #todo: change to true when lanedict entry is complete
+            n = Node(str(lane['lane_id']), lane, True) #todo: change to true when lanedict entry is complete
             self.add_node(n)
             self.add_relation([n, Relations.partOf, self.road_node])
 
         for lane in lanedict['right_lanes']:
-            n = Node(str(lane['lane_id']), lane, False) #todo: change to true when lanedict entry is complete
+            n = Node(str(lane['lane_id']), lane, True) #todo: change to true when lanedict entry is complete
             self.add_node(n)
             self.add_relation([n, Relations.partOf, self.road_node])
             

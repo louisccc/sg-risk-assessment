@@ -25,7 +25,7 @@ class DetectObjects:
         MODEL_DIR = os.path.join(ROOT_DIR, "logs")
 
         # Local path to trained weights file
-        COCO_MODEL_PATH = ROOT_DIR + '/data/mask_rcnn_coco.h5'
+        COCO_MODEL_PATH = ROOT_DIR + '/../input/mask_rcnn_coco.h5'
 
         IMAGE_DIR = self.image_path
         OUTPUT_DIR = self.masked_image_path

@@ -14,7 +14,7 @@ def create_backbone():
 
 	return backbone_model
 
-def preprocess():
+def raw2masked():
 	''' 
 		This step is for preprocessing the raw images 
 		to semantic segmented images (Using Mask RCNN) and store it in [data_path]/masked_images/
@@ -118,7 +118,7 @@ if __name__ == "__main__":
 	args=parser.parse_args()
 
 	if args.maskRCNN:
-		#preprocess()
+		raw2masked()
 		data=load_masked_dataset()
 		train_cnn_to_lstm(data)
 

@@ -102,7 +102,7 @@ class Models:
                                save_option=0, save_path='results/test1.png', epoch_resolution=100, verbose=2):
 
         nb_samples = Data.shape[0]
-        #import pdb; pdb.set_trace()
+        # import pdb; pdb.set_trace()
         rand_indexes = list(range(0, nb_samples))
         # get the initial random model weights
         w_save = self.model.get_weights()
@@ -128,8 +128,6 @@ class Models:
             c1 = round(y_train[y_train[:, 1] == 0, :].shape[0] / y_train.shape[0], 2)
             c2 = 1 - c1
             self.class_weights = {0: c2, 1: c1}
-            print (X_train,y_train)
-            print(X_test,y_test)
             self.train_model(X_train, y_train, X_test, y_test, print_option=print_option, verbose=verbose)
 
             if plot_option == 1:

@@ -47,9 +47,9 @@ class DataSet:
                 self.read_image_data(data_dir + "/" + foldername, scaling=scaling, scale_x=scale_x, scale_y=scale_y)
                 if not len(self.image_seq) == 0:
                     if option == 'fixed frame amount':
-                        self.video[int(foldername)-1, :, :, :, :] = self._read_video_helper(number_of_frames=number_of_frames)
+                        self.video[int(foldername), :, :, :, :] = self._read_video_helper(number_of_frames=number_of_frames)
                     elif option == 'all frames':
-                        self.video[int(foldername)-1, 0:len(self.image_seq), :, :, :] = self.image_seq
+                        self.video[int(foldername), 0:len(self.image_seq), :, :, :] = self.image_seq
 
     def _read_video_helper(self, number_of_frames=20):
 

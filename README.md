@@ -34,22 +34,24 @@ Infers the risk level of lane change video clips with deep learning. Utilizes de
 1- Install the  dependencies:
 
 ```shell
+	conda install python=3.6.8
 	conda install -c anaconda cython=0.29.10
-	pip install numpy==1.16.0
-	pip install scipy==1.1.0
 	conda install -c aaronzs tensorflow-gpu
 	conda install git
+	
+	Refer to: https://github.com/philferriere/cocoapi.git#subdirectory=PythonAPI to download pycocotools
+	
+	If you have problems downloading pycocotools refer to: https://stackoverflow.com/questions/14372706/visual-studio-cant-build-due-to-rc-exe
+	
 	pip install git+https://github.com/philferriere/cocoapi.git#subdirectory=PythonAPI
 
 ```
     $pip install -r requirements.txt
  
- 2- [Only for the MaskRCNN based model] Download MaskRCNN weights* from https://www.dropbox.com/s/n81pagybkj8p5w1/mask_rcnn_coco.h5?dl=0 and move it to /input . 
+ 2- Download MaskRCNN weights* from https://www.dropbox.com/s/n81pagybkj8p5w1/mask_rcnn_coco.h5?dl=0 and move it to /input . 
  
  _*This model and weights were originally obtained from [Mask R-CNN implementation by Matterport](https://github.com/matterport/Mask_RCNN)._
    
-PLEASE NOTE: Install in a fresh python 3.6 environment with the above commands. If you use different versions of keras or tensorflow-GPU, the trained models will either not work or give false results!! The trained models will only work with the specific tensorflow-gpu version that I used to train the networks (no open access to training data at the moment). If you don't get the results mentioned below, please check the dependencies and compare them to the requirements.txt file.
-
 ## Hardware requirements
 
 The following GPU-enabled devices are supported:

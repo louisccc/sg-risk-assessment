@@ -8,10 +8,7 @@
 
 """Spawn NPCs into the simulation"""
 
-import glob
-import os
-import sys
-import time
+import glob, os, sys, time
 
 CARLA_API_PATH = r'.\PythonAPI' 
 CARLA_ROOT_PATH = r'.\PythonAPI\carla' 

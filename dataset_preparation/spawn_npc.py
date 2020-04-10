@@ -13,10 +13,6 @@ import os
 import sys
 import time
 
-import sys
-import glob
-import os
-
 CARLA_API_PATH = r'.\PythonAPI' 
 CARLA_ROOT_PATH = r'.\PythonAPI\carla' 
 CARLA_DIST_PATH = r'.\PythonAPI\carla\dist'

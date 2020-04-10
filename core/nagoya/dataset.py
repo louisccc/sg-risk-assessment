@@ -7,7 +7,7 @@ from keras.applications.resnet50 import preprocess_input
 from tqdm import tqdm
 import pandas as pd
 from Mask_RCNN.mask_rcnn.detect_objects import DetectObjects
-
+from pathlib import Path
 
 
 class DataSet:
@@ -35,7 +35,8 @@ class DataSet:
 
         foldernames = [f for f in os.listdir(data_dir) if f.isnumeric() and not f.startswith('.')]
 
-        self.read_image_data(data_dir + "/" + foldernames[0], scaling=scaling, scale_x=scale_x, scale_y=scale_y)
+        self.read_image_data(str(data_dir/foldernames[0]), scaling=scaling, scale_x=scale_x, scale_y=scale_y)
+        
         if option == 'fixed frame amount':
             self.video = np.zeros([len(foldernames), number_of_frames, self.image_seq[000].shape[0],
                                    self.image_seq[000].shape[1], self.image_seq[000].shape[2]])
@@ -235,13 +236,20 @@ def raw2masked(image_path, masked_image_path):
     masked_image_extraction = DetectObjects(image_path, masked_image_path)
     masked_image_extraction.save_masked_images()
 
-def load_masked_dataset(masked_image_path):
+def load_dataset(masked_image_path: Path, label_table_path: Path):
     '''
         This step is for loading the dataset, preprocessing the video clips 
         and neccessary scaling and normalizing. Also it reads and converts the labeling info.
     '''
-    data = DataSet()
-    data.read_video(masked_image_path, option='fixed frame amount', number_of_frames=5, scaling='scale', scale_x=0.1, scale_y=0.1)
-    
-    return data
+    dataset = DataSet()
+    dataset.read_video(masked_image_path, option='fixed frame amount', number_of_frames=5, scaling='scale', scale_x=0.1, scale_y=0.1)
 
+    '''
+        order videos by risk and find top riskiest
+        #match input to risk label in LCTable 
+        data = label_risk(masked_data)
+    '''
+    dataset.read_risk_data(str(label_table_path))
+    dataset.convert_risk_to_one_hot(risk_threshold=0.5)
+
+    return dataset

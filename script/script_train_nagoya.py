@@ -26,25 +26,7 @@ def train_cnn_to_lstm(dataset):
 	# storing the model weights to cache folder.
 	cache_folder = Path('../cache').resolve().mkdir(exist_ok=True)
 	model.model.save(str(cache_folder / 'maskRCNN_CNN_lstm_GPU.h5'))
-
-def load_dataset(masked_image_path: Path, label_table_path: Path):
-    '''
-        This step is for loading the dataset, preprocessing the video clips 
-        and neccessary scaling and normalizing. Also it reads and converts the labeling info.
-    '''
-    dataset = DataSet()
-    dataset.read_video(masked_image_path, option='fixed frame amount', number_of_frames=5, scaling='scale', scale_x=0.1, scale_y=0.1)
-
-    '''
-		order videos by risk and find top riskiest
-		#match input to risk label in LCTable 
-		data = label_risk(masked_data)
-	'''
-    dataset.read_risk_data(str(label_table_path))
-    dataset.convert_risk_to_one_hot(risk_threshold=0.5)
-
-    return dataset
-
+	
 
 def process_raw_images_to_masked_images(src_path: Path, dst_path: Path, coco_path: Path):
     ''' 
@@ -67,7 +49,7 @@ if __name__ == '__main__':
 		coco_model_path = Path('../pretrained_models')
 		masked_image_path = root_folder_path / (raw_image_path.stem + '_masked') # the path in parallel with raw_image_path
 		masked_image_path.mkdir(exist_ok=True)
-		process_raw_images_to_masked_images(raw_image_path, masked_image_path, coco_model_path)
+		# process_raw_images_to_masked_images(raw_image_path, masked_image_path, coco_model_path)
 		
 		#load masked images
 		dataset = load_dataset(masked_image_path, label_table_path)

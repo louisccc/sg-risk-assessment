@@ -1,23 +1,25 @@
 import sys
 sys.path.append('../core')
 
-from dataset import *
+from nagoya.dataset import *
 from keras.models import load_model
-
-def predict(data):
-	'''
-		determine how safe and dangerous each lane change is 
-	'''
-	model = load_model('../cache/maskRCNN_CNN_lstm_GPU.h5')
-	print(' safe | dangerous \n', model.predict_proba(data.video))
 
 
 if __name__ == '__main__':
-	src = '../input/synthesis_data/lane-change/'
-	dest = src + '_masked/'
+	root_folder_path = Path('../input/synthesis_data').resolve()
+	raw_image_path = root_folder_path / 'lane-change'
+	label_table_path = root_folder_path / "LCTable.csv"
+	masked_image_path = root_folder_path / (raw_image_path.stem + '_masked') # the path in parallel with raw_image_path
+	cache_model_path = Path('../cache').resolve() / 'maskRCNN_CNN_lstm_GPU.h5'
 
-	#raw2masked(src, dest)
-	data = load_masked_dataset(dest)
-	predict(data)
+	if not cache_model_path.exists():
+		print("Please train the model first.")
+		return 
 
-
+	dataset = load_dataset(masked_image_path, label_table_path)
+	model   = load_model(str(cache_model_path))
+	
+	'''
+		determine how safe and dangerous each lane change is 
+	'''
+	print(' safe | dangerous \n', model.predict_proba(dataset.video))

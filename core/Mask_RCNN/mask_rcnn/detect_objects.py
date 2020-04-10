@@ -10,26 +10,29 @@ from Mask_RCNN.mask_rcnn import model as modellib
 from Mask_RCNN.mask_rcnn import visualize
 from Mask_RCNN.mask_rcnn import coco
 
+from pathlib import Path
 
 class DetectObjects:
 
-    def __init__(self, image_path, masked_image_path):
+    def __init__(self, image_path, masked_image_path, pretrained_model_path):
 
         self.image_path = image_path
         self.masked_image_path = masked_image_path
+        self.pretrained_model_path = pretrained_model_path.resolve()
 
     def save_masked_images(self):
         # Import COCO config
-        ROOT_DIR = os.path.abspath("./")
-        sys.path.append(ROOT_DIR)  # To find local version of the librar
-        MODEL_DIR = os.path.join(ROOT_DIR, "logs")
+        
+        ROOT_DIR = self.pretrained_model_path
+        sys.path.append(str(ROOT_DIR))  # To find local version of the librar
+        MODEL_DIR = ROOT_DIR / "logs"
 
         # Local path to trained weights file
-        COCO_MODEL_PATH = ROOT_DIR + '/../input/mask_rcnn_coco.h5'
+        COCO_MODEL_PATH = str(self.pretrained_model_path/'mask_rcnn_coco.h5')
 
         IMAGE_DIR = self.image_path
         OUTPUT_DIR = self.masked_image_path
-
+        
         class InferenceConfig(coco.CocoConfig):
             # Set batch size to 1 since we'll be running inference on
             # one image at a time. Batch size = GPU_COUNT * IMAGES_PER_GPU
@@ -62,29 +65,31 @@ class DetectObjects:
 
         foldernames = [f for f in os.listdir(IMAGE_DIR) if f.isnumeric() and not f.startswith('.')]
         foldernames.sort()
+        
         for foldername in foldernames:
-            print(foldername)
-            if 1:
-                CURRENT_IMAGE_DIR = IMAGE_DIR + foldername + '/raw_images/'
-                CURRENT_OUTPUT_DIR = OUTPUT_DIR + foldername + '/'
-                if not os.path.isdir(CURRENT_OUTPUT_DIR):
-                    os.mkdir(CURRENT_OUTPUT_DIR)
-                filenames = sorted(os.listdir(CURRENT_IMAGE_DIR))
-                for filename in filenames:
-                    if not filename.startswith('.'):
-                        img_rgba = skimage.io.imread(CURRENT_IMAGE_DIR + filename)
-                        img = skimage.color.rgba2rgb(img_rgba)
-                        img=img*255
-                        # view = ImageViewer(img)
-                        # view.show()
-                        # import pdb; pdb.set_trace()
-                        results = model.detect([img], verbose=1)
-                        # import pdb; pdb.set_trace()
-                        # Visualize results
-                        r = results[0]
-                        r['masks'], r['rois'], r['class_ids'], r['scores'] = self.filter_masks(r['masks'], r['rois'], r['class_ids'], r['scores'])
-                        visualize.display_instances(img, r['rois'], r['masks'], r['class_ids'], class_names, r['scores'], save_option=1, save_path=CURRENT_OUTPUT_DIR + filename)
-                        plt.close('all')
+            CURRENT_IMAGE_DIR = IMAGE_DIR / foldername / 'raw_images'
+            CURRENT_OUTPUT_DIR = OUTPUT_DIR / foldername
+
+            print('Processing Folder %s' % str(CURRENT_IMAGE_DIR))
+            
+            CURRENT_OUTPUT_DIR.mkdir(exist_ok=True)
+
+            filenames = sorted(os.listdir(CURRENT_IMAGE_DIR))
+            
+            for filename in filenames:
+               
+                CURRENT_IMAGE_PATH= str(CURRENT_IMAGE_DIR / filename)
+                OUTPUT_IMAGE_PATH = str(CURRENT_OUTPUT_DIR / filename)
+
+                if not filename.startswith('.'):
+                    img_rgba = skimage.io.imread(CURRENT_IMAGE_PATH)
+                    img = skimage.color.rgba2rgb(img_rgba)
+                    img=img*255
+                    results = model.detect([img], verbose=1)
+                    r = results[0]
+                    r['masks'], r['rois'], r['class_ids'], r['scores'] = self.filter_masks(r['masks'], r['rois'], r['class_ids'], r['scores'])
+                    visualize.display_instances(img, r['rois'], r['masks'], r['class_ids'], class_names, r['scores'], save_option=1, save_path=str(CURRENT_OUTPUT_DIR / filename))
+                    plt.close('all')
 
     @staticmethod
     def filter_masks(masks, rois, class_ids, scores):

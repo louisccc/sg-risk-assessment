@@ -7,7 +7,7 @@ For running CARLA on windows 10, we download the official compiled version from 
 
 
 We integrated DeepTL-Lane-Change-Classification.
-Infers the risk level of lane change video clips with deep learning. Utilizes deep transfer learning (TL) and spatiotemporal networks. Please read our paper for details at https://arxiv.org/abs/1906.02859 
+Infers the risk level of lane change video clips with deep learning. Utilizes deep transfer learning (TL) and spatiotemporal networks. https://arxiv.org/abs/1906.02859 
 
 
         @INPROCEEDINGS{yurtsever2019,

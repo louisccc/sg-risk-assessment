@@ -46,7 +46,7 @@ class DataSet:
         # todo convert this to a wrapper
         for foldername in tqdm(foldernames):
             if foldername.isnumeric:
-                self.read_image_data(data_dir + "/" + foldername, scaling=scaling, scale_x=scale_x, scale_y=scale_y)
+                self.read_image_data(str(data_dir/foldername), scaling=scaling, scale_x=scale_x, scale_y=scale_y)
                 if not len(self.image_seq) == 0:
                     if option == 'fixed frame amount':
                         self.video[int(foldername), :, :, :, :] = self._read_video_helper(number_of_frames=number_of_frames)

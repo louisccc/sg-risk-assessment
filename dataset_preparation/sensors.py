@@ -2,17 +2,10 @@ import carla
 
 from carla import ColorConverter as cc
 
-import argparse
-import collections
-import datetime
-import logging
 import math
-import random
 import re
-import time
 import weakref
 from collections import defaultdict
-import json
 import numpy as np
 import pygame
 

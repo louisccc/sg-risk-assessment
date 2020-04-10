@@ -1,21 +1,13 @@
-import random
+import sys, random, math, json, carla, py_trees
 import sensors
-import sys
-from pathlib import Path
-
-import os, math, json
-from collections import defaultdict
-import carla
-
 from sensors import get_actor_attributes, get_vehicle_attributes
-from agents.navigation.basic_agent import BasicAgent 
-from agents.navigation.local_planner import RoadOption
+from pathlib import Path
+from collections import defaultdict
 
 SRUNNER_PATH = r'./scenario_runner'
 sys.path.append(SRUNNER_PATH)
 from srunner.scenariomanager.scenarioatomics.atomic_behaviors import LaneChange
 
-import py_trees
 
 class LaneChangeRecorder:
 

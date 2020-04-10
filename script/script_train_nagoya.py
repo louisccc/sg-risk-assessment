@@ -3,6 +3,7 @@ sys.path.append('../core')
 from dataset import *
 from models import Models
 
+from pathlib import Path
 
 def train_cnn_to_lstm(dataset):
 	'''
@@ -36,22 +37,40 @@ def label_risk(data):
 
 	return data
 
+def load_masked_dataset(masked_image_path: Path):
+    '''
+        This step is for loading the dataset, preprocessing the video clips 
+        and neccessary scaling and normalizing. Also it reads and converts the labeling info.
+    '''
+    data = DataSet()
+    data.read_video(masked_image_path, option='fixed frame amount', number_of_frames=5, scaling='scale', scale_x=0.1, scale_y=0.1)
+    
+    return data
+
+def process_raw_images_to_masked_images(src_path: Path, dst_path: Path, coco_path: Path):
+    ''' 
+        This step is for preprocessing the raw images 
+        to semantic segmented images (Using Mask RCNN) and store it in [data_path]/masked_images/
+    '''
+    masked_image_extraction = DetectObjects(src_path, dst_path, coco_path)
+    masked_image_extraction.save_masked_images()
+
 if __name__ == '__main__':
-	src = '../input/synthesis_data/lane-change/'
-	dest = src + '_masked/'
+	src = Path('../input/synthesis_data/lane-change/').resolve()
+	dest = src / '_masked/'
+	coco_path = Path('../pretrained_models')
 
-	#raw to masked image
-	raw2masked(src,dest)
+	process_raw_images_to_masked_images(src, dest, coco_path)
 
-	#load masked images
+	# #load masked images
 	masked_data = load_masked_dataset(dest)
 
-	#match input to risk label in LCTable 
-	data = label_risk(masked_data)
+	# #match input to risk label in LCTable 
+	# data = label_risk(masked_data)
 
-	#train import from core
-	#output store in maskRCNN_CNN_lstm_GPU.h5
-	#use prediction script to evaluate
-	train_cnn_to_lstm(data)
+	# #train import from core
+	# #output store in maskRCNN_CNN_lstm_GPU.h5
+	# #use prediction script to evaluate
+	# train_cnn_to_lstm(data)
 
 	

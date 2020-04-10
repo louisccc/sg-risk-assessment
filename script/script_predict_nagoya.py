@@ -1,4 +1,7 @@
-from preprocess import *
+import sys
+sys.path.append('../core')
+
+from dataset import *
 from keras.models import load_model
 
 def predict(data):
@@ -13,7 +16,7 @@ if __name__ == '__main__':
 	src = '../input/synthesis_data/lane-change/'
 	dest = src + '_masked/'
 
-	raw2masked(src, dest)
+	#raw2masked(src, dest)
 	data = load_masked_dataset(dest)
 	predict(data)
 

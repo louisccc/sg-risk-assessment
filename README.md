@@ -10,13 +10,13 @@ Infers the risk level of lane change video clips with deep learning. Utilizes de
 
 
 # Module Architecture
-- [project folder]/core: this folder collects all the core functionalities for this project. 
+- **[project folder]/core:** this folder collects all the core functionalities for this project. 
   - Mask_RCNN is the module that handle object detection and coloring on the image sequence. 
   - Nagoya is the module that builts with CNN+LSTM model. 
-- [project folder]/dataset_preparation: this folder collects modules that help collecting the video clip data regarding lane changes (utilizing [scenario_runner](https://github.com/carla-simulator/scenario_runner) and CARLA 0.9.8
-- [project_folder]/script: contains the executable scripts that utilize the functions under core. 
-- [project folder]/input: contains the example inputs for testing purposes. 
-- [project folder]/pretrained_model: contains the pretrained models or weights required for this project. 
+- **[project folder]/dataset_preparation:** this folder collects modules that help collecting the video clip data regarding lane changes (utilizing [scenario_runner](https://github.com/carla-simulator/scenario_runner) and CARLA 0.9.8
+- **[project_folder]/script:** contains the executable scripts that utilize the functions under core. 
+- **[project folder]/input:** contains the example inputs for testing purposes. 
+- **[project folder]/pretrained_model:** contains the pretrained models or weights required for this project. 
   - Mask-RCNN pretrained weights can refer to [this link](https://www.dropbox.com/s/n81pagybkj8p5w1/mask_rcnn_coco.h5?dl=0) and move it under [project folder]/pretrained_model (credit to [this repo]([Mask R-CNN implementation by Matterport](https://github.com/matterport/Mask_RCNN)). 
 
 # To get started

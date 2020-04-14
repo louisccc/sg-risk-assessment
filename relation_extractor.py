@@ -32,7 +32,6 @@ from enum import Enum
 from collections import defaultdict
 import pdb
 import math
-import scene_graph
 import json
 
 MOTO_NAMES = ["Harley-Davidson", "Kawasaki", "Yamaha"]

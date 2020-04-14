@@ -6,6 +6,7 @@ from relation_extractor import Relations, RelationExtractor
 import pdb, json, random
 from pathlib import Path
 from glob import glob
+import pickle as pkl
 #basic class for abstracting a node in the scene graph. this is mainly used for holding the data for each node.
 
 
@@ -158,6 +159,10 @@ class SceneGraphExtractor:
             plt.savefig('%s/%s.png'%(path, frame))
             self.ax_graph.clear()
             self.ax_img.clear()
+            #pickle scenegraph so it can be loaded directly later. scenegraphs are saved by frame number.
+            with open(str(path) + '/' + frame + ".pkl", "wb") as f:
+                pkl.dump(scenegraph, f)
+
 
     def update(self, num):
         self.ax_graph.clear()
@@ -180,9 +185,9 @@ class SceneGraphExtractor:
 if __name__ == '__main__':
     # sg = SceneGraph()
     # re = RelationExtractor()
-    txt_path = r".\input\lane-change-9.8\scene_raw"
-    img_path = r".\input\lane-change-9.8\raw_images"
-    store_path = Path(r'.\input\lane-change-9.8\scenes')
+    txt_path = r".\input\synthesis_data\lane-change-9.8\scene_raw"
+    img_path = r".\input\synthesis_data\lane-change-9.8\raw_images"
+    store_path = Path(r'.\input\synthesis_data\lane-change-9.8\scenes')
     store_path.mkdir(parents=True, exist_ok=True)
     
     sge = SceneGraphExtractor()

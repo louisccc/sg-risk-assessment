@@ -2,7 +2,7 @@ import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
-from relation_extractor import Relations, RelationExtractor
+from .relation_extractor import Relations, RelationExtractor
 import pdb, json, random
 from pathlib import Path
 from glob import glob

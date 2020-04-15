@@ -3,7 +3,7 @@ import networkx as nx
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import os
-from relation_extractor import Relations, ActorType, RelationExtractor
+from .relation_extractor import Relations, ActorType, RelationExtractor
 import pdb, json, random
 from pathlib import Path
 from glob import glob
@@ -12,7 +12,7 @@ import pickle as pkl
 
 
 class Node:
-    def __init__(self, name, attr, type, is_entity=False):
+    def __init__(self, name, attr, type=None, is_entity=False):
         self.name = name
         self.attr = attr
         self.label = name #+ "\n" + str(attr)
@@ -39,7 +39,7 @@ class SceneGraph:
         
     #add single node to graph. node can be any hashable datatype including objects.
     def add_node(self, node):
-        self.g.add_node(node, attr=node.attr, label=node.label, type=self.relation_extractor.get_actor_type(node))
+        self.g.add_node(node, attr=node.attr, label=node.label)
         if(node.is_entity):
             self.entity_nodes.append(node)
         
@@ -64,38 +64,39 @@ class SceneGraph:
     def add_actor_dict(self, actordict):
         for actor_id, attr in actordict.items():
             n = Node(actor_id, attr, True)   #using the actor key as the node name and the dict as its attributes.
+            n.type = self.relation_extractor.get_actor_type(n)
             self.add_node(n)
             self.add_attributes(n, attr)
             
     #adds lanes and their dicts. constructs relation between each lane and the root road node.
     def add_lane_dict(self, lanedict):
         
-        n = Node(str(lanedict['ego_lane']['lane_id']), lanedict['ego_lane'], True) #todo: change to true when lanedict entry is complete
+        n = Node(str(lanedict['ego_lane']['lane_id']), lanedict['ego_lane'], ActorType.LANE, True) #todo: change to true when lanedict entry is complete
         self.add_node(n)
         self.add_relation([n, Relations.partOf, self.road_node])
 
         for lane in lanedict['left_lanes']:
             # for lane_id, laneattr in lane.items():
-            n = Node(str(lane['lane_id']), lane, True) #todo: change to true when lanedict entry is complete
+            n = Node(str(lane['lane_id']), lane, ActorType.LANE, True) #todo: change to true when lanedict entry is complete
             self.add_node(n)
             self.add_relation([n, Relations.partOf, self.road_node])
 
         for lane in lanedict['right_lanes']:
-            n = Node(str(lane['lane_id']), lane, True) #todo: change to true when lanedict entry is complete
+            n = Node(str(lane['lane_id']), lane, ActorType.LANE, True) #todo: change to true when lanedict entry is complete
             self.add_node(n)
             self.add_relation([n, Relations.partOf, self.road_node])
             
     #add signs as entities of the road.
     def add_sign_dict(self, signdict):
         for sign_id, signattr in signdict.items():
-            n = Node(sign_id, signattr, True)
+            n = Node(sign_id, signattr, ActorType.SIGN, True)
             self.add_node(n)
             self.add_relation([n, Relations.partOf, self.road_node])
 
     #parses attributes of ego/actors
     def add_attributes(self, node, attrdict):
         for attr, values in attrdict.items():
-            n = Node(attr, values, False)   #attribute nodes are not entities themselves
+            n = Node(attr, values, None, False)   #attribute nodes are not entities themselves
             self.add_node(n)
             self.add_relation([node, Relations.hasAttribute, n])
 
@@ -104,7 +105,7 @@ class SceneGraph:
         for key, attrs in framedict.items():
             # import pdb; pdb.set_trace()
             if key == "ego":
-                egoNode = Node(key, attrs, True)
+                egoNode = Node(key, attrs, ActorType.CAR, True)
                 self.add_node(egoNode)
                 self.add_attributes(egoNode, attrs)
             elif key == "lane":

@@ -188,9 +188,9 @@ if __name__ == '__main__':
     # sg = SceneGraph()
     # re = RelationExtractor()
     input_path = Path('../../input/synthesis_data/lane-change').resolve()
-    foldernames = os.listdir(input_path)
-
-    for foldername in foldernames[1:]:
+    foldernames = sorted(os.listdir(input_path))
+    
+    for foldername in foldernames:
         txt_path = input_path / foldername / "scene_raw"
         img_path = input_path / foldername / "raw_images"
         store_path = input_path / foldername / "scenes"

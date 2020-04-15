@@ -3,7 +3,7 @@ import networkx as nx
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import os
-from relation_extractor import Relations, RelationExtractor
+from relation_extractor import Relations, ActorType, RelationExtractor
 import pdb, json, random
 from pathlib import Path
 from glob import glob
@@ -12,11 +12,12 @@ import pickle as pkl
 
 
 class Node:
-    def __init__(self, name, attr, is_entity=False):
+    def __init__(self, name, attr, type, is_entity=False):
         self.name = name
         self.attr = attr
         self.label = name #+ "\n" + str(attr)
         self.is_entity = is_entity
+        self.type = type
 
     def __repr__(self):
         return "%s" % self.name 
@@ -29,7 +30,7 @@ class SceneGraph:
     def __init__(self, framedict=None):
         self.g = nx.Graph() #initialize scenegraph as networkx graph
         self.relation_extractor = RelationExtractor()
-        self.road_node = Node("road", None, False)
+        self.road_node = Node("road", None, ActorType.ROAD, False)
         self.add_node(self.road_node)   #adding the road as the root node
         self.entity_nodes = []  #nodes which are explicit entities and not attributes.
         
@@ -38,7 +39,7 @@ class SceneGraph:
         
     #add single node to graph. node can be any hashable datatype including objects.
     def add_node(self, node):
-        self.g.add_node(node, attr=node.attr, label=node.label)
+        self.g.add_node(node, attr=node.attr, label=node.label, type=self.relation_extractor.get_actor_type(node))
         if(node.is_entity):
             self.entity_nodes.append(node)
         

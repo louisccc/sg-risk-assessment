@@ -53,8 +53,9 @@ class ActorType(Enum):
     LANE = 4
     LIGHT = 5
     SIGN = 6
+    ROAD = 7
     
-ACTOR_NAMES=['car','moto','bicycle','ped','lane','light','sign']
+ACTOR_NAMES=['car','moto','bicycle','ped','lane','light','sign', 'road']
     
 class Relations(Enum):
     isIn = 0
@@ -80,6 +81,9 @@ class RelationExtractor:
             return ActorType.MOTO
         if actor.attr["name"].split(" ")[0] in BICYCLE_NAMES:
             return ActorType.BICYCLE
+        if "Sign" in actor.attr["name"]:
+            return ActorType.SIGN
+            
         print(actor.attr)
         import pdb; pdb.set_trace()
         raise NameError("Actor name not found for actor with name: " + actor.attr["name"])

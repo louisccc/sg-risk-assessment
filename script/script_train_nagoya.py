@@ -49,7 +49,13 @@ if __name__ == '__main__':
 		coco_model_path = Path('../pretrained_models')
 		masked_image_path = root_folder_path / (raw_image_path.stem + '_masked') # the path in parallel with raw_image_path
 		masked_image_path.mkdir(exist_ok=True)
-		process_raw_images_to_masked_images(raw_image_path, masked_image_path, coco_model_path)
+
+		#check if masked images already exist
+		raw_folders = [f for f in os.listdir(raw_image_path) if f.isnumeric() and not f.startswith('.')]
+		masked_folders = [f for f in os.listdir(masked_image_path) if f.isnumeric() and not f.startswith('.')]
+
+		if raw_folders[-1]!=masked_folders[-1]:
+			process_raw_images_to_masked_images(raw_image_path, masked_image_path, coco_model_path)
 		
 		#load masked images
 		dataset = load_dataset(masked_image_path, label_table_path)

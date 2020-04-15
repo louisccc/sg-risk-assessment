@@ -2,10 +2,11 @@ import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
-from relation_extractor import Relations, RelationExtractor
+from relation_extractor import *
 import pdb, json, random
 from pathlib import Path
 from glob import glob
+import os
 #basic class for abstracting a node in the scene graph. this is mainly used for holding the data for each node.
 
 
@@ -136,6 +137,9 @@ class SceneGraphExtractor:
                 for frame, frame_dict in framedict.items():
                     scenegraph = SceneGraph()
                     scenegraph.add_frame_dict(frame_dict)
+
+                    #import pdb; pdb.set_trace()
+
                     scenegraph.extract_semantic_relations()
                     self.scenegraphs[frame] = scenegraph
 
@@ -177,17 +181,22 @@ class SceneGraphExtractor:
         ani = animation.FuncAnimation(self.fig, self.update, frames=len(self.scene_images.keys()))
         plt.show()
 
+
 if __name__ == '__main__':
     # sg = SceneGraph()
     # re = RelationExtractor()
-    txt_path = r".\input\lane-change-9.8\scene_raw"
-    img_path = r".\input\lane-change-9.8\raw_images"
-    store_path = Path(r'.\input\lane-change-9.8\scenes')
-    store_path.mkdir(parents=True, exist_ok=True)
+    input_path = Path('input/synthesis_data/lane-change').resolve()
+    foldernames = os.listdir(input_path)
     
-    sge = SceneGraphExtractor()
-    sge.load(txt_path)
-    sge.build_corresponding_images(img_path)
-    sge.store(store_path)
-    sge.show_animation()
-    pdb.set_trace()
+    for foldername in foldernames[1:]:
+        txt_path = input_path / foldername / "scene_raw"
+        img_path = input_path / foldername / "raw_images"
+        store_path = input_path / foldername / "scenes"
+        store_path.mkdir(parents=True, exist_ok=True)
+        
+        sge = SceneGraphExtractor()
+        sge.load(txt_path)
+        sge.build_corresponding_images(img_path)
+        sge.store(store_path)
+        # sge.show_animation()
+        # pdb.set_trace()

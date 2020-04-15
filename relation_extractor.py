@@ -55,7 +55,8 @@ class ActorType(Enum):
     LIGHT = 5
     SIGN = 6
     
-ACTOR_NAMES=['car','moto','bicycle','ped','light','sign','lane']
+#ACTOR_NAMES=['car','moto','bicycle','ped','light','sign','lane']
+ACTOR_NAMES=['car','moto','bicycle','ped','lane','light','sign']
     
 class Relations(Enum):
     isIn = 0
@@ -73,6 +74,8 @@ class RelationExtractor:
             return ActorType.LANE
         if actor.attr["name"] == "Traffic Light":
             return ActorType.LIGHT
+        if actor.attr["name"].split(" ")[0] == "Pedestrian":
+            return ActorType.PED
         if actor.attr["name"].split(" ")[0] in CAR_NAMES:
             return ActorType.CAR
         if actor.attr["name"].split(" ")[0] in MOTO_NAMES:
@@ -80,16 +83,18 @@ class RelationExtractor:
         if actor.attr["name"].split(" ")[0] in BICYCLE_NAMES:
             return ActorType.BICYCLE
         print(actor.attr)
-        raise NameError("Actor name not found for actor with name: " + actor["name"])
+        #import pdb; pdb.set_trace()
+        raise NameError("Actor name not found for actor with name: " + actor.attr["name"])
             
     #takes in two entities and extracts all relations between those two entities. extracted relations are bidirectional    
     def extract_relations(self, actor1, actor2):
+        #import pdb; pdb.set_trace()
         type1 = self.get_actor_type(actor1)
         type2 = self.get_actor_type(actor2)
         
         low_type = min(type1.value, type2.value) #the lower of the two enums.
         high_type = max(type1.value, type2.value)
-        #pdb.set_trace()
+        
         function_call = "self.extract_relations_"+ACTOR_NAMES[low_type]+"_"+ACTOR_NAMES[high_type]+"(actor1, actor2) if type1.value <= type2.value "\
                         "else self.extract_relations_"+ACTOR_NAMES[low_type]+"_"+ACTOR_NAMES[high_type]+"(actor2, actor1)"
         return eval(function_call)
@@ -249,6 +254,7 @@ class RelationExtractor:
 #~~~~~~~~~~~~~~~~~~UTILITY FUNCTIONS~~~~~~~~~~~~~~~~~~~~~~
     #return euclidean distance between actors
     def euclidean_distance(self, actor1, actor2):
+        #import pdb; pdb.set_trace()
         l1 = actor1.attr['location']
         l2 = actor2.attr['location']
         return math.sqrt((l1[0] - l2[0])**2 + (l1[1]- l2[1])**2 + (l1[2] - l2[2])**2)

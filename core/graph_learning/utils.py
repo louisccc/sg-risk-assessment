@@ -2,6 +2,9 @@ import numpy as np
 import scipy.sparse as sp
 import torch
 import pandas as pd
+import networkx as nx
+import pdb
+from collections import defaultdict
 
 #returns onehot version of labels
 def encode_onehot(labels):
@@ -12,10 +15,46 @@ def encode_onehot(labels):
                              dtype=np.int32)
     return labels_onehot
 
-#generates a list of node embeddings in the following format:
-#<node id> <features> <node_class_label>
-def create_node_embeddings(scenegraph):
-    return None
+
+#gets a list of all feature labels for all scenegraphs
+def get_feature_list(scenegraphs):
+    all_attrs = set()
+    for scenegraph in scenegraphs:
+        for entity in scenegraph.entity_nodes:
+            all_attrs.update(entity.attr.keys())
+            
+    final_attr_list = all_attrs.copy()
+    for attr in all_attrs:
+        if attr in ["location", "rotation", "velocity", "ang_velocity"]:
+            final_attr_list.discard(attr)
+            final_attr_list.update([attr+"_x", attr+"_y", attr+"_z"]) #add 3 columns for vector values
+            
+    return sorted(final_attr_list)
+
+
+
+#generates a list of node embeddings based on the node attributes and the feature list
+def create_node_embeddings(scenegraph, feature_list):
+    rows = []
+    for node in scenegraph.entity_nodes:
+        row = defaultdict()
+        for attr in node.attr:
+            if attr in ["location", "rotation", "velocity", "ang_velocity"]:
+                row[attr+"_x"] = node.attr[attr][0]
+                row[attr+"_y"] = node.attr[attr][1]
+                row[attr+"_z"] = node.attr[attr][2]
+            else:
+                row[attr] = node.attr[attr]
+        rows.append(row)
+    #pdb.set_trace()
+    embedding = pd.DataFrame(data=rows, columns=feature_list)
+    return embedding
+
+
+#get adjacency matrix for scenegraph in scipy.sparse CSR matrix format
+def get_adj_matrix(scenegraph):
+    adj = nx.convert_matrix.to_scipy_sparse_matrix(scenegraph.g, nodelist=scenegraph.entity_nodes)
+    return adj
     
     
     

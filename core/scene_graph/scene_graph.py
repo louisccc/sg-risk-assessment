@@ -63,7 +63,7 @@ class SceneGraph:
     #parses actor dict and adds nodes to graph. this can be used for all actor types.
     def add_actor_dict(self, actordict):
         for actor_id, attr in actordict.items():
-            n = Node(actor_id, attr, True)   #using the actor key as the node name and the dict as its attributes.
+            n = Node(actor_id, attr, None, True)   #using the actor key as the node name and the dict as its attributes.
             n.type = self.relation_extractor.get_actor_type(n)
             self.add_node(n)
             self.add_attributes(n, attr)

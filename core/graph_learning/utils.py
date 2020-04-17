@@ -30,6 +30,7 @@ def get_feature_list(scenegraphs, num_classes):
             final_attr_list.update([attr+"_x", attr+"_y", attr+"_z"]) #add 3 columns for vector values
     for i in range(num_classes):
         final_attr_list.add("type_"+str(i)) #create 1hot class labels
+    final_attr_list.discard("name") #remove node name as it is not needed sice we have class labels
     return sorted(final_attr_list)
 
 
@@ -45,6 +46,10 @@ def create_node_embeddings(scenegraph, feature_list):
                 row[attr+"_x"] = node.attr[attr][0]
                 row[attr+"_y"] = node.attr[attr][1]
                 row[attr+"_z"] = node.attr[attr][2]
+            elif attr == "is_junction": #binarizing junction label
+                row[attr] = 1 if node.attr==True else 0
+            elif attr == "name": #dont add name to embedding
+                continue
             else:
                 row[attr] = node.attr[attr]
         row['type_'+str(node.type)] = 1 #assign 1hot class label

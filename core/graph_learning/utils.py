@@ -6,7 +6,7 @@ import networkx as nx
 import pdb
 from collections import defaultdict
 
-#returns onehot version of labels
+#returns onehot version of labels (unused)
 def encode_onehot(labels):
     classes = set(labels)
     classes_dict = {c: np.identity(len(classes))[i, :] for i, c in
@@ -17,7 +17,7 @@ def encode_onehot(labels):
 
 
 #gets a list of all feature labels for all scenegraphs
-def get_feature_list(scenegraphs):
+def get_feature_list(scenegraphs, num_classes):
     all_attrs = set()
     for scenegraph in scenegraphs:
         for entity in scenegraph.entity_nodes:
@@ -28,12 +28,14 @@ def get_feature_list(scenegraphs):
         if attr in ["location", "rotation", "velocity", "ang_velocity"]:
             final_attr_list.discard(attr)
             final_attr_list.update([attr+"_x", attr+"_y", attr+"_z"]) #add 3 columns for vector values
-            
+    for i in range(num_classes):
+        final_attr_list.add("type_"+str(i)) #create 1hot class labels
     return sorted(final_attr_list)
 
 
 
 #generates a list of node embeddings based on the node attributes and the feature list
+#TODO: convert all non-numeric features to numeric datatypes
 def create_node_embeddings(scenegraph, feature_list):
     rows = []
     for node in scenegraph.entity_nodes:
@@ -45,9 +47,12 @@ def create_node_embeddings(scenegraph, feature_list):
                 row[attr+"_z"] = node.attr[attr][2]
             else:
                 row[attr] = node.attr[attr]
+        row['type_'+str(node.type)] = 1 #assign 1hot class label
         rows.append(row)
     #pdb.set_trace()
     embedding = pd.DataFrame(data=rows, columns=feature_list)
+    embedding = embedding.fillna(value=0) #fill in NaN with zeros
+    
     return embedding
 
 

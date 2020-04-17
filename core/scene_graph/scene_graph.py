@@ -17,7 +17,7 @@ class Node:
         self.attr = attr
         self.label = name #+ "\n" + str(attr)
         self.is_entity = is_entity
-        self.type = type
+        self.type = type.value if type != None else None
 
     def __repr__(self):
         return "%s" % self.name 
@@ -64,7 +64,7 @@ class SceneGraph:
     def add_actor_dict(self, actordict):
         for actor_id, attr in actordict.items():
             n = Node(actor_id, attr, None, True)   #using the actor key as the node name and the dict as its attributes.
-            n.type = self.relation_extractor.get_actor_type(n)
+            n.type = self.relation_extractor.get_actor_type(n).value
             self.add_node(n)
             self.add_attributes(n, attr)
             

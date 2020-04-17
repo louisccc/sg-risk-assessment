@@ -8,7 +8,7 @@ from collections import defaultdict
 
 #preprocess data for input to graph learning algorithms.
 input_source = "input/synthesis_data/lane-change-9.8/scenes/"
-
+save_dir = input_source + "processed_scenes/"
 
 def get_scene_graphs(dir):
     scenegraphs = defaultdict()
@@ -20,18 +20,32 @@ def get_scene_graphs(dir):
             #break #For testing only. returns single graph
     return scenegraphs
 
-#TODO: save extracted embeddings, labels, and adj matrices as pkl files
-def save_preprocessed_data(savedir, scenegraphs):
-    pass
-
+#save extracted embeddings, labels, and adj matrices as pkl files
+#the entire dictionary for all frames is saved in each pkl file
+def save_preprocessed_data(savedir, scenegraphs, embeddings, adj_matrix, labels):
+    
+    if not os.path.exists(savedir):
+        os.mkdir(savedir)
+    
+    for frame_id, scenegraph in scenegraphs.items():
+        with open(savedir+'scenegraphs.pkl','wb') as f:
+            pkl.dump(scenegraphs, f)
+        with open(savedir+'embeddings.pkl', 'wb') as f:
+            pkl.dump(embeddings, f)
+        with open(savedir+'adj_matrix.pkl', 'wb') as f:
+            pkl.dump(adj_matrix, f)
+        if(labels != None):
+            with open(savedir+'labels.pkl', 'wb') as f:
+                pkl.dump(labels, f)
+    print("processed data saved to: " + savedir)
 
 if __name__ == "__main__":
     scenegraphs = get_scene_graphs(input_source)
     embeddings = defaultdict()
     adj_matrix = defaultdict()
-    feature_list = utils.get_feature_list(scenegraphs.values())
+    feature_list = utils.get_feature_list(scenegraphs.values(), num_classes=8)
     for frame_id, scenegraph in scenegraphs.items():
         embeddings[frame_id] = utils.create_node_embeddings(scenegraph, feature_list)
         adj_matrix[frame_id] = utils.get_adj_matrix(scenegraph)
-        #TODO: create onehot labels matrix from ActorType of each entity_node
+    save_preprocessed_data(save_dir, scenegraphs, embeddings, adj_matrix, None)
     pdb.set_trace()

@@ -33,7 +33,9 @@ class DataSet:
     def read_video(self, data_dir, option='fixed frame amount', number_of_frames=20, max_number_of_frames=500,
                    scaling='no scaling', scale_x=0.1, scale_y=0.1):
 
-        foldernames = [f for f in os.listdir(data_dir) if f.isnumeric() and not f.startswith('.')]
+        foldernames = [f for f in sorted(os.listdir(data_dir),key=int) if f.isnumeric() and not f.startswith('.')]
+        print(foldernames)
+        #need to sort, global variable foldernames when read one hot match
 
         self.read_image_data(str(data_dir/foldernames[0]), scaling=scaling, scale_x=scale_x, scale_y=scale_y)
         
@@ -137,7 +139,7 @@ class DataSet:
         self.can_seq = []
 
     def read_risk_data(self, file_path):
-        df = pd.read_csv(file_path, header=None, usecols=[5], names=['risk_score'])
+        df = pd.read_csv(file_path, header=None, usecols=[8], names=['risk_score'])
         self.risk_scores = df['risk_score'].tolist()
 
     def convert_risk_to_one_hot(self, risk_threshold=0.5):

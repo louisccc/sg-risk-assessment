@@ -120,7 +120,8 @@ class Models:
             y_train = label[rand_indexes[0:int(nb_samples * training_to_all_data_ratio)], :]
             X_test = Data[rand_indexes[int(nb_samples * training_to_all_data_ratio):], :]
             y_test = label[rand_indexes[int(nb_samples * training_to_all_data_ratio):], :]
-
+            # if both classes in testing set?
+            
             # Model weights from the previous training session must be resetted to the initial random values
             self.model.set_weights(w_save)
             self.history = []
@@ -229,7 +230,7 @@ class Models:
 
         self.model = model
 
-    def build_cnn_to_lstm_model(self, input_shape, optimizer=Adam(lr=1e-6, decay=1e-5)):
+    def build_cnn_to_lstm_model(self, input_shape, optimizer=Adam(lr=1e-5, decay=1e-5)):
 
         model = Sequential()
 

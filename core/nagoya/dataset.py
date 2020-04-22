@@ -139,7 +139,8 @@ class DataSet:
         self.can_seq = []
 
     def read_risk_data(self, file_path):
-        df = pd.read_csv(file_path, header=None, usecols=[8], names=['risk_score'])
+        df = pd.read_csv(file_path, header=None, usecols=[7], names=['risk_score'])
+        #import pdb; pdb.set_trace()
         self.risk_scores = df['risk_score'].tolist()
 
     def convert_risk_to_one_hot(self, risk_threshold=0.5):

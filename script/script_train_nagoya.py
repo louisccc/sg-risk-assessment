@@ -11,9 +11,9 @@ def train_cnn_to_lstm(dataset):
 	'''
 
 	class_weight = {0: 0.05, 1: 0.95}
-	training_to_all_data_ratio = 0.5
+	training_to_all_data_ratio = 0.8
 	nb_cross_val = 1
-	nb_epoch = 1000
+	nb_epoch = 100
 	batch_size = 32
 
 	video_sequence = dataset.video
@@ -24,7 +24,10 @@ def train_cnn_to_lstm(dataset):
 	model.train_n_fold_cross_val(video_sequence, label, training_to_all_data_ratio=training_to_all_data_ratio, n=nb_cross_val, print_option=0, plot_option=0, save_option=0)
 	
 	# storing the model weights to cache folder.
-	cache_folder = Path('../cache').resolve().mkdir(exist_ok=True)
+	cache_folder = Path('../cache').resolve()
+	cache_folder.mkdir(exist_ok=True)
+	print(cache_folder)
+	#import pdb; pdb.set_trace()
 	model.model.save(str(cache_folder / 'maskRCNN_CNN_lstm_GPU.h5'))
 	
 

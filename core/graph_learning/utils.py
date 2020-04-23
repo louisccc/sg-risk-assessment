@@ -39,6 +39,7 @@ def get_feature_list(scenegraphs, num_classes):
 #TODO: convert all non-numeric features to numeric datatypes
 def create_node_embeddings(scenegraph, feature_list):
     rows = []
+    labels=[]
     for node in scenegraph.entity_nodes:
         row = defaultdict()
         for attr in node.attr:
@@ -53,20 +54,19 @@ def create_node_embeddings(scenegraph, feature_list):
             else:
                 row[attr] = node.attr[attr]
         row['type_'+str(node.type)] = 1 #assign 1hot class label
+        labels.append(node.type)
         rows.append(row)
     #pdb.set_trace()
     embedding = pd.DataFrame(data=rows, columns=feature_list)
     embedding = embedding.fillna(value=0) #fill in NaN with zeros
     
-    return embedding
+    return np.array(labels), embedding
 
 
-#get adjacency matrix for scenegraph in scipy.sparse CSR matrix format
+#get adjacency matrix for entity nodes only from  scenegraph in scipy.sparse CSR matrix format
 def get_adj_matrix(scenegraph):
     adj = nx.convert_matrix.to_scipy_sparse_matrix(scenegraph.g, nodelist=scenegraph.entity_nodes)
     return adj
-    
-    
     
     
 

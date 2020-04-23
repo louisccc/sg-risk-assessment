@@ -1,7 +1,9 @@
 import numpy as np
 import scipy.sparse as sp
 import torch
-
+import os
+import pickle as pkl
+from collections import defaultdict
 
 def encode_onehot(labels):
     classes = set(labels)
@@ -51,6 +53,31 @@ def load_data(path="../data/cora/", dataset="cora"):
     idx_test = torch.LongTensor(idx_test)
 
     return adj, features, labels, idx_train, idx_val, idx_test
+
+
+#loading scene graph data in a format expected by GCN
+def load_scene_data(input_source="data/processed_scenes/"):
+    embeddings = adj_matrix = labels = None
+    
+    if not os.path.exists(input_source):
+        raise FileNotFoundError("path does not exist: " + input_source)
+        
+    else:
+        with open(input_source + "embeddings.pkl", 'rb') as f:
+            embeddings = pkl.load(f)
+            newembeddings=defaultdict()
+            for filename, embedding in embeddings.items():
+                newembeddings[filename] = torch.FloatTensor(np.array(normalize(sp.csr_matrix(embedding.values)).todense()))
+        with open(input_source + "adj_matrix.pkl", 'rb') as f:
+            adj_matrix = pkl.load(f)
+            newadj = defaultdict()
+            for filename, a_m in adj_matrix.items():
+                newadj[filename] = sparse_mx_to_torch_sparse_tensor(normalize(a_m + sp.eye(a_m.shape[0])))
+        if(os.path.exists(input_source+"labels.pkl")):
+            with open(input_source+"labels.pkl", 'rb') as f:
+                labels = pkl.load(f)
+
+    return  newadj, newembeddings, labels
 
 
 def normalize(mx):

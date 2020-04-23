@@ -4,7 +4,8 @@ from core.graph_learning import utils
 from core.scene_graph import scene_graph, relation_extractor
 import pickle as pkl
 from collections import defaultdict
-
+import numpy as np
+import pandas as pd
 
 #preprocess data for input to graph learning algorithms.
 input_source = "input/synthesis_data/lane-change-9.8/scenes/"
@@ -32,20 +33,27 @@ def save_preprocessed_data(savedir, scenegraphs, embeddings, adj_matrix, labels)
             pkl.dump(scenegraphs, f)
         with open(savedir+'embeddings.pkl', 'wb') as f:
             pkl.dump(embeddings, f)
+            combined_embeddings = pd.DataFrame()
+            for item in embeddings.values():
+                combined_embeddings = pd.concat([combined_embeddings, item], axis=0, ignore_index=False)
+            combined_embeddings.to_csv('combined_embeddings.tsv', sep='\t', header=False, index=False)
         with open(savedir+'adj_matrix.pkl', 'wb') as f:
             pkl.dump(adj_matrix, f)
         if(labels != None):
             with open(savedir+'labels.pkl', 'wb') as f:
                 pkl.dump(labels, f)
+            pd.DataFrame(np.concatenate(list(labels.values()))).to_csv('meta.tsv', sep='\t', header=False, index=False)
+            
     print("processed data saved to: " + savedir)
 
 if __name__ == "__main__":
     scenegraphs = get_scene_graphs(input_source)
     embeddings = defaultdict()
     adj_matrix = defaultdict()
+    labels = defaultdict()
     feature_list = utils.get_feature_list(scenegraphs.values(), num_classes=8)
     for frame_id, scenegraph in scenegraphs.items():
-        embeddings[frame_id] = utils.create_node_embeddings(scenegraph, feature_list)
+        labels[frame_id], embeddings[frame_id] = utils.create_node_embeddings(scenegraph, feature_list)
         adj_matrix[frame_id] = utils.get_adj_matrix(scenegraph)
-    save_preprocessed_data(save_dir, scenegraphs, embeddings, adj_matrix, None)
+    save_preprocessed_data(save_dir, scenegraphs, embeddings, adj_matrix, labels)
     pdb.set_trace()

@@ -121,12 +121,12 @@ for i in range(len(features)):
     output = train(features[i], adjs[i], labels[i])
     result_embeddings = pd.concat([result_embeddings, pd.DataFrame(output.detach().numpy().reshape(output.size()[0],n_features))], axis=0, ignore_index=True)
 
-pdb.set_trace()
+
 labels = np.concatenate(labels)
-result_embeddings.to_csv("result_embeddings.tsv", sep="\t", header=False, index=False)
-pd.DataFrame(labels).to_csv('meta.tsv', sep='\t', header=False, index=False)
+result_embeddings.to_csv("data/processed_scenes/result_embeddings.tsv", sep="\t", header=False, index=False)
+pd.DataFrame(labels).to_csv('data/processed_scenes/meta.tsv', sep='\t', header=False, index=False)
 
-
+pdb.set_trace()
 # Train model
 #t_total = time.time()
 #for epoch in range(args.epochs):

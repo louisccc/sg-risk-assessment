@@ -30,10 +30,9 @@ class SceneGraph:
     def __init__(self, framedict=None):
         self.g = nx.Graph() #initialize scenegraph as networkx graph
         self.relation_extractor = RelationExtractor()
-        self.road_node = Node("road", None, ActorType.ROAD, False)
-        self.add_node(self.road_node)   #adding the road as the root node
+        self.road_node = Node("road", {}, ActorType.ROAD, True)
         self.entity_nodes = []  #nodes which are explicit entities and not attributes.
-        
+        self.add_node(self.road_node)   #adding the road as the root node
         if framedict != None:
             self.add_frame_dict(framedict)
         
@@ -120,7 +119,7 @@ class SceneGraph:
     def extract_semantic_relations(self):
         for node1 in self.entity_nodes:
             for node2 in self.entity_nodes:
-                if node1.name != node2.name: #dont build self-relations
+                if node1.name != node2.name and node1.name != 'road' and node2.name != 'road': #dont build self-relations or relations w/ road
                     self.add_relations(self.relation_extractor.extract_relations(node1, node2))
     
 

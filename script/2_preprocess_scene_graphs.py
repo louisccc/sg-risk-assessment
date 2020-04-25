@@ -36,13 +36,13 @@ def save_preprocessed_data(savedir, scenegraphs, embeddings, adj_matrix, labels)
             combined_embeddings = pd.DataFrame()
             for item in embeddings.values():
                 combined_embeddings = pd.concat([combined_embeddings, item], axis=0, ignore_index=False)
-            combined_embeddings.to_csv('combined_embeddings.tsv', sep='\t', header=False, index=False)
+            combined_embeddings.to_csv(savedir+'combined_embeddings.tsv', sep='\t', header=False, index=False)
         with open(savedir+'adj_matrix.pkl', 'wb') as f:
             pkl.dump(adj_matrix, f)
         if(labels != None):
             with open(savedir+'labels.pkl', 'wb') as f:
                 pkl.dump(labels, f)
-            pd.DataFrame(np.concatenate(list(labels.values()))).to_csv('meta.tsv', sep='\t', header=False, index=False)
+            pd.DataFrame(np.concatenate(list(labels.values()))).to_csv(savedir+'meta.tsv', sep='\t', header=False, index=False)
             
     print("processed data saved to: " + savedir)
 

@@ -138,7 +138,6 @@ class GCNTrainer:
         features = list(self.scene_graph_embeddings.values())
         adjs =  list(self.adj_matrixes.values())
         labels =  list(self.scene_graph_labels.values())
-        labels = np.concatenate(labels)
         result_embeddings = pd.DataFrame()
         for i in range(len(features)): # iterate through scenegraphs
     
@@ -148,17 +147,18 @@ class GCNTrainer:
             adj = sparse_mx_to_torch_sparse_tensor(normalize(adjs[i] + sp.eye(adjs[i].shape[0])))
            
             output = self.model.forward(embs, adj)
-            result_embeddings = pd.concat([result_embeddings, pd.DataFrame(output.detach().numpy().reshape(output.size()[0],self.n_features))], axis=0, ignore_index=True)
+            result_embeddings = pd.concat([result_embeddings, pd.DataFrame(output.detach().numpy())], axis=0, ignore_index=True)
             acc_train = accuracy(output, torch.LongTensor(labels[i]))
 
             print('SceneGraph: {:04d}'.format(i), 'acc_train: {:.4f}'.format(acc_train.item()))
             
+        labels = np.concatenate(labels)
         self.save_output(labels, result_embeddings, "test")
     
     #generate TSV output file from embeddings and labels for visualization
     def save_output(self, metadata, embeddings, filename):
-        pd.DataFrame(metadata).to_csv(self.input_source + filename + '_meta.tsv', sep='\t', header=False, index=False)
-        embeddings.to_csv(self.input_source + filename + "_embeddings.tsv", sep="\t", header=False, index=False)
+        pd.DataFrame(metadata).to_csv(self.config.input_source / str(filename + "_meta.tsv"), sep='\t', header=False, index=False)
+        embeddings.to_csv(self.config.input_source / str(filename + "_embeddings.tsv"), sep="\t", header=False, index=False)
 
 
 if __name__ == "__main__":

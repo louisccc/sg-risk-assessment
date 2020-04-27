@@ -129,7 +129,7 @@ class GCNTrainer:
         features = self.node_embeddings
         adjs =  self.adj_matrixes
         labels =  self.node_labels
-        labels = np.concatenate(labels)
+
         result_embeddings = pd.DataFrame()
         for i in range(len(features)): # iterate through scenegraphs
     
@@ -143,14 +143,13 @@ class GCNTrainer:
             acc_train = accuracy(output, torch.LongTensor(labels[i]))
 
             print('SceneGraph: {:04d}'.format(i), 'acc_train: {:.4f}'.format(acc_train.item()))
-            
-        labels = np.concatenate(labels)
-        self.save_output(labels, result_embeddings, "test")
+        
+        self.save_output(np.concatenate(labels), result_embeddings, "test")
     
     #generate TSV output file from embeddings and labels for visualization
     def save_output(self, metadata, embeddings, filename):
-        pd.DataFrame(metadata).to_csv(self.config.input_source / str(filename + "_meta.tsv"), sep='\t', header=False, index=False)
-        embeddings.to_csv(self.config.input_source / str(filename + "_embeddings.tsv"), sep="\t", header=False, index=False)
+        pd.DataFrame(metadata).to_csv(self.config.input_base_dir / str(filename + "_meta.tsv"), sep='\t', header=False, index=False)
+        embeddings.to_csv(self.config.input_base_dir / str(filename + "_embeddings.tsv"), sep="\t", header=False, index=False)
 
 
 if __name__ == "__main__":

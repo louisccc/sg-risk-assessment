@@ -8,8 +8,9 @@ import numpy as np
 import pandas as pd
 
 #preprocess data for input to graph learning algorithms.
-input_source = "input/synthesis_data/lane-change-9.8/scenes/"
-save_dir = input_source + "processed_scenes/"
+base_dir = "input/synthesis_data/lane-change-9.8/"
+input_source = base_dir + "scenes/"
+save_dir = base_dir + "processed_scenes/"
 
 def get_scene_graphs(dir):
     scenegraphs = defaultdict()

@@ -48,6 +48,7 @@ class Config:
         self.parser.add_argument('--hidden', type=int, default=200, help='Number of hidden units.')
         self.parser.add_argument('--dropout', type=float, default=0.5, help='Dropout rate (1 - keep probability).')
         self.parser.add_argument('--nclass', type=int, default=8, help="The number of classes for node.")
+        self.parser.add_argument('--recursive', type=lambda x: (str(x).lower() == 'true'), default=False, help='Recursive loading scenegraphs')
 
         args_parsed = self.parser.parse_args(args)
         
@@ -55,11 +56,6 @@ class Config:
             self.__dict__[arg_name] = getattr(args_parsed, arg_name)
 
         self.input_base_dir = Path(self.input_path).resolve()
-        self.input_source   = self.input_base_dir / "processed_scenes"
-        self.data_source    = self.input_base_dir / "scene_raw"
-
-        # FIX ME: am I needed?
-        self.save_dir       = self.input_base_dir / "models"
 
 
 class GCNTrainer:
@@ -75,7 +71,14 @@ class GCNTrainer:
     def preprocess_scenegraph_data(self):
         # load scene graph txts into memory 
         sge = SceneGraphExtractor()
-        sge.load(self.config.data_source)
+
+        if self.config.recursive:
+            for sub_dir in tqdm([x for x in self.config.input_base_dir.iterdir() if x.is_dir()]):
+                data_source = sub_dir / "scene_raw"
+                sge.load(data_source)
+        else:
+            data_source = self.config.input_base_dir / "scene_raw"
+            sge.load(data_source)
 
         scene_graph_embeddings = {}
         scene_graph_labels = {}
@@ -93,6 +96,8 @@ class GCNTrainer:
         self.scene_graph_labels = scene_graph_labels
 
         self.n_features = next(iter(self.scene_graph_embeddings.values())).shape[1]
+
+        print("Number of Scene Graphs included: ", len(self.scenegraphs))
 
     def build_model(self):
         #returns an embedding for each node (unsupervised)

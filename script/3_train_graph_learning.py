@@ -2,7 +2,6 @@ import os, pdb, sys
 sys.path.append(os.path.dirname(sys.path[0]))
 from core.graph_learning import utils
 from core.graph_learning.models import base_model
-import pickle as pkl
 
 from pygcn.models import GCN
 from pygcn.utils import sparse_mx_to_torch_sparse_tensor, normalize, accuracy
@@ -16,9 +15,6 @@ from core.scene_graph.scene_graph import SceneGraphExtractor
 from argparse import ArgumentParser
 from pathlib import Path
 from tqdm import tqdm
-
-
-
 
 #loads data from processed_scenes folder. loads labels if they exist.
 # def load_data(input_source):
@@ -40,57 +36,70 @@ from tqdm import tqdm
                 
 #     return scenegraphs, embeddings, adj_matrix, labels
 
-def reduce_scene_graph_extraction(args):
-    args = SceneGraphArgumentParser().get_args(args)
-
-    input_base_dir = Path(args.input_path).resolve()
-    input_source   = input_base_dir / "processed_scenes"
-    data_source    = input_base_dir / "scene_raw"
-
-    # FIX ME 
-    # save_dir       = input_base_dir / "models"
-    
-    # load scene graph txts into memory 
-    sge = SceneGraphExtractor()
-    sge.load(data_source)
-
-    scene_graph_embeddings = {}
-    scene_graph_labels = {}
-    adj_matrix = {}
-
-    feature_list = utils.get_feature_list(sge.scenegraphs.values(), num_classes=8)
-
-    for timeframe, scenegraph in sge.scenegraphs.items():
-        print(timeframe, scenegraph)
-
-        scene_graph_labels[timeframe], scene_graph_embeddings[timeframe] = utils.create_node_embeddings(scenegraph, feature_list)
-        adj_matrix[timeframe] = utils.get_adj_matrix(scenegraph)
-    
-    return sge.scenegraphs, adj_matrix, scene_graph_embeddings, scene_graph_labels
-
-class SceneGraphArgumentParser:
-    '''
-        Argument Parser for script to train scenegraphs.
-    '''
-    def __init__(self):
+class Config:
+    '''Argument Parser for script to train scenegraphs.'''
+    def __init__(self, args):
         self.parser = ArgumentParser(description='The parameters for training the scene graph using GCN.')
-        self.parser.add_argument('-ip', '--input_path', type=str, default="../input/synthesis_data/lane-change-9.8/", help="Path to code directory.")
-        self.parser.add_argument('-lr',  dest='learning_rate', default=0.0001, type=float, help='The learning rate for GCN.')
+        self.parser.add_argument('--input_path', type=str, default="../input/synthesis_data/lane-change-9.8/", help="Path to code directory.")
+        self.parser.add_argument('--learning_rate', default=0.0001, type=float, help='The initial learning rate for GCN.')
+        self.parser.add_argument('--seed', type=int, default=42, help='Random seed.')
+        self.parser.add_argument('--epochs', type=int, default=200, help='Number of epochs to train.')
+        self.parser.add_argument('--weight_decay', type=float, default=5e-4, help='Weight decay (L2 loss on parameters).')
+        self.parser.add_argument('--hidden', type=int, default=200, help='Number of hidden units.')
+        self.parser.add_argument('--dropout', type=float, default=0.5, help='Dropout rate (1 - keep probability).')
+        self.parser.add_argument('--nclass', type=int, default=8, help="The number of classes for node.")
 
+        args_parsed = self.parser.parse_args(args)
+        
+        for arg_name in vars(args_parsed):
+            self.__dict__[arg_name] = getattr(args_parsed, arg_name)
 
-    def get_args(self, args):
-        return self.parser.parse_args(args)
+        self.input_base_dir = Path(self.input_path).resolve()
+        self.input_source   = self.input_base_dir / "processed_scenes"
+        self.data_source    = self.input_base_dir / "scene_raw"
+
+        # FIX ME: am I needed?
+        self.save_dir       = self.input_base_dir / "models"
+
 
 class GCNTrainer:
 
     def __init__(self, args):
-        self.scenegraphs, self.adj_matrixes, self.scene_graph_embeddings, self.scene_graph_labels = reduce_scene_graph_extraction(args)
+        self.config = Config(args)
+
+        np.random.seed(self.config.seed)
+        torch.manual_seed(self.config.seed)
+        
+        self.preprocess_scenegraph_data() # reduced scenegraph extraction
+
+    def preprocess_scenegraph_data(self):
+        # load scene graph txts into memory 
+        sge = SceneGraphExtractor()
+        sge.load(self.config.data_source)
+
+        scene_graph_embeddings = {}
+        scene_graph_labels = {}
+        adj_matrix = {}
+
+        feature_list = utils.get_feature_list(sge.scenegraphs.values(), num_classes=self.config.nclass)
+
+        for timeframe, scenegraph in sge.scenegraphs.items():
+            print(timeframe, scenegraph)
+
+            scene_graph_labels[timeframe], scene_graph_embeddings[timeframe] = utils.create_node_embeddings(scenegraph, feature_list)
+            adj_matrix[timeframe] = utils.get_adj_matrix(scenegraph)
+        
+        self.scenegraphs = sge.scenegraphs
+        self.adj_matrixes = adj_matrix
+        self.scene_graph_embeddings = scene_graph_embeddings
+        self.scene_graph_labels = scene_graph_labels
+
         self.n_features = next(iter(self.scene_graph_embeddings.values())).shape[1]
 
     def build_model(self):
         #returns an embedding for each node (unsupervised)
-        self.model = GCN(nfeat=self.n_features, nhid=200, nclass=8, dropout=0.75)
-        self.optimizer = optim.Adam(self.model.parameters(), lr=0.0001)
+        self.model = GCN(nfeat=self.n_features, nhid=self.config.hidden, nclass=self.config.nclass, dropout=self.config.dropout)
+        self.optimizer = optim.Adam(self.model.parameters(), lr=self.config.learning_rate, weight_decay=self.config.weight_decay)
 
     def train_model(self):
 
@@ -98,7 +107,7 @@ class GCNTrainer:
         adjs =  list(self.adj_matrixes.values())
         labels =  list(self.scene_graph_labels.values())
         
-        for epoch_idx in tqdm(range(100)): # iterate through epoch
+        for epoch_idx in tqdm(range(self.config.epochs)): # iterate through epoch
             acc_loss_train = 0
 
             for i in range(len(features)): # iterate through scenegraphs

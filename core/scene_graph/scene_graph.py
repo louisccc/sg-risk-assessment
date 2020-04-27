@@ -8,6 +8,8 @@ import pdb, json, random
 from pathlib import Path
 from glob import glob
 import pickle as pkl
+from collections import defaultdict
+import pandas as pd
 #basic class for abstracting a node in the scene graph. this is mainly used for holding the data for each node.
 
 
@@ -125,81 +127,134 @@ class SceneGraph:
 
 class SceneGraphExtractor:
     def __init__(self):
-        self.scenegraphs = {}
-        self.scene_images = {}
-
-        # For Visualization
-        self.fig, (self.ax_graph, self.ax_img) = plt.subplots(1, 2, figsize=(20, 12))
-        self.fig.canvas.set_window_title("Scene Graph Visualization")
+        self.scenegraphs_sequence = []
 
     def load(self, path):
+        scenegraphs = {}
+
         for txt_path in glob("%s/**/*.txt" % str(path), recursive=True):
-            with open(txt_path, 'r') as f:
-                framedict = json.loads(f.read())
-                for frame, frame_dict in framedict.items():
-                    scenegraph = SceneGraph()
-                    scenegraph.add_frame_dict(frame_dict)
-                    scenegraph.extract_semantic_relations()
-                    self.scenegraphs[frame] = scenegraph
+            scene_dict_f = open(txt_path, 'r')
+            
+            framedict = json.loads(scene_dict_f.read())
 
-    def build_corresponding_images(self, path):
-        for frame, scenegraph in self.scenegraphs.items():
-            try:
-                print('catch %s/%.8d.png'%(path, int(frame)))
-                img = plt.imread('%s/%.8d.png'%(path, int(frame)))
-                self.scene_images[frame] = (scenegraph, img)
-            except Exception as e:
-                print(e)
+            for frame, frame_dict in framedict.items():
+                scenegraph = SceneGraph()
+                scenegraph.add_frame_dict(frame_dict)
+                scenegraph.extract_semantic_relations()
+                scenegraphs[frame] = scenegraph
         
-    def store(self, path):
-        for frame, (scenegraph, image) in self.scene_images.items():
-            pos = nx.spring_layout(scenegraph.g, k=1.5*1/np.sqrt(len(scenegraph.g.nodes())))
-            nx.draw(scenegraph.g, labels=nx.get_node_attributes(scenegraph.g, 'label'), pos=pos, font_size=8, with_labels=True, ax=self.ax_graph)
-            self.ax_img.imshow(image)
-            self.ax_graph.set_title("Risk {}".format(random.random()))
-            self.ax_img.set_title("Frame {}".format(frame))
-            plt.savefig('%s/%s.png'%(path, frame))
-            self.ax_graph.clear()
-            self.ax_img.clear()
-            #pickle scenegraph so it can be loaded directly later. scenegraphs are saved by frame number.
-            with open(str(path) + '/' + frame + ".pkl", "wb") as f:
-                pkl.dump(scenegraph, f)
+        risk_label = 1.0
 
+        self.scenegraphs_sequence.append((scenegraphs, risk_label))
 
-    def update(self, num):
-        self.ax_graph.clear()
-        self.ax_img.clear()
-
-        frame = list(self.scene_images.keys())[num]
-        scenegraph = self.scene_images[frame][0]
-        pos = nx.spring_layout(scenegraph.g, k=1.5*1/np.sqrt(len(scenegraph.g.nodes())))
-        nx.draw(scenegraph.g, labels=nx.get_node_attributes(scenegraph.g, 'label'), pos=pos, font_size=8, with_labels=True, ax=self.ax_graph)
-        self.ax_img.imshow(self.scene_images[frame][1])
-
-        # Set the title
-        self.ax_graph.set_title("Risk {}".format(random.random()))
-        self.ax_img.set_title("Frame {}".format(num))
-
-    def show_animation(self):
-        ani = animation.FuncAnimation(self.fig, self.update, frames=len(self.scene_images.keys()))
-        plt.show()
-
-
-if __name__ == '__main__':
-    # sg = SceneGraph()
-    # re = RelationExtractor()
-    input_path = Path('../../input/synthesis_data/lane-change').resolve()
-    foldernames = sorted(os.listdir(input_path))
-    
-    for foldername in foldernames:
-        txt_path = input_path / foldername / "scene_raw"
-        img_path = input_path / foldername / "raw_images"
-        store_path = input_path / foldername / "scenes"
-        store_path.mkdir(parents=True, exist_ok=True)
+    #gets a list of all feature labels for all scenegraphs
+    def get_feature_list(self, num_classes):
+        all_attrs = set()
+        for scenegraphs, risk_label in self.scenegraphs_sequence:
+            for timeframe, scenegraph in scenegraphs.items():
+                for entity in scenegraph.entity_nodes:
+                    all_attrs.update(entity.attr.keys())
+                    
+        final_attr_list = all_attrs.copy()
+        for attr in all_attrs:
+            if attr in ["location", "rotation", "velocity", "ang_velocity"]:
+                final_attr_list.discard(attr)
+                final_attr_list.update([attr+"_x", attr+"_y", attr+"_z"]) #add 3 columns for vector values
         
-        sge = SceneGraphExtractor()
-        sge.load(txt_path)
-        sge.build_corresponding_images(img_path)
-        sge.store(store_path)
-        # sge.show_animation()
-        # pdb.set_trace()
+        for i in range(num_classes):
+            final_attr_list.add("type_"+str(i)) #create 1hot class labels
+        
+        final_attr_list.discard("name") #remove node name as it is not needed sice we have class labels
+        
+        return sorted(final_attr_list)
+
+    def create_node_embeddings(self, scenegraph, feature_list):
+        rows = []
+        labels=[]
+        for node in scenegraph.entity_nodes:
+            row = defaultdict()
+            for attr in node.attr:
+                if attr in ["location", "rotation", "velocity", "ang_velocity"]:
+                    row[attr+"_x"] = node.attr[attr][0]
+                    row[attr+"_y"] = node.attr[attr][1]
+                    row[attr+"_z"] = node.attr[attr][2]
+                elif attr == "is_junction": #binarizing junction label
+                    row[attr] = 1 if node.attr==True else 0
+                elif attr == "name": #dont add name to embedding
+                    continue
+                else:
+                    row[attr] = node.attr[attr]
+            row['type_'+str(node.type)] = 1 #assign 1hot class label
+            labels.append(node.type)
+            rows.append(row)
+        #pdb.set_trace()
+        embedding = pd.DataFrame(data=rows, columns=feature_list)
+        embedding = embedding.fillna(value=0) #fill in NaN with zeros
+        
+        return np.array(labels), embedding
+
+    #get adjacency matrix for entity nodes only from  scenegraph in scipy.sparse CSR matrix format
+    def get_adj_matrix(self, scenegraph):
+        adj = nx.convert_matrix.to_scipy_sparse_matrix(scenegraph.g, nodelist=scenegraph.entity_nodes)
+        return adj
+
+    def create_dataset_4_node_classification(self):
+        node_embeddings = []
+        node_labels = []
+        adj_matrixes = []
+
+        feature_list = self.get_feature_list(num_classes=8)
+        for scenegraphs, risk_label in self.scenegraphs_sequence:
+            for timeframe, scenegraph in scenegraphs.items():
+                labels, embeddings = self.create_node_embeddings(scenegraph, feature_list)
+                adjs = self.get_adj_matrix(scenegraph)
+                node_embeddings.append(embeddings)
+                node_labels.append(labels)
+                adj_matrixes.append(adjs)
+
+        return node_embeddings, node_labels, adj_matrixes
+
+    # self.scene_images = {}
+    # For Visualization
+    # self.fig, (self.ax_graph, self.ax_img) = plt.subplots(1, 2, figsize=(20, 12))
+    # self.fig.canvas.set_window_title("Scene Graph Visualization")
+
+    # TODO: Aung change this into gif creations.
+    # def build_corresponding_images(self, path):
+    #     for scenegraphs, risk_label in self.scenegraphs_sequence.items():
+    #         for frame, scenegraph in scenegraphs.items():
+    #             try:
+    #                 print('catch %s/%.8d.png'%(path, int(frame)))
+    #                 img = plt.imread('%s/%.8d.png'%(path, int(frame)))
+    #                 self.scene_images[frame] = (scenegraph, img)
+    #             except Exception as e:
+    #                 print(e)
+        
+    # def store(self, path):
+    #     for frame, (scenegraph, image) in self.scene_images.items():
+    #         pos = nx.spring_layout(scenegraph.g, k=1.5*1/np.sqrt(len(scenegraph.g.nodes())))
+    #         nx.draw(scenegraph.g, labels=nx.get_node_attributes(scenegraph.g, 'label'), pos=pos, font_size=8, with_labels=True, ax=self.ax_graph)
+    #         self.ax_img.imshow(image)
+    #         self.ax_graph.set_title("Risk {}".format(random.random()))
+    #         self.ax_img.set_title("Frame {}".format(frame))
+    #         plt.savefig('%s/%s.png'%(path, frame))
+    #         self.ax_graph.clear()
+    #         self.ax_img.clear()
+
+    # def update(self, num):
+    #     self.ax_graph.clear()
+    #     self.ax_img.clear()
+
+    #     frame = list(self.scene_images.keys())[num]
+    #     scenegraph = self.scene_images[frame][0]
+    #     pos = nx.spring_layout(scenegraph.g, k=1.5*1/np.sqrt(len(scenegraph.g.nodes())))
+    #     nx.draw(scenegraph.g, labels=nx.get_node_attributes(scenegraph.g, 'label'), pos=pos, font_size=8, with_labels=True, ax=self.ax_graph)
+    #     self.ax_img.imshow(self.scene_images[frame][1])
+
+    #     # Set the title
+    #     self.ax_graph.set_title("Risk {}".format(random.random()))
+    #     self.ax_img.set_title("Frame {}".format(num))
+
+    # def show_animation(self):
+    #     ani = animation.FuncAnimation(self.fig, self.update, frames=len(self.scene_images.keys()))
+    #     plt.show()

@@ -81,24 +81,15 @@ class GCNTrainer:
             data_source = self.config.input_base_dir / "scene_raw"
             sge.load(data_source)
 
-        scene_graph_embeddings = {}
-        scene_graph_labels = {}
-        adj_matrix = {}
+        self.node_embeddings = []
+        self.node_labels = []
+        self.adj_matrixes = []
 
-        feature_list = utils.get_feature_list(sge.scenegraphs.values(), num_classes=self.config.nclass)
+        self.node_embeddings, self.node_labels, self.adj_matrixes = sge.create_dataset_4_node_classification()
+                    
+        self.n_features = self.node_embeddings[0].shape[1]
 
-        for timeframe, scenegraph in sge.scenegraphs.items():
-            scene_graph_labels[timeframe], scene_graph_embeddings[timeframe] = utils.create_node_embeddings(scenegraph, feature_list)
-            adj_matrix[timeframe] = utils.get_adj_matrix(scenegraph)
-        
-        self.scenegraphs = sge.scenegraphs
-        self.adj_matrixes = adj_matrix
-        self.scene_graph_embeddings = scene_graph_embeddings
-        self.scene_graph_labels = scene_graph_labels
-
-        self.n_features = next(iter(self.scene_graph_embeddings.values())).shape[1]
-
-        print("Number of Scene Graphs included: ", len(self.scenegraphs))
+        print("Number of Scene Graphs included: ", len(self.node_embeddings))
 
     def build_model(self):
         #returns an embedding for each node (unsupervised)
@@ -107,9 +98,9 @@ class GCNTrainer:
 
     def train_model(self):
 
-        features = list(self.scene_graph_embeddings.values())
-        adjs =  list(self.adj_matrixes.values())
-        labels =  list(self.scene_graph_labels.values())
+        features = self.node_embeddings
+        adjs =  self.adj_matrixes
+        labels =  self.node_labels
         
         for epoch_idx in tqdm(range(self.config.epochs)): # iterate through epoch
             acc_loss_train = 0
@@ -135,9 +126,9 @@ class GCNTrainer:
 
     def predict_node_classification(self):
         # take training set as testing data temporarily
-        features = list(self.scene_graph_embeddings.values())
-        adjs =  list(self.adj_matrixes.values())
-        labels =  list(self.scene_graph_labels.values())
+        features = self.node_embeddings
+        adjs =  self.adj_matrixes
+        labels =  self.node_labels
         labels = np.concatenate(labels)
         result_embeddings = pd.DataFrame()
         for i in range(len(features)): # iterate through scenegraphs

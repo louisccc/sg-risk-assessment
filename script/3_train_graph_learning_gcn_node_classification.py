@@ -85,8 +85,6 @@ class GCNTrainer:
         feature_list = utils.get_feature_list(sge.scenegraphs.values(), num_classes=self.config.nclass)
 
         for timeframe, scenegraph in sge.scenegraphs.items():
-            print(timeframe, scenegraph)
-
             scene_graph_labels[timeframe], scene_graph_embeddings[timeframe] = utils.create_node_embeddings(scenegraph, feature_list)
             adj_matrix[timeframe] = utils.get_adj_matrix(scenegraph)
         

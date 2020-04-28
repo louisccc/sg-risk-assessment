@@ -10,6 +10,8 @@ from glob import glob
 import pickle as pkl
 from collections import defaultdict
 import pandas as pd
+from sklearn.model_selection import train_test_split
+
 #basic class for abstracting a node in the scene graph. this is mainly used for holding the data for each node.
 
 
@@ -200,6 +202,7 @@ class SceneGraphExtractor:
 
     def create_dataset_4_node_classification(self):
         node_embeddings = []
+
         node_labels = []
         adj_matrixes = []
 
@@ -213,12 +216,18 @@ class SceneGraphExtractor:
                 adj_matrixes.append(adjs)
 
         # training, testing set split.
-
-        # each row stands for a scenegraph: 
+        train, test = train_test_split(list(zip(node_embeddings, node_labels, adj_matrixes)), test_size=0.1, shuffle=True)
+        
+        # in train and test, each row stands for a scenegraph: 
         # 1) a list of node embeddings
         # 2) a list of node labels
         # 3) adjacency matrix for this scenegraph
-        return node_embeddings, node_labels, adj_matrixes
+        # return node_embeddings, node_labels, adj_matrixes
+
+        return train, test
+        
+    def create_dataset_4_graph_classification(self):
+        return self.scenegraphs_sequence
 
     # self.scene_images = {}
     # For Visualization

@@ -85,8 +85,14 @@ class GCNTrainer:
         self.node_labels = []
         self.adj_matrixes = []
 
-        self.node_embeddings, self.node_labels, self.adj_matrixes = sge.create_dataset_4_node_classification()
-                    
+        self.training_data, self.testing_data = sge.create_dataset_4_node_classification()
+        
+        unzip_training_data = list(zip(*self.training_data)) 
+        unzip_testing_data = list(zip(*self.testing_data))
+
+        self.node_embeddings, self.node_labels, self.adj_matrixes = list(unzip_training_data[0]), list(unzip_training_data[1]), list(unzip_training_data[2])
+        self.node_embeddings_test, self.node_labels_test, self.adj_matrixes_test = list(unzip_testing_data[0]), list(unzip_testing_data[1]), list(unzip_testing_data[2])                    
+
         self.n_features = self.node_embeddings[0].shape[1]
 
         print("Number of Scene Graphs included: ", len(self.node_embeddings))
@@ -126,9 +132,9 @@ class GCNTrainer:
 
     def predict_node_classification(self):
         # take training set as testing data temporarily
-        features = self.node_embeddings
-        adjs =  self.adj_matrixes
-        labels =  self.node_labels
+        features = self.node_embeddings_test
+        adjs =  self.adj_matrixes_test
+        labels =  self.node_labels_test
 
         result_embeddings = pd.DataFrame()
         for i in range(len(features)): # iterate through scenegraphs

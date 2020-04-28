@@ -212,6 +212,12 @@ class SceneGraphExtractor:
                 node_labels.append(labels)
                 adj_matrixes.append(adjs)
 
+        # training, testing set split.
+
+        # each row stands for a scenegraph: 
+        # 1) a list of node embeddings
+        # 2) a list of node labels
+        # 3) adjacency matrix for this scenegraph
         return node_embeddings, node_labels, adj_matrixes
 
     # self.scene_images = {}

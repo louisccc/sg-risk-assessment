@@ -3,7 +3,6 @@ sys.path.append(os.path.dirname(sys.path[0]))
 from core.graph_learning import utils
 from core.graph_learning.models import base_model
 
-from pygcn.models import GCN
 from pygcn.utils import sparse_mx_to_torch_sparse_tensor, normalize, accuracy
 import torch
 import torch.nn.functional as F
@@ -13,6 +12,7 @@ import scipy.sparse as sp
 import pandas as pd
 
 from core.scene_graph.graph_process import NodeClassificationExtractor
+from core.graph_learning.models.gcn import *
 from argparse import ArgumentParser
 from pathlib import Path
 from tqdm import tqdm

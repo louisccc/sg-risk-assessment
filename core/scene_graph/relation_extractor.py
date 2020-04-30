@@ -68,7 +68,6 @@ class Relations(Enum):
 class RelationExtractor:
 
     def get_actor_type(self, actor):
-            
         if "lane_type" in actor.attr.keys():
             return ActorType.LANE
         if actor.attr["name"] == "Traffic Light":
@@ -96,7 +95,7 @@ class RelationExtractor:
         
         low_type = min(type1.value, type2.value) #the lower of the two enums.
         high_type = max(type1.value, type2.value)
-        
+    
         function_call = "self.extract_relations_"+ACTOR_NAMES[low_type]+"_"+ACTOR_NAMES[high_type]+"(actor1, actor2) if type1.value <= type2.value "\
                         "else self.extract_relations_"+ACTOR_NAMES[low_type]+"_"+ACTOR_NAMES[high_type]+"(actor2, actor1)"
         return eval(function_call)
@@ -113,6 +112,7 @@ class RelationExtractor:
             
     def extract_relations_car_lane(self, actor1, actor2):
         relation_list = []
+        # import pdb; pdb.set_trace()
         if(self.in_lane(actor1,actor2)):
             relation_list.append([actor1, Relations.isIn, actor2])
         return relation_list 

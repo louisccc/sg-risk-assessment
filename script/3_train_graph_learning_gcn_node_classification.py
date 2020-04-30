@@ -12,36 +12,19 @@ import numpy as np
 import scipy.sparse as sp
 import pandas as pd
 
-from core.scene_graph.scene_graph import SceneGraphExtractor
+from core.scene_graph.graph_process import NodeClassificationExtractor
 from argparse import ArgumentParser
 from pathlib import Path
 from tqdm import tqdm
 
-#loads data from processed_scenes folder. loads labels if they exist.
-# def load_data(input_source):
-#     scenegraphs = embeddings = adj_matrix = labels = None
-    
-#     if not input_source.exists():
-#         raise FileNotFoundError("path does not exist: " + input_source)
-        
-#     else:
-#         with open(str(input_source/"scenegraphs.pkl"), 'rb') as f:
-#             scenegraphs = pkl.load(f)
-#         with open(str(input_source/"embeddings.pkl"), 'rb') as f:
-#             embeddings = pkl.load(f)
-#         with open(str(input_source/"adj_matrix.pkl"), 'rb') as f:
-#             adj_matrix = pkl.load(f)
-#         if (input_source/"labels.pkl").exists():
-#             with open(str(input_source/"labels.pkl"), 'rb') as f:
-#                 labels = pkl.load(f)
-                
-#     return scenegraphs, embeddings, adj_matrix, labels
 
 class Config:
+
     '''Argument Parser for script to train scenegraphs.'''
+
     def __init__(self, args):
         self.parser = ArgumentParser(description='The parameters for training the scene graph using GCN.')
-        self.parser.add_argument('--input_path', type=str, default="../input/synthesis_data/lane-change-9.8/", help="Path to code directory.")
+        self.parser.add_argument('--input_path', type=str, default="../input/synthesis_data/lane-change/0", help="Path to code directory.")
         self.parser.add_argument('--learning_rate', default=0.0001, type=float, help='The initial learning rate for GCN.')
         self.parser.add_argument('--seed', type=int, default=42, help='Random seed.')
         self.parser.add_argument('--epochs', type=int, default=200, help='Number of epochs to train.')
@@ -71,21 +54,19 @@ class GCNTrainer:
 
     def preprocess_scenegraph_data(self):
         # load scene graph txts into memory 
-        sge = SceneGraphExtractor()
+        sge = NodeClassificationExtractor()
 
         if self.config.recursive:
             for sub_dir in tqdm([x for x in self.config.input_base_dir.iterdir() if x.is_dir()]):
-                data_source = sub_dir / "scene_raw"
-                sge.load(data_source)
+                sge.load(sub_dir)
         else:
-            data_source = self.config.input_base_dir / "scene_raw"
-            sge.load(data_source)
+            sge.load(self.config.input_base_dir)
 
         self.node_embeddings = []
         self.node_labels = []
         self.adj_matrixes = []
 
-        self.training_data, self.testing_data = sge.create_dataset_4_node_classification()
+        self.training_data, self.testing_data = sge.to_dataset()
         
         unzip_training_data = list(zip(*self.training_data)) 
         unzip_testing_data = list(zip(*self.testing_data))

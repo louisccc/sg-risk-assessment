@@ -23,7 +23,7 @@ class Config:
     '''Argument Parser for script to train scenegraphs.'''
     def __init__(self, args):
         self.parser = ArgumentParser(description='The parameters for training the scene graph using GCN.')
-        self.parser.add_argument('--input_path', type=str, default="../input/synthesis_data/lane-change-9.8/", help="Path to code directory.")
+        self.parser.add_argument('--input_path', type=str, default="../input/synthesis_data/lane-change/0", help="Path to code directory.")
         self.parser.add_argument('--learning_rate', default=0.0001, type=float, help='The initial learning rate for GCN.')
         self.parser.add_argument('--seed', type=int, default=42, help='Random seed.')
         self.parser.add_argument('--epochs', type=int, default=200, help='Number of epochs to train.')
@@ -32,6 +32,7 @@ class Config:
         self.parser.add_argument('--dropout', type=float, default=0.5, help='Dropout rate (1 - keep probability).')
         self.parser.add_argument('--nclass', type=int, default=8, help="The number of classes for node.")
         self.parser.add_argument('--recursive', type=lambda x: (str(x).lower() == 'true'), default=False, help='Recursive loading scenegraphs')
+        self.parser.add_argument('--batch_size', type=int, default=32, help='Number of graphs in a batch.')
 
         args_parsed = self.parser.parse_args(args)
         
@@ -70,7 +71,7 @@ class Generator:
 
         return raw_data, raw_label
 
-class GCNTrainer:
+class GINTrainer:
 
     def __init__(self, args):
         self.config = Config(args)
@@ -92,9 +93,9 @@ class GCNTrainer:
             data_source = self.config.input_base_dir
             sge.load(data_source)
 
-        self.training_graphs, self.training_labels = sge.create_dataset_4_graph_classification()
+        self.training_graphs, self.training_labels = sge.to_dataset()
         
-        self.generator = Generator(self.training_graphs, self.training_labels, 32)
+        self.generator = Generator(self.training_graphs, self.training_labels, self.config.batch_size)
 
         print("Number of Scene Graphs included: ", len(self.training_graphs))
 
@@ -144,9 +145,8 @@ class GCNTrainer:
             print('SceneGraph: {:04d}'.format(i), 'acc_train: {:.4f}'.format(acc_train.item()))
 
 
-
 if __name__ == "__main__":
-    gcn_trainer = GCNTrainer(sys.argv[1:])
+    gcn_trainer = GINTrainer(sys.argv[1:])
     gcn_trainer.build_model()
     gcn_trainer.train_model()
     gcn_trainer.predict_graph_classification()

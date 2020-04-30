@@ -227,6 +227,12 @@ class GraphCNN(nn.Module):
         
         return score_over_layer
 
+    def forward2(self, graph_sequence):
+        output = self.forward(graph_sequence)
+
+        ### average pooling
+        pool_output = output.mean(axis=0)
+        return pool_output
 
 ###MLP with lienar output
 class MLP(nn.Module):

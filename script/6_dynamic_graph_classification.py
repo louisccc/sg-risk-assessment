@@ -9,7 +9,7 @@ import scipy.sparse as sp
 import pandas as pd
 
 from core.graph_learning.models import base_model
-from core.scene_graph.graph_process import SceneGraphExtractor
+from core.scene_graph.graph_process import SceneGraphSequenceGenerator
 from core.graph_learning.utils import accuracy
 from argparse import ArgumentParser
 from pathlib import Path
@@ -69,7 +69,7 @@ class Generator:
 
         return raw_data, raw_label
 
-class GINTrainer:
+class DynGINTrainer:
 
     def __init__(self, args):
         self.config = Config(args)
@@ -81,7 +81,7 @@ class GINTrainer:
 
     def preprocess_scenegraph_data(self):
         # load scene graph txts into memory 
-        sge = SceneGraphExtractor()
+        sge = SceneGraphSequenceGenerator()
 
         if self.config.recursive:
             for sub_dir in tqdm([x for x in self.config.input_base_dir.iterdir() if x.is_dir()]):
@@ -91,11 +91,10 @@ class GINTrainer:
             data_source = self.config.input_base_dir
             sge.load(data_source)
 
-        self.training_graphs, self.training_labels = sge.to_dataset()
+        self.training_sequences, self.training_labels = sge.to_dataset()
         
-        self.generator = Generator(self.training_graphs, self.training_labels, self.config.batch_size)
+        print("Number of Sequences included: ", len(self.training_sequences))
 
-        print("Number of Scene Graphs included: ", len(self.training_graphs))
 
     def build_model(self):
         self.model = GraphCNN(4, 4, 34, 50, 2, 0.75, False, "average", "average", "cuda").to("cuda")
@@ -106,16 +105,15 @@ class GINTrainer:
         for epoch_idx in tqdm(range(self.config.epochs)): # iterate through epoch
             acc_loss_train = 0
             
-            for i in range(self.generator.number_of_batch): # iterate through scenegraphs
-                
-                data, label = next(self.generator)
+            for i in range(len(self.training_sequences)): # iterate through scenegraphs
+                data, label = self.training_sequences[i], self.training_labels[i]
 
                 self.model.train()
                 self.optimizer.zero_grad()
                                
-                output = self.model.forward(data)
-
-                loss_train = nn.CrossEntropyLoss()(output, torch.LongTensor(label).to("cuda"))
+                output = self.model.forward2(data)
+                
+                loss_train = nn.CrossEntropyLoss()(output.view(-1, 2), torch.LongTensor([label]).to("cuda"))
 
                 loss_train.backward()
 
@@ -130,21 +128,22 @@ class GINTrainer:
     def predict_graph_classification(self):
         # take training set as testing data temporarily
 
-        for i in range(self.generator.number_of_batch): # iterate through scenegraphs
+        for i in range(len(self.training_sequences)): # iterate through scenegraphs
             
-            data, label = next(self.generator)
+            data, label = self.training_sequences[i], self.training_labels[i]
             
             self.model.eval()
 
-            output = self.model.forward(data)
+            output = self.model.forward2(data)
 
-            acc_train = accuracy(output, torch.LongTensor(label))
+            print(output, label)
+            acc_train = accuracy(output.view(-1, 2), torch.LongTensor([label]))
 
-            print('SceneGraph: {:04d}'.format(i), 'acc_train: {:.4f}'.format(acc_train.item()))
+            print('Dynamic SceneGraph: {:04d}'.format(i), 'acc_train: {:.4f}'.format(acc_train.item()))
 
 
 if __name__ == "__main__":
-    gcn_trainer = GINTrainer(sys.argv[1:])
+    gcn_trainer = DynGINTrainer(sys.argv[1:])
     gcn_trainer.build_model()
     gcn_trainer.train_model()
     gcn_trainer.predict_graph_classification()

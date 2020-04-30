@@ -16,60 +16,6 @@ def encode_onehot(labels):
     return labels_onehot
 
 
-#gets a list of all feature labels for all scenegraphs
-def get_feature_list(scenegraphs, num_classes):
-    all_attrs = set()
-    for scenegraph in scenegraphs:
-        for entity in scenegraph.entity_nodes:
-            all_attrs.update(entity.attr.keys())
-            
-    final_attr_list = all_attrs.copy()
-    for attr in all_attrs:
-        if attr in ["location", "rotation", "velocity", "ang_velocity"]:
-            final_attr_list.discard(attr)
-            final_attr_list.update([attr+"_x", attr+"_y", attr+"_z"]) #add 3 columns for vector values
-    for i in range(num_classes):
-        final_attr_list.add("type_"+str(i)) #create 1hot class labels
-    final_attr_list.discard("name") #remove node name as it is not needed sice we have class labels
-    return sorted(final_attr_list)
-
-
-
-#generates a list of node embeddings based on the node attributes and the feature list
-#TODO: convert all non-numeric features to numeric datatypes
-def create_node_embeddings(scenegraph, feature_list):
-    rows = []
-    labels=[]
-    for node in scenegraph.entity_nodes:
-        row = defaultdict()
-        for attr in node.attr:
-            if attr in ["location", "rotation", "velocity", "ang_velocity"]:
-                row[attr+"_x"] = node.attr[attr][0]
-                row[attr+"_y"] = node.attr[attr][1]
-                row[attr+"_z"] = node.attr[attr][2]
-            elif attr == "is_junction": #binarizing junction label
-                row[attr] = 1 if node.attr==True else 0
-            elif attr == "name": #dont add name to embedding
-                continue
-            else:
-                row[attr] = node.attr[attr]
-        row['type_'+str(node.type)] = 1 #assign 1hot class label
-        labels.append(node.type)
-        rows.append(row)
-    #pdb.set_trace()
-    embedding = pd.DataFrame(data=rows, columns=feature_list)
-    embedding = embedding.fillna(value=0) #fill in NaN with zeros
-    
-    return np.array(labels), embedding
-
-
-#get adjacency matrix for entity nodes only from  scenegraph in scipy.sparse CSR matrix format
-def get_adj_matrix(scenegraph):
-    adj = nx.convert_matrix.to_scipy_sparse_matrix(scenegraph.g, nodelist=scenegraph.entity_nodes)
-    return adj
-    
-    
-
 #copied from https://github.com/tkipf/pygcn/tree/master/data/cora to load cora dataset
 def load_cora_data(path="../../input/cora/", dataset="cora"):
     """Load citation network dataset"""
@@ -131,4 +77,8 @@ def sparse_mx_to_torch_sparse_tensor(sparse_mx):
     shape = torch.Size(sparse_mx.shape)
     return torch.sparse.FloatTensor(indices, values, shape)
     
-    
+def accuracy(output, labels):
+    preds = output.max(1)[1].type_as(labels)
+    correct = preds.eq(labels).double()
+    correct = correct.sum()
+    return correct / len(labels)

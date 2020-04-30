@@ -163,6 +163,32 @@ class SceneGraphExtractor(NodeClassificationExtractor):
 
         return graphs, graph_labels
 
+class SceneGraphSequenceGenerator(SceneGraphExtractor):
+    def __init__(self):
+        super(SceneGraphSequenceGenerator, self).__init__()
+
+    def to_dataset(self, number_of_frames=50):
+        sequence_labels = []
+        sequences = [] 
+
+        feature_list = self.get_feature_list(num_classes=8)
+        for scenegraphs, risk_label in self.scenegraphs_sequence:
+            sequence = []
+            acc_number = 0
+            modulo = int(len(scenegraphs) / number_of_frames)
+            for idx, (timeframe, scenegraph) in enumerate(scenegraphs.items()):
+                if idx % modulo == 0 and acc_number < number_of_frames:
+                    sequence.append(scenegraph)
+                    
+                    _, node_features = self.create_node_embeddings(scenegraph, feature_list)
+                    scenegraph.node_features = torch.FloatTensor(node_features.values)
+                    
+                    sparse_mx = nx.convert_matrix.to_scipy_sparse_matrix(scenegraph.g).tocoo().astype(np.float32)
+                    scenegraph.edge_mat = torch.from_numpy(np.vstack((sparse_mx.row, sparse_mx.col)).astype(np.int64))
+                    acc_number+=1
+            sequences.append(sequence)
+            sequence_labels.append(risk_label)
+        return sequences, sequence_labels
 
     # self.scene_images = {}
     # For Visualization

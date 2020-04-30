@@ -16,7 +16,7 @@ from core.scene_graph.graph_process import SceneGraphExtractor
 from argparse import ArgumentParser
 from pathlib import Path
 from tqdm import tqdm
-from core.graph_learning.models.graphcnn import *
+from core.graph_learning.models.gin import *
 
 
 class Config:

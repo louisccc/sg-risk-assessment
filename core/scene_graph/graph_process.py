@@ -116,7 +116,7 @@ class NodeClassificationExtractor:
         return adj
 
 
-class SceneGraphExtractor(NodeClassificationExtractor):
+class SceneGraphExtractor:
     
     def __init__(self):      
         self.scenegraphs_sequence = []
@@ -195,7 +195,7 @@ class SceneGraphExtractor(NodeClassificationExtractor):
         adj = nx.convert_matrix.to_scipy_sparse_matrix(scenegraph.g)
         return adj
 
-    def create_dataset_4_graph_classification(self):
+    def to_dataset(self):
         graph_labels = []
         graphs = []
 

@@ -3,7 +3,6 @@ sys.path.append(os.path.dirname(sys.path[0]))
 from core.graph_learning import utils
 from core.graph_learning.models import base_model
 
-from pygcn.utils import sparse_mx_to_torch_sparse_tensor, normalize, accuracy
 import torch
 import torch.nn.functional as F
 import torch.optim as optim
@@ -62,25 +61,28 @@ class GCNTrainer:
         else:
             sge.load(self.config.input_base_dir)
 
-        self.node_embeddings = []
-        self.node_labels = []
-        self.adj_matrixes = []
-
-        self.training_data, self.testing_data = sge.to_dataset()
+        self.training_data, self.testing_data = sge.to_dataset(train_to_test_ratio=0.1)
         
         unzip_training_data = list(zip(*self.training_data)) 
-        unzip_testing_data = list(zip(*self.testing_data))
+        unzip_testing_data  = list(zip(*self.testing_data))
 
         self.node_embeddings, self.node_labels, self.adj_matrixes = list(unzip_training_data[0]), list(unzip_training_data[1]), list(unzip_training_data[2])
         self.node_embeddings_test, self.node_labels_test, self.adj_matrixes_test = list(unzip_testing_data[0]), list(unzip_testing_data[1]), list(unzip_testing_data[2])                    
 
-        self.n_features = self.node_embeddings[0].shape[1]
+        self.num_features = self.node_embeddings[0].shape[1]
+        self.num_training_samples = len(self.node_embeddings)
+        self.num_testing_samples  = len(self.node_embeddings_test)
 
-        print("Number of Scene Graphs included: ", len(self.node_embeddings))
+        print("Number of SceneGraphs in the training set: ", self.num_training_samples)
+        print("Number of SceneGraphs in the testing set:  ", self.num_testing_samples)
+        print("Number of nodes in the training set:", sum([n.shape[0] for n in self.node_embeddings]))
+        print("Number of nodes in the testing set: ", sum([n.shape[0] for n in self.node_embeddings_test]))
+        print("Number of features for each node: ", self.num_features)
+
 
     def build_model(self):
         #returns an embedding for each node (unsupervised)
-        self.model = GCN(nfeat=self.n_features, nhid=self.config.hidden, nclass=self.config.nclass, dropout=self.config.dropout)
+        self.model = GCN(nfeat=self.num_features, nhid=self.config.hidden, nclass=self.config.nclass, dropout=self.config.dropout)
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.config.learning_rate, weight_decay=self.config.weight_decay)
 
     def train_model(self):
@@ -89,18 +91,15 @@ class GCNTrainer:
         adjs =  self.adj_matrixes
         labels =  self.node_labels
         
-        for epoch_idx in tqdm(range(self.config.epochs)): # iterate through epoch
+        for epoch_idx in tqdm(range(self.config.epochs)):
             acc_loss_train = 0
 
-            for i in range(len(features)): # iterate through scenegraphs
+            for i in range(self.num_training_samples):
             
                 self.model.train()
                 self.optimizer.zero_grad()
-                
-                embs = torch.FloatTensor(np.array(normalize(sp.csr_matrix(features[i].values)).todense()))
-                adj = sparse_mx_to_torch_sparse_tensor(normalize(adjs[i] + sp.eye(adjs[i].shape[0])))
                
-                output = self.model.forward(embs, adj)
+                output = self.model.forward(features[i], adjs[i])
 
                 loss_train = F.nll_loss(output, torch.LongTensor(labels[i]))
 
@@ -111,21 +110,20 @@ class GCNTrainer:
 
             print('Epoch: {:04d}'.format(epoch_idx), 'loss_train: {:.4f}'.format(acc_loss_train))
 
-    def predict_node_classification(self):
-        # take training set as testing data temporarily
+    def predict(self):
+        # predict the node classification performance.
+
         features = self.node_embeddings_test
         adjs =  self.adj_matrixes_test
         labels =  self.node_labels_test
 
         result_embeddings = pd.DataFrame()
-        for i in range(len(features)): # iterate through scenegraphs
-    
+        
+        for i in range(self.num_testing_samples):
             self.model.eval()
-            
-            embs = torch.FloatTensor(np.array(normalize(sp.csr_matrix(features[i].values)).todense()))
-            adj = sparse_mx_to_torch_sparse_tensor(normalize(adjs[i] + sp.eye(adjs[i].shape[0])))
-           
-            output = self.model.forward(embs, adj)
+                     
+            output = self.model.forward(features[i], adjs[i])
+
             result_embeddings = pd.concat([result_embeddings, pd.DataFrame(output.detach().numpy())], axis=0, ignore_index=True)
             acc_train = accuracy(output, torch.LongTensor(labels[i]))
 
@@ -143,4 +141,4 @@ if __name__ == "__main__":
     gcn_trainer = GCNTrainer(sys.argv[1:])
     gcn_trainer.build_model()
     gcn_trainer.train_model()
-    gcn_trainer.predict_node_classification()
+    gcn_trainer.predict()

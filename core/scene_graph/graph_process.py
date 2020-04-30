@@ -8,6 +8,9 @@ from glob import glob
 from collections import defaultdict
 from sklearn.model_selection import train_test_split
 
+from pygcn.utils import sparse_mx_to_torch_sparse_tensor, normalize, accuracy
+import scipy.sparse as sp
+
 import torch, json
 
 
@@ -43,6 +46,10 @@ class NodeClassificationExtractor:
             for timeframe, scenegraph in scenegraphs.items():
                 labels, embeddings = self.create_node_embeddings(scenegraph, feature_list)
                 adjs = self.get_adj_matrix(scenegraph)
+                
+                embeddings = torch.FloatTensor(np.array(normalize(sp.csr_matrix(embeddings.values)).todense()))
+                adjs = sparse_mx_to_torch_sparse_tensor(normalize(adjs + sp.eye(adjs.shape[0])))
+
                 node_embeddings.append(embeddings)
                 node_labels.append(labels)
                 adj_matrixes.append(adjs)
@@ -98,7 +105,7 @@ class NodeClassificationExtractor:
             row['type_'+str(node.type)] = 1 #assign 1hot class label
             labels.append(node.type)
             rows.append(row)
-        #pdb.set_trace()
+        
         embedding = pd.DataFrame(data=rows, columns=feature_list)
         embedding = embedding.fillna(value=0) #fill in NaN with zeros
         
@@ -137,33 +144,6 @@ class SceneGraphExtractor(NodeClassificationExtractor):
 
         print(path, risk_label)
         self.scenegraphs_sequence.append((scenegraphs, risk_label))
-
-    def create_dataset_4_node_classification(self):
-        node_embeddings = []
-
-        node_labels = []
-        adj_matrixes = []
-
-        feature_list = self.get_feature_list(num_classes=8)
-
-        for scenegraphs, risk_label in self.scenegraphs_sequence:
-            for timeframe, scenegraph in scenegraphs.items():
-                labels, embeddings = self.create_node_embeddings(scenegraph, feature_list)
-                adjs = self.get_adj_matrix(scenegraph)
-                node_embeddings.append(embeddings)
-                node_labels.append(labels)
-                adj_matrixes.append(adjs)
-
-        # training, testing set split.
-        train, test = train_test_split(list(zip(node_embeddings, node_labels, adj_matrixes)), test_size=0.1, shuffle=True)
-        
-        # in train and test, each row stands for a scenegraph: 
-        # 1) a list of node embeddings
-        # 2) a list of node labels
-        # 3) adjacency matrix for this scenegraph
-        # return node_embeddings, node_labels, adj_matrixes
-
-        return train, test
     
     #gets a list of all feature labels for all scenegraphs
     def get_feature_list(self, num_classes):

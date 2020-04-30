@@ -68,6 +68,8 @@ class NodeClassificationExtractor:
     def get_feature_list(self, num_classes):
         all_attrs = set()
         for scenegraphs in self.scenegraphs_sequence:
+            if type(scenegraphs) is tuple:
+                scenegraphs = scenegraphs[0]
             for timeframe, scenegraph in scenegraphs.items():
                 for entity in scenegraph.g.nodes:
                     all_attrs.update(entity.attr.keys())
@@ -116,10 +118,10 @@ class NodeClassificationExtractor:
         return adj
 
 
-class SceneGraphExtractor:
+class SceneGraphExtractor(NodeClassificationExtractor):
     
-    def __init__(self):      
-        self.scenegraphs_sequence = []
+    def __init__(self):
+        super(SceneGraphExtractor, self).__init__()
 
     def load(self, path):
         scenegraphs = {}
@@ -141,66 +143,14 @@ class SceneGraphExtractor:
         else:
             risk_label = 0
 
-        print(path, risk_label)
         self.scenegraphs_sequence.append((scenegraphs, risk_label))
     
-    #gets a list of all feature labels for all scenegraphs
-    def get_feature_list(self, num_classes):
-        all_attrs = set()
-        for scenegraphs, risk_label in self.scenegraphs_sequence:
-            for timeframe, scenegraph in scenegraphs.items():
-                for entity in scenegraph.g.nodes:
-                    all_attrs.update(entity.attr.keys())
-                    
-        final_attr_list = all_attrs.copy()
-        for attr in all_attrs:
-            if attr in ["location", "rotation", "velocity", "ang_velocity"]:
-                final_attr_list.discard(attr)
-                final_attr_list.update([attr+"_x", attr+"_y", attr+"_z"]) #add 3 columns for vector values
-        
-        for i in range(num_classes):
-            final_attr_list.add("type_"+str(i)) #create 1hot class labels
-        
-        final_attr_list.discard("name") #remove node name as it is not needed sice we have class labels
-        
-        return sorted(final_attr_list)
 
-    def create_node_embeddings(self, scenegraph, feature_list):
-        rows = []
-        labels=[]
-        for node in scenegraph.g.nodes:
-            row = defaultdict()
-            for attr in node.attr:
-                if attr in ["location", "rotation", "velocity", "ang_velocity"]:
-                    row[attr+"_x"] = node.attr[attr][0]
-                    row[attr+"_y"] = node.attr[attr][1]
-                    row[attr+"_z"] = node.attr[attr][2]
-                elif attr == "is_junction": #binarizing junction label
-                    row[attr] = 1 if node.attr==True else 0
-                elif attr == "name": #dont add name to embedding
-                    continue
-                else:
-                    row[attr] = node.attr[attr]
-            row['type_'+str(node.type)] = 1 #assign 1hot class label
-            labels.append(node.type)
-            rows.append(row)
-        #pdb.set_trace()
-        embedding = pd.DataFrame(data=rows, columns=feature_list)
-        embedding = embedding.fillna(value=0) #fill in NaN with zeros
-        
-        return np.array(labels), embedding
-
-    #get adjacency matrix for entity nodes only from  scenegraph in scipy.sparse CSR matrix format
-    def get_adj_matrix(self, scenegraph):
-        adj = nx.convert_matrix.to_scipy_sparse_matrix(scenegraph.g)
-        return adj
-
-    def to_dataset(self):
+    def to_dataset(self, train_to_test_ratio=0.1):
         graph_labels = []
         graphs = []
 
         feature_list = self.get_feature_list(num_classes=8)
-
         for scenegraphs, risk_label in self.scenegraphs_sequence:
             for timeframe, scenegraph in scenegraphs.items():
                 graphs.append(scenegraph)

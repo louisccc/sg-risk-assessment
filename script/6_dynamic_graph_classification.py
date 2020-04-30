@@ -40,35 +40,6 @@ class Config:
         self.input_base_dir = Path(self.input_path).resolve()
 
 
-class Generator:
-
-    def __init__(self, data, label, batch_size):
-        self.data = data
-        self.label = label
-        self.batch_size = batch_size
-        
-        self.number_of_batch = len(data) // self.batch_size
-        
-        self.random_ids = np.random.permutation(len(data))
-        self.batch_idx = 0
-
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        pos_start = self.batch_size * self.batch_idx
-        pos_end   = self.batch_size * (self.batch_idx+1)
-
-        raw_data  = [self.data[x]  for x in self.random_ids[pos_start:pos_end]]
-        raw_label = [self.label[x] for x in self.random_ids[pos_start:pos_end]]
-        
-        self.batch_idx += 1
-        if  self.batch_idx == self.number_of_batch:
-            self.batch_idx = 0
-            self.random_ids = np.random.permutation(len(self.data))
-
-        return raw_data, raw_label
-
 class DynGINTrainer:
 
     def __init__(self, args):

@@ -13,7 +13,4 @@ if __name__ == '__main__':
     
     sge = SceneGraphExtractor()
     sge.load(txt_path)
-    # sge.build_corresponding_images(img_path)
-    # sge.store(store_path)
-    # sge.show_animation()
     pdb.set_trace()

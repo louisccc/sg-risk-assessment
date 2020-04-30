@@ -128,7 +128,7 @@ class DynGINTrainer:
     def predict_graph_classification(self):
         # take training set as testing data temporarily
         acc_predict = []
-        
+
         for i in range(len(self.training_sequences)): # iterate through scenegraphs
             
             data, label = self.training_sequences[i], self.training_labels[i]
@@ -138,7 +138,8 @@ class DynGINTrainer:
             output = self.model.forward2(data)
 
             print(output, label)
-            acc_predict.append([accuracy(output.view(-1, 2), torch.LongTensor([label]))])
+            acc_train = accuracy(output.view(-1, 2), torch.LongTensor([label]))
+            acc_predict.append(acc_train.item())
 
             print('Dynamic SceneGraph: {:04d}'.format(i), 'acc_train: {:.4f}'.format(acc_train.item()))
 

@@ -15,7 +15,7 @@ from core.graph_learning.models.gcn import *
 from argparse import ArgumentParser
 from pathlib import Path
 from tqdm import tqdm
-
+from pygcn.utils import accuracy
 
 class Config:
 

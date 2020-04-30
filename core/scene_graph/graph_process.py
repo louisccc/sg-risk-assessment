@@ -54,7 +54,6 @@ class NodeClassificationExtractor:
                 node_labels.append(labels)
                 adj_matrixes.append(adjs)
 
-        # training, testing set split.
         train, test = train_test_split(list(zip(node_embeddings, node_labels, adj_matrixes)), test_size=train_to_test_ratio, shuffle=True)
         
         # in train and test, each row stands for a scenegraph: 

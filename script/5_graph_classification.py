@@ -150,6 +150,8 @@ class GINTrainer:
             self.model.eval()
 
             output = self.model.forward(data)
+            if self.processor=="cuda":
+                output = output.cpu()
             result_embeddings = pd.concat([result_embeddings, pd.DataFrame(output.detach().numpy())], axis=0, ignore_index=True)
             labels.append(label)
             acc_train = accuracy(output, torch.LongTensor(label))

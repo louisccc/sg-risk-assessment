@@ -10,7 +10,7 @@ import pandas as pd
 
 from core.graph_learning.models import base_model
 from core.scene_graph.graph_process import SceneGraphExtractor
-from core.graph_learning.utils import accuracy
+from core.graph_learning.utils import accuracy, save_embedding
 from argparse import ArgumentParser
 from pathlib import Path
 from tqdm import tqdm
@@ -31,7 +31,9 @@ class Config:
         self.parser.add_argument('--nclass', type=int, default=8, help="The number of classes for node.")
         self.parser.add_argument('--recursive', type=lambda x: (str(x).lower() == 'true'), default=False, help='Recursive loading scenegraphs')
         self.parser.add_argument('--batch_size', type=int, default=32, help='Number of graphs in a batch.')
-
+        self.parser.add_argument('--cuda', dest='cuda', action='store_true', help='Run with cuda.')
+        self.parser.add_argument('--cpu', dest='cuda', action='store_false', help='Run with cpu.')
+        self.parser.set_defaults(cuda=False)
         args_parsed = self.parser.parse_args(args)
         
         for arg_name in vars(args_parsed):
@@ -73,10 +75,12 @@ class GINTrainer:
 
     def __init__(self, args):
         self.config = Config(args)
-
         np.random.seed(self.config.seed)
         torch.manual_seed(self.config.seed)
-        
+        self.processor = "cpu"
+        if self.config.cuda:
+            self.processor = "cuda"
+            
         self.preprocess_scenegraph_data() # reduced scenegraph extraction
 
     def preprocess_scenegraph_data(self):
@@ -98,7 +102,11 @@ class GINTrainer:
         print("Number of Scene Graphs included: ", len(self.training_graphs))
 
     def build_model(self):
-        self.model = GraphCNN(4, 4, 34, 50, 2, 0.75, False, "average", "average", "cuda").to("cuda")
+        
+        self.model = GraphCNN(4, 4, 34, 50, 2, 0.75, False, "average", "average", self.processor)
+        if self.processor == "cuda":
+            self.model = self.model.to(self.processor)
+
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.config.learning_rate, weight_decay=self.config.weight_decay)
 
     def train_model(self):
@@ -114,9 +122,12 @@ class GINTrainer:
                 self.optimizer.zero_grad()
                                
                 output = self.model.forward(data)
-
-                loss_train = nn.CrossEntropyLoss()(output, torch.LongTensor(label).to("cuda"))
-
+                
+                if self.processor == "cuda":
+                    loss_train = nn.CrossEntropyLoss()(output, torch.LongTensor(label).to(self.processor))
+                else:
+                    loss_train = nn.CrossEntropyLoss()(output, torch.LongTensor(label))
+                    
                 loss_train.backward()
 
                 self.optimizer.step()
@@ -129,7 +140,9 @@ class GINTrainer:
 
     def predict_graph_classification(self):
         # take training set as testing data temporarily
-
+        
+        result_embeddings = pd.DataFrame()
+        labels = []
         for i in range(self.generator.number_of_batch): # iterate through scenegraphs
             
             data, label = next(self.generator)
@@ -137,14 +150,16 @@ class GINTrainer:
             self.model.eval()
 
             output = self.model.forward(data)
-
+            result_embeddings = pd.concat([result_embeddings, pd.DataFrame(output.detach().numpy())], axis=0, ignore_index=True)
+            labels.append(label)
             acc_train = accuracy(output, torch.LongTensor(label))
 
             print('SceneGraph: {:04d}'.format(i), 'acc_train: {:.4f}'.format(acc_train.item()))
-
+            
+        save_embedding(self.config.input_base_dir, np.concatenate(np.array(labels)), result_embeddings, "gin_test")
 
 if __name__ == "__main__":
-    gcn_trainer = GINTrainer(sys.argv[1:])
-    gcn_trainer.build_model()
-    gcn_trainer.train_model()
-    gcn_trainer.predict_graph_classification()
+    gin_trainer = GINTrainer(sys.argv[1:])
+    gin_trainer.build_model()
+    gin_trainer.train_model()
+    gin_trainer.predict_graph_classification()

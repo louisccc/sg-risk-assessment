@@ -82,3 +82,10 @@ def accuracy(output, labels):
     correct = preds.eq(labels).double()
     correct = correct.sum()
     return correct / len(labels)
+
+
+#generate TSV output file from embeddings and labels for visualization
+def save_embedding(output_dir, metadata, embeddings, filename):
+    pd.DataFrame(metadata).to_csv(output_dir / str(filename + "_meta.tsv"), sep='\t', header=False, index=False)
+    embeddings.to_csv(output_dir / str(filename + "_embeddings.tsv"), sep="\t", header=False, index=False)
+

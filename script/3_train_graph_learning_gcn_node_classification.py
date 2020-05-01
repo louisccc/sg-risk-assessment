@@ -12,7 +12,6 @@ import pandas as pd
 
 from core.scene_graph.graph_process import NodeClassificationExtractor
 from core.graph_learning.models.gcn import *
-from core.graph_learning.utils import *
 from argparse import ArgumentParser
 from pathlib import Path
 from tqdm import tqdm
@@ -125,16 +124,12 @@ class GCNTrainer:
             output = self.model.forward(features[i], adjs[i])
 
             result_embeddings = pd.concat([result_embeddings, pd.DataFrame(output.detach().numpy())], axis=0, ignore_index=True)
-            acc_train = accuracy(output, torch.LongTensor(labels[i]))
+            acc_train = utils.accuracy(output, torch.LongTensor(labels[i]))
 
             print('SceneGraph: {:04d}'.format(i), 'acc_train: {:.4f}'.format(acc_train.item()))
         
-        self.save_output(np.concatenate(labels), result_embeddings, "test")
+        utils.save_embedding(self.config.input_base_dir, np.concatenate(labels), result_embeddings, "gcn_test")
     
-    #generate TSV output file from embeddings and labels for visualization
-    def save_output(self, metadata, embeddings, filename):
-        pd.DataFrame(metadata).to_csv(self.config.input_base_dir / str(filename + "_meta.tsv"), sep='\t', header=False, index=False)
-        embeddings.to_csv(self.config.input_base_dir / str(filename + "_embeddings.tsv"), sep="\t", header=False, index=False)
 
 
 if __name__ == "__main__":

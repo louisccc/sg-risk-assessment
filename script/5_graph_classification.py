@@ -95,7 +95,7 @@ class GINTrainer:
             data_source = self.config.input_base_dir
             sge.load(data_source)
 
-        self.training_graphs, self.training_labels = sge.to_dataset()
+        self.training_graphs, self.training_labels, self.feature_list = sge.to_dataset()
         
         self.generator = Generator(self.training_graphs, self.training_labels, self.config.batch_size)
 
@@ -103,7 +103,7 @@ class GINTrainer:
 
     def build_model(self):
         
-        self.model = GraphCNN(4, 4, 34, 50, 2, 0.75, False, "average", "average", self.processor)
+        self.model = GraphCNN(4, 4, len(self.feature_list), 50, 2, 0.75, False, "average", "average", self.processor)
         if self.processor == "cuda":
             self.model = self.model.to(self.processor)
 

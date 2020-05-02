@@ -241,7 +241,7 @@ class SceneGraphExtractor(NodeClassificationExtractor):
                 sparse_mx = nx.convert_matrix.to_scipy_sparse_matrix(scenegraph.g).tocoo().astype(np.float32)
                 scenegraph.edge_mat = torch.from_numpy(np.vstack((sparse_mx.row, sparse_mx.col)).astype(np.int64))
 
-        return graphs, graph_labels
+        return graphs, graph_labels, feature_list
 
 class SceneGraphSequenceGenerator(SceneGraphExtractor):
     def __init__(self):
@@ -268,7 +268,7 @@ class SceneGraphSequenceGenerator(SceneGraphExtractor):
                     acc_number+=1
             sequences.append(sequence)
             sequence_labels.append(risk_label)
-        return sequences, sequence_labels
+        return sequences, sequence_labels, feature_list
 
     # self.scene_images = {}
     # For Visualization

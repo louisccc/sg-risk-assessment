@@ -62,13 +62,13 @@ class DynGINTrainer:
             data_source = self.config.input_base_dir
             sge.load(data_source)
 
-        self.training_sequences, self.training_labels = sge.to_dataset()
+        self.training_sequences, self.training_labels, self.feature_list = sge.to_dataset()
         
         print("Number of Sequences included: ", len(self.training_sequences))
 
 
     def build_model(self):
-        self.model = GraphCNN(4, 4, 34, 50, 2, 0.75, False, "average", "average", "cuda").to("cuda")
+        self.model = GraphCNN(4, 4, len(self.feature_list), 50, 2, 0.75, False, "average", "average", "cuda").to("cuda")
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.config.learning_rate, weight_decay=self.config.weight_decay)
 
     def train_model(self):

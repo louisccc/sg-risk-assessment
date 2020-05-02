@@ -2,6 +2,7 @@ import numpy as np
 import networkx as nx
 import pickle as pkl
 import pandas as pd
+import math
 
 from .scene_graph import SceneGraph
 from glob import glob
@@ -11,7 +12,53 @@ from sklearn.model_selection import train_test_split
 from pygcn.utils import sparse_mx_to_torch_sparse_tensor, normalize, accuracy
 import scipy.sparse as sp
 
-import torch, json
+import torch, json, pdb
+
+LANE_MARKING_TYPES = [
+"NONE",
+"Other",
+"Broken",
+"Solid",
+"SolidSolid",
+"SolidBroken",
+"BrokenSolid",
+"BrokenBroken",
+"BottsDots",
+"Grass",
+"Curb"]
+
+LANE_TYPES = [
+"NONE",
+"Driving",
+"Stop",
+"Shoulder",
+"Biking",
+"Sidewalk",
+"Border",
+"Restricted",
+"Parking",
+"Bidirectional",
+"Median",
+"Special1",
+"Special2",
+"Special3",
+"RoadWorks",
+"Tram",
+"Rail",
+"Entry",
+"Exit",
+"OffRamp",
+"OnRamp",
+"Any"]
+
+LANE_MARKING_COLORS = [
+"Standard"
+"Blue"
+"Green"
+"Red"
+"White"
+"Yellow"
+"Other"]
 
 
 class NodeClassificationExtractor: 
@@ -39,7 +86,6 @@ class NodeClassificationExtractor:
         node_embeddings = []
         node_labels = []
         adj_matrixes = []
-
         feature_list = self.get_feature_list(num_classes=8)
 
         for scenegraphs in self.scenegraphs_sequence:
@@ -64,52 +110,86 @@ class NodeClassificationExtractor:
 
         return train, test
     
-    #gets a list of all feature labels for all scenegraphs
+    #gets a list of all feature labels (which will be used) for all scenegraphs
     def get_feature_list(self, num_classes):
         all_attrs = set()
+        
+        def get_all_attrs(scenegraphs, attrs):
+            for timeframe, scenegraph in scenegraphs.items():
+                for entity in scenegraph.g.nodes:
+                    attrs.update(entity.attr.keys())
+            return attrs
+        
         for scenegraphs in self.scenegraphs_sequence:
             if type(scenegraphs) is tuple:
                 scenegraphs = scenegraphs[0]
-            for timeframe, scenegraph in scenegraphs.items():
-                for entity in scenegraph.g.nodes:
-                    all_attrs.update(entity.attr.keys())
+            all_attrs = get_all_attrs(scenegraphs, all_attrs)
                     
         final_attr_list = all_attrs.copy()
         for attr in all_attrs:
-            if attr in ["location", "rotation", "velocity", "ang_velocity"]:
+            if attr in ["location", "velocity", "ang_velocity", "rotation"]:
                 final_attr_list.discard(attr)
-                final_attr_list.update([attr+"_x", attr+"_y", attr+"_z"]) #add 3 columns for vector values
+                final_attr_list.update(["rel_"+attr+"_x", "rel_"+attr+"_y", "rel_"+attr+"_z"]) #add 3 columns for relative vector values
+        final_attr_list.add("distance_abs") #adding absolute distance to ego
         
         for i in range(num_classes):
             final_attr_list.add("type_"+str(i)) #create 1hot class labels
-        
+        for i in range(len(LANE_TYPES)):
+            final_attr_list.add("lane_type_"+str(i))
+        for i in range(len(LANE_MARKING_COLORS)):
+            final_attr_list.add("left_lane_color_"+str(i))
+            final_attr_list.add("right_lane_color_"+str(i))
+        for i in range(len(LANE_MARKING_TYPES)):
+            final_attr_list.add("left_lane_marking_type_"+str(i))
+            final_attr_list.add("right_lane_marking_type_"+str(i))
+            
         final_attr_list.discard("name") #remove node name as it is not needed sice we have class labels
+        final_attr_list.discard("road_id") #remove road_id from feature list
+        final_attr_list.discard("lane_id")
         
         return sorted(final_attr_list)
 
     def create_node_embeddings(self, scenegraph, feature_list):
         rows = []
         labels=[]
-        for node in scenegraph.g.nodes:
-            row = defaultdict()
+        ego_attrs = None
+        
+        #extract ego attrs for creating relative features
+        for node, data in scenegraph.g.nodes.items():
+            if "ego:" in str(node):
+                ego_attrs = data['attr']   
+        if ego_attrs == None:
+            raise NameError("Ego not found in scenegraph")
+            
+        def get_embedding(node, row):
             for attr in node.attr:
-                if attr in ["location", "rotation", "velocity", "ang_velocity"]:
-                    row[attr+"_x"] = node.attr[attr][0]
-                    row[attr+"_y"] = node.attr[attr][1]
-                    row[attr+"_z"] = node.attr[attr][2]
+                if attr in ["location", "velocity", "ang_velocity", 'rotation']: #subtract each vector from corresponding vector of ego to find delta
+                    row["rel_"+attr+"_x"] = node.attr[attr][0] - ego_attrs[attr][0]
+                    row["rel_"+attr+"_y"] = node.attr[attr][1] - ego_attrs[attr][1]
+                    row["rel_"+attr+"_z"] = node.attr[attr][2] - ego_attrs[attr][2]
+                    if attr == 'location':
+                        row["distance_abs"] = math.sqrt(row["rel_"+attr+"_x"]**2 + row["rel_"+attr+"_y"]**2 + row["rel_"+attr+"_z"]**2)
                 elif attr == "is_junction": #binarizing junction label
-                    row[attr] = 1 if node.attr==True else 0
-                elif attr == "name": #dont add name to embedding
-                    continue
-                else:
+                    row[attr] = 1 if node.attr[attr]==True else 0
+                elif attr in ['brake_light_on', 'left_blinker_on', 'right_blinker_on']:
+                    row[attr] = 1 if node.attr[attr] > 0 else 0 #binarize light signals
+                elif attr in ['lane_type', 'left_lane_marking_type', 'right_lane_marking_type', 'left_lane_color', 'right_lane_color']:
+                    row[attr+"_"+str(node.attr[attr])] = 1 #assign 1hot labels for lanes
+                elif attr in feature_list: #only add attributes specified by feature_list
                     row[attr] = node.attr[attr]
             row['type_'+str(node.type)] = 1 #assign 1hot class label
+            return row
+        
+        for node in scenegraph.g.nodes:
+            d = defaultdict()
+            row = get_embedding(node, d)
             labels.append(node.type)
             rows.append(row)
-        
+            
         embedding = pd.DataFrame(data=rows, columns=feature_list)
         embedding = embedding.fillna(value=0) #fill in NaN with zeros
         
+
         return np.array(labels), embedding
 
     #get adjacency matrix for entity nodes only from  scenegraph in scipy.sparse CSR matrix format

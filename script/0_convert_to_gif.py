@@ -27,7 +27,7 @@ def convert_gif(path):
 	exists = os.path.isfile(path / 'movie.gif')
 
 	if (not exists):
-		for filename in tqdm(img_path):
+		for filename in img_path:
 			images.append(imageio.imread(str(filename)))
 		imageio.mimsave(path / 'movie.gif', images, format='GIF')
 

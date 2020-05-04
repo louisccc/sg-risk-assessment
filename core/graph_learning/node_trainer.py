@@ -60,13 +60,8 @@ class GCNTrainer:
         else:
             sge.load(self.config.input_base_dir)
 
-        self.training_data, self.testing_data = sge.to_dataset(train_to_test_ratio=0.1)
-        
-        unzip_training_data = list(zip(*self.training_data)) 
-        unzip_testing_data  = list(zip(*self.testing_data))
-
-        self.node_embeddings, self.node_labels, self.adj_matrixes = list(unzip_training_data[0]), list(unzip_training_data[1]), list(unzip_training_data[2])
-        self.node_embeddings_test, self.node_labels_test, self.adj_matrixes_test = list(unzip_testing_data[0]), list(unzip_testing_data[1]), list(unzip_testing_data[2])                    
+        self.node_embeddings, self.node_labels, self.adj_matrixes, \
+        self.node_embeddings_test, self.node_labels_test, self.adj_matrixes_test = sge.to_dataset(train_to_test_ratio=0.1)                  
 
         self.num_features = self.node_embeddings[0].shape[1]
         self.num_training_samples = len(self.node_embeddings)

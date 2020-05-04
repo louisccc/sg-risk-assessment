@@ -95,9 +95,10 @@ class GINTrainer:
             data_source = self.config.input_base_dir
             sge.load(data_source)
 
-        self.training_graphs, self.training_labels, self.feature_list = sge.to_dataset()
+        self.training_graphs, self.training_labels, self.testing_graphs, self.testing_labels, self.feature_list = sge.to_dataset()
         
         self.generator = Generator(self.training_graphs, self.training_labels, self.config.batch_size)
+        self.test_generator = Generator(self.testing_graphs, self.testing_labels, 1)
 
         print("Number of Scene Graphs included: ", len(self.training_graphs))
 
@@ -143,9 +144,9 @@ class GINTrainer:
         
         result_embeddings = pd.DataFrame()
         labels = []
-        for i in range(self.generator.number_of_batch): # iterate through scenegraphs
+        for i in range(self.test_generator.number_of_batch): # iterate through scenegraphs
             
-            data, label = next(self.generator)
+            data, label = next(self.test_generator)
             
             self.model.eval()
 

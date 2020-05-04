@@ -62,7 +62,7 @@ class DynGINTrainer(BaseTrainer):
             data_source = self.config.input_base_dir
             sge.load(data_source)
 
-        self.training_sequences, self.training_labels, self.feature_list = sge.to_dataset()
+        self.training_sequences, self.training_labels, self.testing_sequences, self.testing_labels, self.feature_list = sge.to_dataset()
         
         print("Number of Sequences included: ", len(self.training_sequences))
 
@@ -100,9 +100,9 @@ class DynGINTrainer(BaseTrainer):
         # take training set as testing data temporarily
         acc_predict = []
 
-        for i in range(len(self.training_sequences)): # iterate through scenegraphs
+        for i in range(len(self.testing_sequences)): # iterate through scenegraphs
             
-            data, label = self.training_sequences[i], self.training_labels[i]
+            data, label = self.testing_sequences[i], self.testing_labels[i]
             
             self.model.eval()
 

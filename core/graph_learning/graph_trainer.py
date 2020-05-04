@@ -109,7 +109,7 @@ class GINTrainer:
 
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.config.learning_rate, weight_decay=self.config.weight_decay)
 
-    def train_model(self):
+    def train(self):
 
         for epoch_idx in tqdm(range(self.config.epochs)): # iterate through epoch
             acc_loss_train = 0
@@ -138,7 +138,7 @@ class GINTrainer:
             print('Epoch: {:04d},'.format(epoch_idx), 'loss_train: {:.4f}'.format(acc_loss_train))
             print('')
 
-    def predict_graph_classification(self):
+    def predict(self):
         # take training set as testing data temporarily
         
         result_embeddings = pd.DataFrame()
@@ -159,9 +159,3 @@ class GINTrainer:
             print('SceneGraph: {:04d}'.format(i), 'acc_train: {:.4f}'.format(acc_train.item()))
             
         save_embedding(self.config.input_base_dir, np.concatenate(np.array(labels)), result_embeddings, "gin_test")
-
-if __name__ == "__main__":
-    gin_trainer = GINTrainer(sys.argv[1:])
-    gin_trainer.build_model()
-    gin_trainer.train_model()
-    gin_trainer.predict_graph_classification()

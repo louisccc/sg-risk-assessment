@@ -84,7 +84,7 @@ class GCNTrainer:
         self.model = GCN(nfeat=self.num_features, nhid=self.config.hidden, nclass=self.config.nclass, dropout=self.config.dropout)
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.config.learning_rate, weight_decay=self.config.weight_decay)
 
-    def train_model(self):
+    def train(self):
 
         features = self.node_embeddings
         adjs =  self.adj_matrixes
@@ -129,11 +129,3 @@ class GCNTrainer:
             print('SceneGraph: {:04d}'.format(i), 'acc_train: {:.4f}'.format(acc_train.item()))
         
         utils.save_embedding(self.config.input_base_dir, np.concatenate(labels), result_embeddings, "gcn_test")
-    
-
-
-if __name__ == "__main__":
-    gcn_trainer = GCNTrainer(sys.argv[1:])
-    gcn_trainer.build_model()
-    gcn_trainer.train_model()
-    gcn_trainer.predict()

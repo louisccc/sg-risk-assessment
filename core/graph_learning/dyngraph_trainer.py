@@ -1,4 +1,4 @@
-import os, pdb, sys
+import os, sys
 sys.path.append(os.path.dirname(sys.path[0]))
 
 import torch
@@ -8,7 +8,7 @@ import numpy as np
 import scipy.sparse as sp
 import pandas as pd
 
-from core.graph_learning.models import base_model
+from core.graph_learning.bases import BaseTrainer
 from core.scene_graph.graph_process import SceneGraphSequenceGenerator
 from core.graph_learning.utils import accuracy
 from argparse import ArgumentParser
@@ -40,7 +40,7 @@ class Config:
         self.input_base_dir = Path(self.input_path).resolve()
 
 
-class DynGINTrainer:
+class DynGINTrainer(BaseTrainer):
 
     def __init__(self, args):
         self.config = Config(args)
@@ -71,7 +71,7 @@ class DynGINTrainer:
         self.model = GraphCNN(4, 4, len(self.feature_list), 50, 2, 0.75, False, "average", "average", "cuda").to("cuda")
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.config.learning_rate, weight_decay=self.config.weight_decay)
 
-    def train_model(self):
+    def train(self):
 
         for epoch_idx in tqdm(range(self.config.epochs)): # iterate through epoch
             acc_loss_train = 0
@@ -96,7 +96,7 @@ class DynGINTrainer:
             print('Epoch: {:04d},'.format(epoch_idx), 'loss_train: {:.4f}'.format(acc_loss_train))
             print('')
 
-    def predict_graph_classification(self):
+    def predict(self):
         # take training set as testing data temporarily
         acc_predict = []
 
@@ -115,10 +115,3 @@ class DynGINTrainer:
             print('Dynamic SceneGraph: {:04d}'.format(i), 'acc_train: {:.4f}'.format(acc_train.item()))
 
         print('Dynamic SceneGraph precision', sum(acc_predict) / len(acc_predict))
-
-
-if __name__ == "__main__":
-    gcn_trainer = DynGINTrainer(sys.argv[1:])
-    gcn_trainer.build_model()
-    gcn_trainer.train_model()
-    gcn_trainer.predict_graph_classification()

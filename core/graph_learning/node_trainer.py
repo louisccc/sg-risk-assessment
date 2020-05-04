@@ -54,14 +54,19 @@ class GCNTrainer:
         # load scene graph txts into memory 
         sge = NodeClassificationExtractor()
 
-        if self.config.recursive:
-            for sub_dir in tqdm([x for x in self.config.input_base_dir.iterdir() if x.is_dir()]):
-                sge.load(sub_dir)
-        else:
-            sge.load(self.config.input_base_dir)
+        if not sge.is_cache_exists():
+            if self.config.recursive:
+                for sub_dir in tqdm([x for x in self.config.input_base_dir.iterdir() if x.is_dir()]):
+                    sge.load(sub_dir)
+            else:
+                sge.load(self.config.input_base_dir)
 
-        self.node_embeddings, self.node_labels, self.adj_matrixes, \
-        self.node_embeddings_test, self.node_labels_test, self.adj_matrixes_test = sge.to_dataset(train_to_test_ratio=0.1)                  
+            self.node_embeddings, self.node_labels, self.adj_matrixes, \
+            self.node_embeddings_test, self.node_labels_test, self.adj_matrixes_test = sge.to_dataset(train_to_test_ratio=0.1)
+
+        else:
+            self.node_embeddings, self.node_labels, self.adj_matrixes, \
+            self.node_embeddings_test, self.node_labels_test, self.adj_matrixes_test = sge.read_cache()
 
         self.num_features = self.node_embeddings[0].shape[1]
         self.num_training_samples = len(self.node_embeddings)

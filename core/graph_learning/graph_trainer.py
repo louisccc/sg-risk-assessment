@@ -87,15 +87,18 @@ class GINTrainer:
         # load scene graph txts into memory 
         sge = SceneGraphExtractor()
 
-        if self.config.recursive:
-            for sub_dir in tqdm([x for x in self.config.input_base_dir.iterdir() if x.is_dir()]):
-                data_source = sub_dir
+        if not sge.is_cache_exists():
+            if self.config.recursive:
+                for sub_dir in tqdm([x for x in self.config.input_base_dir.iterdir() if x.is_dir()]):
+                    data_source = sub_dir
+                    sge.load(data_source)
+            else:
+                data_source = self.config.input_base_dir
                 sge.load(data_source)
-        else:
-            data_source = self.config.input_base_dir
-            sge.load(data_source)
 
-        self.training_graphs, self.training_labels, self.testing_graphs, self.testing_labels, self.feature_list = sge.to_dataset()
+            self.training_graphs, self.training_labels, self.testing_graphs, self.testing_labels, self.feature_list = sge.to_dataset()
+        else:
+            self.training_graphs, self.training_labels, self.testing_graphs, self.testing_labels, self.feature_list = sge.read_cache()
         
         self.generator = Generator(self.training_graphs, self.training_labels, self.config.batch_size)
         self.test_generator = Generator(self.testing_graphs, self.testing_labels, 1)

@@ -13,6 +13,9 @@ from pygcn.utils import sparse_mx_to_torch_sparse_tensor, normalize, accuracy
 import scipy.sparse as sp
 
 import torch, json, pdb
+import pickle as pkl
+from pathlib import Path 
+
 
 LANE_MARKING_TYPES = [
 "NONE",
@@ -81,11 +84,19 @@ class NodeClassificationExtractor:
 
         self.scenegraphs_sequence.append(scenegraphs)
 
+    def is_cache_exists(self):
+        return Path('node_embeddings.pkl').exists()
+
+    def read_cache(self):   
+        with open('node_embeddings.pkl','rb') as f: 
+            return pkl.load(f)
+
     def to_dataset(self, train_to_test_ratio=0.1):
         
         node_embeddings = []
         node_labels = []
         adj_matrixes = []
+
         feature_list = self.get_feature_list(num_classes=8)
 
         for scenegraphs in self.scenegraphs_sequence:
@@ -110,8 +121,13 @@ class NodeClassificationExtractor:
 
         unzip_training_data = list(zip(*train)) 
         unzip_testing_data  = list(zip(*test))
+        return_values = list(unzip_training_data[0]), list(unzip_training_data[1]), list(unzip_training_data[2]), list(unzip_testing_data[0]), list(unzip_testing_data[1]), list(unzip_testing_data[2])
 
-        return list(unzip_training_data[0]), list(unzip_training_data[1]), list(unzip_training_data[2]), list(unzip_testing_data[0]), list(unzip_testing_data[1]), list(unzip_testing_data[2])
+        # Saving the objects:
+        with open('node_embeddings.pkl', 'wb') as f:  # Python 3: open(..., 'wb')
+            pkl.dump(return_values, f)
+
+        return return_values
     
     #gets a list of all feature labels (which will be used) for all scenegraphs
     def get_feature_list(self, num_classes):
@@ -228,6 +244,12 @@ class SceneGraphExtractor(NodeClassificationExtractor):
 
         self.scenegraphs_sequence.append((scenegraphs, risk_label))
     
+    def is_cache_exists(self):
+        return Path('graph_embeddings.pkl').exists()
+
+    def read_cache(self):   
+        with open('graph_embeddings.pkl','rb') as f: 
+            return pkl.load(f)
 
     def to_dataset(self, train_to_test_ratio=0.1):
         graph_labels = []
@@ -252,7 +274,13 @@ class SceneGraphExtractor(NodeClassificationExtractor):
         # train_graphs, train_labels.
         # test_graphs, test_labels.
 
-        return list(unzip_training_data[0]), list(unzip_training_data[1]), list(unzip_testing_data[0]), list(unzip_testing_data[1]), feature_list
+        return_values = list(unzip_training_data[0]), list(unzip_training_data[1]), list(unzip_testing_data[0]), list(unzip_testing_data[1]), feature_list
+
+        # Saving the objects:
+        with open('graph_embeddings.pkl', 'wb') as f:  # Python 3: open(..., 'wb')
+            pkl.dump(return_values, f)
+
+        return return_values
 
 
 class SceneGraphSequenceGenerator(SceneGraphExtractor):
@@ -289,4 +317,10 @@ class SceneGraphSequenceGenerator(SceneGraphExtractor):
         # train_sequences, train_sequence_labels.
         # test_sequences, test_sequence_labels.
 
-        return list(unzip_training_data[0]), list(unzip_training_data[1]), list(unzip_testing_data[0]), list(unzip_testing_data[1]), feature_list
+        return_values = list(unzip_training_data[0]), list(unzip_training_data[1]), list(unzip_testing_data[0]), list(unzip_testing_data[1]), feature_list
+
+        # Saving the objects:
+        with open('dyngraph_embeddings.pkl', 'wb') as f:  # Python 3: open(..., 'wb')
+            pkl.dump(return_values, f)
+
+        return return_values

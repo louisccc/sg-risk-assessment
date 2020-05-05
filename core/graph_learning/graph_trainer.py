@@ -10,7 +10,7 @@ import pandas as pd
 
 from core.graph_learning.models import base_model
 from core.scene_graph.graph_process import SceneGraphExtractor
-from core.graph_learning.utils import accuracy, save_embedding
+from core.graph_learning.utils import accuracy
 from argparse import ArgumentParser
 from pathlib import Path
 from tqdm import tqdm
@@ -135,12 +135,10 @@ class GINTrainer:
             print('')
 
     def predict(self):
-        # take training set as testing data temporarily
-        
-        result_embeddings = pd.DataFrame()
-        
+        # take training set as testing data temporarily        
         labels = []
-
+        outputs = []
+        
         for i in range(self.test_generator.number_of_batch): # iterate through scenegraphs
             
             data, label = next(self.test_generator)
@@ -148,11 +146,11 @@ class GINTrainer:
             self.model.eval()
 
             output = self.model.forward(data)
-
-            result_embeddings = pd.concat([result_embeddings, pd.DataFrame(output.cpu().detach().numpy())], axis=0, ignore_index=True)
+            outputs.append(output)
             labels.append(label)
             acc_train = accuracy(output, torch.LongTensor(label))
 
             print('SceneGraph: {:04d}'.format(i), 'acc_train: {:.4f}'.format(acc_train.item()))
-            
-        save_embedding(self.config.input_base_dir, np.concatenate(np.array(labels)), result_embeddings, "gin_test")
+        return outputs, labels
+        
+        

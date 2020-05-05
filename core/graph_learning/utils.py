@@ -76,16 +76,38 @@ def sparse_mx_to_torch_sparse_tensor(sparse_mx):
     values = torch.from_numpy(sparse_mx.data)
     shape = torch.Size(sparse_mx.shape)
     return torch.sparse.FloatTensor(indices, values, shape)
-    
+
+#generate TSV output file from outputs and labels
+def save_outputs(output_dir, outputs, labels, filename):
+    pdb.set_trace()
+    outputs = torch.cat(outputs)
+    outputs = pd.DataFrame(outputs.cpu().detach().numpy())
+    labels = np.concatenate(labels)
+    pd.DataFrame(labels).to_csv(output_dir / str(filename + "_labels.tsv"), sep='\t', header=False, index=False)
+    outputs.to_csv(output_dir / str(filename + "_outputs.tsv"), sep="\t", header=False, index=False)
+
+
+#~~~~~~~~~~Scoring Metrics~~~~~~~~~~
+
 def accuracy(output, labels):
     preds = output.max(1)[1].type_as(labels)
     correct = preds.eq(labels).double()
     correct = correct.sum()
     return correct / len(labels)
+    
+def f1_score(output, labels):
+    pass
+    
+def confusion_matrix(output, labels):
+    pass
+    
+def precision(output, labels):
+    pass
+    
+def recall(outputs, labels):
+    pass
+    
+    
 
 
-#generate TSV output file from embeddings and labels for visualization
-def save_embedding(output_dir, metadata, embeddings, filename):
-    pd.DataFrame(metadata).to_csv(output_dir / str(filename + "_meta.tsv"), sep='\t', header=False, index=False)
-    embeddings.to_csv(output_dir / str(filename + "_embeddings.tsv"), sep="\t", header=False, index=False)
 

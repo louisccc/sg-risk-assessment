@@ -104,7 +104,10 @@ class DynGINTrainer(BaseTrainer):
     def predict(self):
         # take training set as testing data temporarily
         acc_predict = []
-
+        result_embeddings = pd.DataFrame()
+        labels = []
+        outputs = []
+        
         for i in range(len(self.testing_sequences)): # iterate through scenegraphs
             
             data, label = self.testing_sequences[i], self.testing_labels[i]
@@ -112,7 +115,9 @@ class DynGINTrainer(BaseTrainer):
             self.model.eval()
 
             output = self.model.forward2(data)
-
+            outputs.append(output)
+            labels.append(label)
+            
             print(output, label)
             acc_train = accuracy(output.view(-1, 2), torch.LongTensor([label]).to(self.config.device))
             acc_predict.append(acc_train.item())
@@ -120,3 +125,5 @@ class DynGINTrainer(BaseTrainer):
             print('Dynamic SceneGraph: {:04d}'.format(i), 'acc_train: {:.4f}'.format(acc_train.item()))
 
         print('Dynamic SceneGraph precision', sum(acc_predict) / len(acc_predict))
+        
+        return outputs, labels

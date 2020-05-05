@@ -1,4 +1,4 @@
-import os, pdb, sys
+import os, sys
 sys.path.append(os.path.dirname(sys.path[0]))
 
 import torch
@@ -8,7 +8,7 @@ import numpy as np
 import scipy.sparse as sp
 import pandas as pd
 
-from core.graph_learning.models import base_model
+from core.graph_learning.bases import BaseTrainer
 from core.scene_graph.graph_process import SceneGraphSequenceGenerator
 from core.graph_learning.utils import accuracy
 from argparse import ArgumentParser
@@ -31,6 +31,7 @@ class Config:
         self.parser.add_argument('--nclass', type=int, default=8, help="The number of classes for node.")
         self.parser.add_argument('--recursive', type=lambda x: (str(x).lower() == 'true'), default=False, help='Recursive loading scenegraphs')
         self.parser.add_argument('--batch_size', type=int, default=32, help='Number of graphs in a batch.')
+        self.parser.add_argument('--device', type=str, default="cpu", help='The device to run on models (cuda or cpu) cpu in default.')
 
         args_parsed = self.parser.parse_args(args)
         
@@ -40,7 +41,7 @@ class Config:
         self.input_base_dir = Path(self.input_path).resolve()
 
 
-class DynGINTrainer:
+class DynGINTrainer(BaseTrainer):
 
     def __init__(self, args):
         self.config = Config(args)
@@ -53,25 +54,29 @@ class DynGINTrainer:
     def preprocess_scenegraph_data(self):
         # load scene graph txts into memory 
         sge = SceneGraphSequenceGenerator()
-
-        if self.config.recursive:
-            for sub_dir in tqdm([x for x in self.config.input_base_dir.iterdir() if x.is_dir()]):
-                data_source = sub_dir
-                sge.load(data_source)
-        else:
-            data_source = self.config.input_base_dir
-            sge.load(data_source)
-
-        self.training_sequences, self.training_labels, self.feature_list = sge.to_dataset()
         
+        if not sge.is_cache_exists():
+            if self.config.recursive:
+                for sub_dir in tqdm([x for x in self.config.input_base_dir.iterdir() if x.is_dir()]):
+                    data_source = sub_dir
+                    sge.load(data_source)
+            else:
+                data_source = self.config.input_base_dir
+                sge.load(data_source)
+
+            self.training_sequences, self.training_labels, self.testing_sequences, self.testing_labels, self.feature_list = sge.to_dataset()
+        
+        else:
+            self.training_sequences, self.training_labels, self.testing_sequences, self.testing_labels, self.feature_list = sge.read_cache()
+
         print("Number of Sequences included: ", len(self.training_sequences))
 
 
     def build_model(self):
-        self.model = GraphCNN(4, 4, len(self.feature_list), 50, 2, 0.75, False, "average", "average", "cuda").to("cuda")
+        self.model = GraphCNN(4, 4, len(self.feature_list), 50, 2, 0.75, False, "average", "average", self.config.device).to(self.config.device)
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.config.learning_rate, weight_decay=self.config.weight_decay)
 
-    def train_model(self):
+    def train(self):
 
         for epoch_idx in tqdm(range(self.config.epochs)): # iterate through epoch
             acc_loss_train = 0
@@ -84,7 +89,7 @@ class DynGINTrainer:
                                
                 output = self.model.forward2(data)
                 
-                loss_train = nn.CrossEntropyLoss()(output.view(-1, 2), torch.LongTensor([label]).to("cuda"))
+                loss_train = nn.CrossEntropyLoss()(output.view(-1, 2), torch.LongTensor([label]).to(self.config.device))
 
                 loss_train.backward()
 
@@ -96,29 +101,22 @@ class DynGINTrainer:
             print('Epoch: {:04d},'.format(epoch_idx), 'loss_train: {:.4f}'.format(acc_loss_train))
             print('')
 
-    def predict_graph_classification(self):
+    def predict(self):
         # take training set as testing data temporarily
         acc_predict = []
 
-        for i in range(len(self.training_sequences)): # iterate through scenegraphs
+        for i in range(len(self.testing_sequences)): # iterate through scenegraphs
             
-            data, label = self.training_sequences[i], self.training_labels[i]
+            data, label = self.testing_sequences[i], self.testing_labels[i]
             
             self.model.eval()
 
             output = self.model.forward2(data)
 
             print(output, label)
-            acc_train = accuracy(output.view(-1, 2), torch.LongTensor([label]))
+            acc_train = accuracy(output.view(-1, 2), torch.LongTensor([label]).to(self.config.device))
             acc_predict.append(acc_train.item())
 
             print('Dynamic SceneGraph: {:04d}'.format(i), 'acc_train: {:.4f}'.format(acc_train.item()))
 
         print('Dynamic SceneGraph precision', sum(acc_predict) / len(acc_predict))
-
-
-if __name__ == "__main__":
-    gcn_trainer = DynGINTrainer(sys.argv[1:])
-    gcn_trainer.build_model()
-    gcn_trainer.train_model()
-    gcn_trainer.predict_graph_classification()

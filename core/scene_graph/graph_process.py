@@ -13,6 +13,9 @@ from pygcn.utils import sparse_mx_to_torch_sparse_tensor, normalize, accuracy
 import scipy.sparse as sp
 
 import torch, json, pdb
+import pickle as pkl
+from pathlib import Path 
+
 
 LANE_MARKING_TYPES = [
 "NONE",
@@ -81,11 +84,16 @@ class NodeClassificationExtractor:
 
         self.scenegraphs_sequence.append(scenegraphs)
 
+    def is_cache_exists(self):
+        return Path('node_embeddings.pkl').exists()
+
+    def read_cache(self):   
+        with open('node_embeddings.pkl','rb') as f: 
+            return pkl.load(f)
+
     def to_dataset(self, train_to_test_ratio=0.1):
         
-        node_embeddings = []
-        node_labels = []
-        adj_matrixes = []
+        graphs = []
         feature_list = self.get_feature_list(num_classes=8)
 
         for scenegraphs in self.scenegraphs_sequence:
@@ -96,11 +104,16 @@ class NodeClassificationExtractor:
                 embeddings = torch.FloatTensor(np.array(normalize(sp.csr_matrix(embeddings.values)).todense()))
                 adjs = sparse_mx_to_torch_sparse_tensor(normalize(adjs + sp.eye(adjs.shape[0])))
 
-                node_embeddings.append(embeddings)
-                node_labels.append(labels)
-                adj_matrixes.append(adjs)
+                scenegraph.node_features = embeddings
+                scenegraph.node_labels = labels
+                scenegraph.adj_matrix = adjs
+                
+                sparse_mx = nx.convert_matrix.to_scipy_sparse_matrix(scenegraph.g).tocoo().astype(np.float32)
+                scenegraph.edge_mat = torch.from_numpy(np.vstack((sparse_mx.row, sparse_mx.col)).astype(np.int64))
 
-        train, test = train_test_split(list(zip(node_embeddings, node_labels, adj_matrixes)), test_size=train_to_test_ratio, shuffle=True)
+                graphs.append(scenegraph)
+
+        train, test = train_test_split(graphs, test_size=train_to_test_ratio, shuffle=True)
         
         # in train and test, each row stands for a scenegraph: 
         # 1) a list of node embeddings
@@ -108,7 +121,13 @@ class NodeClassificationExtractor:
         # 3) adjacency matrix for this scenegraph
         # return node_embeddings, node_labels, adj_matrixes
 
-        return train, test
+        return_values = train, test
+
+        # Saving the objects:
+        with open('node_embeddings.pkl', 'wb') as f:  # Python 3: open(..., 'wb')
+            pkl.dump(return_values, f)
+
+        return return_values
     
     #gets a list of all feature labels (which will be used) for all scenegraphs
     def get_feature_list(self, num_classes):
@@ -225,6 +244,12 @@ class SceneGraphExtractor(NodeClassificationExtractor):
 
         self.scenegraphs_sequence.append((scenegraphs, risk_label))
     
+    def is_cache_exists(self):
+        return Path('graph_embeddings.pkl').exists()
+
+    def read_cache(self):   
+        with open('graph_embeddings.pkl','rb') as f: 
+            return pkl.load(f)
 
     def to_dataset(self, train_to_test_ratio=0.1):
         graph_labels = []
@@ -241,13 +266,35 @@ class SceneGraphExtractor(NodeClassificationExtractor):
                 sparse_mx = nx.convert_matrix.to_scipy_sparse_matrix(scenegraph.g).tocoo().astype(np.float32)
                 scenegraph.edge_mat = torch.from_numpy(np.vstack((sparse_mx.row, sparse_mx.col)).astype(np.int64))
 
-        return graphs, graph_labels, feature_list
+        train, test = train_test_split(list(zip(graphs, graph_labels)), test_size=train_to_test_ratio, shuffle=True)
+
+        unzip_training_data = list(zip(*train)) 
+        unzip_testing_data  = list(zip(*test))
+
+        # train_graphs, train_labels.
+        # test_graphs, test_labels.
+
+        return_values = list(unzip_training_data[0]), list(unzip_training_data[1]), list(unzip_testing_data[0]), list(unzip_testing_data[1]), feature_list
+
+        # Saving the objects:
+        with open('graph_embeddings.pkl', 'wb') as f:  # Python 3: open(..., 'wb')
+            pkl.dump(return_values, f)
+
+        return return_values
+
 
 class SceneGraphSequenceGenerator(SceneGraphExtractor):
     def __init__(self):
         super(SceneGraphSequenceGenerator, self).__init__()
 
-    def to_dataset(self, number_of_frames=50):
+    def is_cache_exists(self):
+        return Path('dyngraph_embeddings.pkl').exists()
+
+    def read_cache(self):   
+        with open('dyngraph_embeddings.pkl','rb') as f: 
+            return pkl.load(f)
+
+    def to_dataset(self, number_of_frames=20, train_to_test_ratio=0.1):
         sequence_labels = []
         sequences = [] 
 
@@ -268,49 +315,19 @@ class SceneGraphSequenceGenerator(SceneGraphExtractor):
                     acc_number+=1
             sequences.append(sequence)
             sequence_labels.append(risk_label)
-        return sequences, sequence_labels, feature_list
 
-    # self.scene_images = {}
-    # For Visualization
-    # self.fig, (self.ax_graph, self.ax_img) = plt.subplots(1, 2, figsize=(20, 12))
-    # self.fig.canvas.set_window_title("Scene Graph Visualization")
+        train, test = train_test_split(list(zip(sequences, sequence_labels)), test_size=train_to_test_ratio, shuffle=True)
 
-    # TODO: Aung change this into gif creations.
-    # def build_corresponding_images(self, path):
-    #     for scenegraphs, risk_label in self.scenegraphs_sequence.items():
-    #         for frame, scenegraph in scenegraphs.items():
-    #             try:
-    #                 print('catch %s/%.8d.png'%(path, int(frame)))
-    #                 img = plt.imread('%s/%.8d.png'%(path, int(frame)))
-    #                 self.scene_images[frame] = (scenegraph, img)
-    #             except Exception as e:
-    #                 print(e)
-        
-    # def store(self, path):
-    #     for frame, (scenegraph, image) in self.scene_images.items():
-    #         pos = nx.spring_layout(scenegraph.g, k=1.5*1/np.sqrt(len(scenegraph.g.nodes())))
-    #         nx.draw(scenegraph.g, labels=nx.get_node_attributes(scenegraph.g, 'label'), pos=pos, font_size=8, with_labels=True, ax=self.ax_graph)
-    #         self.ax_img.imshow(image)
-    #         self.ax_graph.set_title("Risk {}".format(random.random()))
-    #         self.ax_img.set_title("Frame {}".format(frame))
-    #         plt.savefig('%s/%s.png'%(path, frame))
-    #         self.ax_graph.clear()
-    #         self.ax_img.clear()
+        unzip_training_data = list(zip(*train)) 
+        unzip_testing_data  = list(zip(*test))
 
-    # def update(self, num):
-    #     self.ax_graph.clear()
-    #     self.ax_img.clear()
+        # train_sequences, train_sequence_labels.
+        # test_sequences, test_sequence_labels.
 
-    #     frame = list(self.scene_images.keys())[num]
-    #     scenegraph = self.scene_images[frame][0]
-    #     pos = nx.spring_layout(scenegraph.g, k=1.5*1/np.sqrt(len(scenegraph.g.nodes())))
-    #     nx.draw(scenegraph.g, labels=nx.get_node_attributes(scenegraph.g, 'label'), pos=pos, font_size=8, with_labels=True, ax=self.ax_graph)
-    #     self.ax_img.imshow(self.scene_images[frame][1])
+        return_values = list(unzip_training_data[0]), list(unzip_training_data[1]), list(unzip_testing_data[0]), list(unzip_testing_data[1]), feature_list
 
-    #     # Set the title
-    #     self.ax_graph.set_title("Risk {}".format(random.random()))
-    #     self.ax_img.set_title("Frame {}".format(num))
+        # Saving the objects:
+        with open('dyngraph_embeddings.pkl', 'wb') as f:  # Python 3: open(..., 'wb')
+            pkl.dump(return_values, f)
 
-    # def show_animation(self):
-    #     ani = animation.FuncAnimation(self.fig, self.update, frames=len(self.scene_images.keys()))
-    #     plt.show()
+        return return_values

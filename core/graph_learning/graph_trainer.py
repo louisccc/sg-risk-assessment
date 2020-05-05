@@ -31,9 +31,8 @@ class Config:
         self.parser.add_argument('--nclass', type=int, default=8, help="The number of classes for node.")
         self.parser.add_argument('--recursive', type=lambda x: (str(x).lower() == 'true'), default=False, help='Recursive loading scenegraphs')
         self.parser.add_argument('--batch_size', type=int, default=32, help='Number of graphs in a batch.')
-        self.parser.add_argument('--cuda', dest='cuda', action='store_true', help='Run with cuda.')
-        self.parser.add_argument('--cpu', dest='cuda', action='store_false', help='Run with cpu.')
-        self.parser.set_defaults(cuda=False)
+        self.parser.add_argument('--device', type=str, default="cpu", help='The device to run on models (cuda or cpu) cpu in default.')
+
         args_parsed = self.parser.parse_args(args)
         
         for arg_name in vars(args_parsed):
@@ -71,45 +70,45 @@ class Generator:
 
         return raw_data, raw_label
 
+
 class GINTrainer:
 
     def __init__(self, args):
         self.config = Config(args)
         np.random.seed(self.config.seed)
         torch.manual_seed(self.config.seed)
-        self.processor = "cpu"
-        if self.config.cuda:
-            self.processor = "cuda"
-            
+
         self.preprocess_scenegraph_data() # reduced scenegraph extraction
 
     def preprocess_scenegraph_data(self):
         # load scene graph txts into memory 
         sge = SceneGraphExtractor()
 
-        if self.config.recursive:
-            for sub_dir in tqdm([x for x in self.config.input_base_dir.iterdir() if x.is_dir()]):
-                data_source = sub_dir
+        if not sge.is_cache_exists():
+            if self.config.recursive:
+                for sub_dir in tqdm([x for x in self.config.input_base_dir.iterdir() if x.is_dir()]):
+                    data_source = sub_dir
+                    sge.load(data_source)
+            else:
+                data_source = self.config.input_base_dir
                 sge.load(data_source)
-        else:
-            data_source = self.config.input_base_dir
-            sge.load(data_source)
 
-        self.training_graphs, self.training_labels, self.feature_list = sge.to_dataset()
+            self.training_graphs, self.training_labels, self.testing_graphs, self.testing_labels, self.feature_list = sge.to_dataset()
+        else:
+            self.training_graphs, self.training_labels, self.testing_graphs, self.testing_labels, self.feature_list = sge.read_cache()
         
         self.generator = Generator(self.training_graphs, self.training_labels, self.config.batch_size)
+        self.test_generator = Generator(self.testing_graphs, self.testing_labels, 1)
 
         print("Number of Scene Graphs included: ", len(self.training_graphs))
 
     def build_model(self):
         
-        self.model = GraphCNN(4, 4, len(self.feature_list), 50, 2, 0.75, False, "average", "average", self.processor)
-        if self.processor == "cuda":
-            self.model = self.model.to(self.processor)
+        self.model = GraphCNN(4, 4, len(self.feature_list), 50, 2, 0.75, False, "average", "average", self.config.device).to(self.config.device)
 
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.config.learning_rate, weight_decay=self.config.weight_decay)
 
-    def train_model(self):
+    def train(self):
 
         for epoch_idx in tqdm(range(self.config.epochs)): # iterate through epoch
             acc_loss_train = 0
@@ -122,11 +121,8 @@ class GINTrainer:
                 self.optimizer.zero_grad()
                                
                 output = self.model.forward(data)
-                
-                if self.processor == "cuda":
-                    loss_train = nn.CrossEntropyLoss()(output, torch.LongTensor(label).to(self.processor))
-                else:
-                    loss_train = nn.CrossEntropyLoss()(output, torch.LongTensor(label))
+                    
+                loss_train = nn.CrossEntropyLoss()(output, torch.LongTensor(label).to(self.config.device))
                     
                 loss_train.backward()
 
@@ -138,30 +134,25 @@ class GINTrainer:
             print('Epoch: {:04d},'.format(epoch_idx), 'loss_train: {:.4f}'.format(acc_loss_train))
             print('')
 
-    def predict_graph_classification(self):
+    def predict(self):
         # take training set as testing data temporarily
         
         result_embeddings = pd.DataFrame()
+        
         labels = []
-        for i in range(self.generator.number_of_batch): # iterate through scenegraphs
+
+        for i in range(self.test_generator.number_of_batch): # iterate through scenegraphs
             
-            data, label = next(self.generator)
+            data, label = next(self.test_generator)
             
             self.model.eval()
 
             output = self.model.forward(data)
-            if self.processor=="cuda":
-                output = output.cpu()
-            result_embeddings = pd.concat([result_embeddings, pd.DataFrame(output.detach().numpy())], axis=0, ignore_index=True)
+
+            result_embeddings = pd.concat([result_embeddings, pd.DataFrame(output.cpu().detach().numpy())], axis=0, ignore_index=True)
             labels.append(label)
             acc_train = accuracy(output, torch.LongTensor(label))
 
             print('SceneGraph: {:04d}'.format(i), 'acc_train: {:.4f}'.format(acc_train.item()))
             
         save_embedding(self.config.input_base_dir, np.concatenate(np.array(labels)), result_embeddings, "gin_test")
-
-if __name__ == "__main__":
-    gin_trainer = GINTrainer(sys.argv[1:])
-    gin_trainer.build_model()
-    gin_trainer.train_model()
-    gin_trainer.predict_graph_classification()

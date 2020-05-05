@@ -267,15 +267,3 @@ class RelationExtractor:
             return True
         else:
             return False
-    
-    
-    
-if __name__ == "__main__":
-    txt_path = r".\input\lane-change-9.8\scene_raw\1503183-1503184.txt"
-    with open(txt_path, 'rb') as f:
-        framedict = json.loads(f.read())
-    for frame, frame_dict in framedict.items():
-        sg = scene_graph.SceneGraph(frame_dict)
-        pdb.set_trace()
-    #r = RelationExtractor()
-    #print(l)

@@ -12,6 +12,7 @@ import pandas as pd
 
 from core.scene_graph.graph_process import NodeClassificationExtractor
 from core.graph_learning.models.gcn import *
+from core.graph_learning.models.gin import *
 from argparse import ArgumentParser
 from pathlib import Path
 from tqdm import tqdm
@@ -31,6 +32,7 @@ class Config:
         self.parser.add_argument('--dropout', type=float, default=0.5, help='Dropout rate (1 - keep probability).')
         self.parser.add_argument('--nclass', type=int, default=8, help="The number of classes for node.")
         self.parser.add_argument('--recursive', type=lambda x: (str(x).lower() == 'true'), default=False, help='Recursive loading scenegraphs')
+        self.parser.add_argument('--device', type=str, default="cpu", help='The device to run on models (cuda or cpu) cpu in default.')
 
         args_parsed = self.parser.parse_args(args)
         
@@ -54,42 +56,38 @@ class GCNTrainer:
         # load scene graph txts into memory 
         sge = NodeClassificationExtractor()
 
-        if self.config.recursive:
-            for sub_dir in tqdm([x for x in self.config.input_base_dir.iterdir() if x.is_dir()]):
-                sge.load(sub_dir)
+        if not sge.is_cache_exists():
+            if self.config.recursive:
+                for sub_dir in tqdm([x for x in self.config.input_base_dir.iterdir() if x.is_dir()]):
+                    sge.load(sub_dir)
+            else:
+                sge.load(self.config.input_base_dir)
+
+            self.train_graphs, self.test_graphs = sge.to_dataset(train_to_test_ratio=0.1)
+
         else:
-            sge.load(self.config.input_base_dir)
+            self.train_graphs, self.test_graphs = sge.read_cache()
 
-        self.training_data, self.testing_data = sge.to_dataset(train_to_test_ratio=0.1)
-        
-        unzip_training_data = list(zip(*self.training_data)) 
-        unzip_testing_data  = list(zip(*self.testing_data))
-
-        self.node_embeddings, self.node_labels, self.adj_matrixes = list(unzip_training_data[0]), list(unzip_training_data[1]), list(unzip_training_data[2])
-        self.node_embeddings_test, self.node_labels_test, self.adj_matrixes_test = list(unzip_testing_data[0]), list(unzip_testing_data[1]), list(unzip_testing_data[2])                    
-
-        self.num_features = self.node_embeddings[0].shape[1]
-        self.num_training_samples = len(self.node_embeddings)
-        self.num_testing_samples  = len(self.node_embeddings_test)
+        self.num_features = self.train_graphs[0].node_features.shape[1]
+        self.num_training_samples = len(self.train_graphs)
+        self.num_testing_samples  = len(self.test_graphs)
 
         print("Number of SceneGraphs in the training set: ", self.num_training_samples)
         print("Number of SceneGraphs in the testing set:  ", self.num_testing_samples)
-        print("Number of nodes in the training set:", sum([n.shape[0] for n in self.node_embeddings]))
-        print("Number of nodes in the testing set: ", sum([n.shape[0] for n in self.node_embeddings_test]))
+        print("Number of nodes in the training set:", sum([g.node_features.shape[0] for g in self.train_graphs]))
+        print("Number of nodes in the testing set: ", sum([g.node_features.shape[0] for g in self.test_graphs]))
         print("Number of features for each node: ", self.num_features)
 
 
     def build_model(self):
-        #returns an embedding for each node (unsupervised)
-        self.model = GCN(nfeat=self.num_features, nhid=self.config.hidden, nclass=self.config.nclass, dropout=self.config.dropout)
+        self.model = GraphCNN(1, 1, self.num_features, self.config.hidden, self.config.nclass, self.config.dropout, \
+            False, None, "average", self.config.device).to(self.config.device)
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.config.learning_rate, weight_decay=self.config.weight_decay)
 
-    def train_model(self):
+    def train(self):
 
-        features = self.node_embeddings
-        adjs =  self.adj_matrixes
-        labels =  self.node_labels
-        
+        data = self.train_graphs
+
         for epoch_idx in tqdm(range(self.config.epochs)):
             acc_loss_train = 0
 
@@ -97,10 +95,10 @@ class GCNTrainer:
             
                 self.model.train()
                 self.optimizer.zero_grad()
-               
-                output = self.model.forward(features[i], adjs[i])
 
-                loss_train = F.nll_loss(output, torch.LongTensor(labels[i]))
+                output = self.model.forward([data[i]])
+
+                loss_train = nn.CrossEntropyLoss()(output, torch.LongTensor(data[i].node_labels).to(self.config.device))
 
                 loss_train.backward()
                 self.optimizer.step()
@@ -112,28 +110,23 @@ class GCNTrainer:
     def predict(self):
         # predict the node classification performance.
 
-        features = self.node_embeddings_test
-        adjs =  self.adj_matrixes_test
-        labels =  self.node_labels_test
+        data = self.test_graphs
 
         result_embeddings = pd.DataFrame()
         
         for i in range(self.num_testing_samples):
             self.model.eval()
                      
-            output = self.model.forward(features[i], adjs[i])
+            output = self.model.forward([data[i]])
 
-            result_embeddings = pd.concat([result_embeddings, pd.DataFrame(output.detach().numpy())], axis=0, ignore_index=True)
-            acc_train = utils.accuracy(output, torch.LongTensor(labels[i]))
+            acc_train = utils.accuracy(output, torch.LongTensor(data[i].node_labels).to(self.config.device))
+
+            result_embeddings = pd.concat([result_embeddings, pd.DataFrame(output.cpu().detach().numpy())], axis=0, ignore_index=True)
 
             print('SceneGraph: {:04d}'.format(i), 'acc_train: {:.4f}'.format(acc_train.item()))
         
+        labels = []
+        for scenegraph in self.test_graphs: 
+            labels.append(scenegraph.node_labels)
+
         utils.save_embedding(self.config.input_base_dir, np.concatenate(labels), result_embeddings, "gcn_test")
-    
-
-
-if __name__ == "__main__":
-    gcn_trainer = GCNTrainer(sys.argv[1:])
-    gcn_trainer.build_model()
-    gcn_trainer.train_model()
-    gcn_trainer.predict()

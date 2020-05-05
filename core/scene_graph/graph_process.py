@@ -287,6 +287,13 @@ class SceneGraphSequenceGenerator(SceneGraphExtractor):
     def __init__(self):
         super(SceneGraphSequenceGenerator, self).__init__()
 
+    def is_cache_exists(self):
+        return Path('dyngraph_embeddings.pkl').exists()
+
+    def read_cache(self):   
+        with open('dyngraph_embeddings.pkl','rb') as f: 
+            return pkl.load(f)
+            
     def to_dataset(self, number_of_frames=20, train_to_test_ratio=0.1):
         sequence_labels = []
         sequences = [] 

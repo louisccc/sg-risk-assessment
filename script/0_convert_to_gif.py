@@ -24,7 +24,7 @@ def convert_gif(path):
 	folder_path = path / 'raw_images'
 	img_path = folder_path.glob('**/*.png')
 	images = []
-	exists = os.path.isfile(path / 'movie.gif')
+	exists = os.path.isfile(path / 'lane_change.gif')
 
 	if (not exists):
 		for filename in img_path:

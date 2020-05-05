@@ -1,4 +1,4 @@
-import os, sys
+import os, sys, pdb
 sys.path.append(os.path.dirname(sys.path[0]))
 
 import torch
@@ -21,7 +21,7 @@ class Config:
     '''Argument Parser for script to train scenegraphs.'''
     def __init__(self, args):
         self.parser = ArgumentParser(description='The parameters for training the scene graph using GCN.')
-        self.parser.add_argument('--input_path', type=str, default="../input/synthesis_data/lane-change/0", help="Path to code directory.")
+        self.parser.add_argument('--input_path', type=str, default="../input/synthesis_data/lane-change/", help="Path to code directory.")
         self.parser.add_argument('--learning_rate', default=0.0001, type=float, help='The initial learning rate for GCN.')
         self.parser.add_argument('--seed', type=int, default=42, help='Random seed.')
         self.parser.add_argument('--epochs', type=int, default=200, help='Number of epochs to train.')
@@ -29,7 +29,7 @@ class Config:
         self.parser.add_argument('--hidden', type=int, default=200, help='Number of hidden units.')
         self.parser.add_argument('--dropout', type=float, default=0.5, help='Dropout rate (1 - keep probability).')
         self.parser.add_argument('--nclass', type=int, default=8, help="The number of classes for node.")
-        self.parser.add_argument('--recursive', type=lambda x: (str(x).lower() == 'true'), default=False, help='Recursive loading scenegraphs')
+        self.parser.add_argument('--recursive', type=lambda x: (str(x).lower() == 'true'), default=True, help='Recursive loading scenegraphs')
         self.parser.add_argument('--batch_size', type=int, default=32, help='Number of graphs in a batch.')
         self.parser.add_argument('--device', type=str, default="cpu", help='The device to run on models (cuda or cpu) cpu in default.')
 
@@ -109,7 +109,7 @@ class DynGINTrainer(BaseTrainer):
         outputs = []
         
         for i in range(len(self.testing_sequences)): # iterate through scenegraphs
-            
+            pdb.set_trace()
             data, label = self.testing_sequences[i], self.testing_labels[i]
             
             self.model.eval()

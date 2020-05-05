@@ -79,10 +79,10 @@ def sparse_mx_to_torch_sparse_tensor(sparse_mx):
 
 #generate TSV output file from outputs and labels
 def save_outputs(output_dir, outputs, labels, filename):
-    pdb.set_trace()
+    
     outputs = torch.cat(outputs)
     outputs = pd.DataFrame(outputs.cpu().detach().numpy())
-    labels = np.concatenate(labels)
+    labels = np.concatenate(labels) if len(labels) > 1 else labels
     pd.DataFrame(labels).to_csv(output_dir / str(filename + "_labels.tsv"), sep='\t', header=False, index=False)
     outputs.to_csv(output_dir / str(filename + "_outputs.tsv"), sep="\t", header=False, index=False)
 
@@ -95,13 +95,27 @@ def accuracy(output, labels):
     correct = correct.sum()
     return correct / len(labels)
     
-def f1_score(output, labels):
+def overall_accuracy(outputs, labels):
+    if(len(outputs) > 1 and len(labels) > 1):
+        labels = torch.LongTensor(np.concatenate(labels))
+        preds = torch.cat(outputs).max(1)[1].type_as(labels)
+        correct = preds.eq(labels).double()
+        correct = correct.sum()
+        return correct.item() / len(labels)
+    else:
+        #if only one value in output (edge case)
+        labels = torch.LongTensor(labels)
+        preds = torch.cat(outputs).max(0)[1].type_as(labels)
+        correct = preds.eq(labels).double()
+        return correct.item()
+        
+def f1_score(outputs, labels):
     pass
     
-def confusion_matrix(output, labels):
+def confusion_matrix(outputs, labels):
     pass
     
-def precision(output, labels):
+def precision(outputs, labels):
     pass
     
 def recall(outputs, labels):

@@ -31,6 +31,7 @@ class Config:
         self.parser.add_argument('--nclass', type=int, default=8, help="The number of classes for node.")
         self.parser.add_argument('--recursive', type=lambda x: (str(x).lower() == 'true'), default=False, help='Recursive loading scenegraphs')
         self.parser.add_argument('--batch_size', type=int, default=32, help='Number of graphs in a batch.')
+        self.parser.add_argument('--device', type=str, default="cpu", help='The device to run on models (cuda or cpu) cpu in default.')
 
         args_parsed = self.parser.parse_args(args)
         
@@ -72,7 +73,7 @@ class DynGINTrainer(BaseTrainer):
 
 
     def build_model(self):
-        self.model = GraphCNN(4, 4, len(self.feature_list), 50, 2, 0.75, False, "average", "average", "cuda").to("cuda")
+        self.model = GraphCNN(4, 4, len(self.feature_list), 50, 2, 0.75, False, "average", "average", self.config.device).to(self.config.device)
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.config.learning_rate, weight_decay=self.config.weight_decay)
 
     def train(self):
@@ -88,7 +89,7 @@ class DynGINTrainer(BaseTrainer):
                                
                 output = self.model.forward2(data)
                 
-                loss_train = nn.CrossEntropyLoss()(output.view(-1, 2), torch.LongTensor([label]).to("cuda"))
+                loss_train = nn.CrossEntropyLoss()(output.view(-1, 2), torch.LongTensor([label]).to(self.config.device))
 
                 loss_train.backward()
 
@@ -113,7 +114,7 @@ class DynGINTrainer(BaseTrainer):
             output = self.model.forward2(data)
 
             print(output, label)
-            acc_train = accuracy(output.view(-1, 2), torch.LongTensor([label]))
+            acc_train = accuracy(output.view(-1, 2), torch.LongTensor([label]).to(self.config.device))
             acc_predict.append(acc_train.item())
 
             print('Dynamic SceneGraph: {:04d}'.format(i), 'acc_train: {:.4f}'.format(acc_train.item()))

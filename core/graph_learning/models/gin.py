@@ -194,7 +194,7 @@ class GraphCNN(nn.Module):
 
     def forward(self, batch_graph):
         X_concat = torch.cat([graph.node_features for graph in batch_graph], 0).to(self.device)
-        graph_pool = self.__preprocess_graphpool(batch_graph)
+        
         
         if self.neighbor_pooling_type == "max":
             padded_neighbor_list = self.__preprocess_neighbors_maxpool(batch_graph)
@@ -220,8 +220,14 @@ class GraphCNN(nn.Module):
         score_over_layer = 0
     
         #perform pooling over all nodes in each graph in every layer
+        if self.graph_pooling_type != None:
+            graph_pool = self.__preprocess_graphpool(batch_graph)
+            
         for layer, h in enumerate(hidden_rep):
-            pooled_h = torch.spmm(graph_pool, h)
+            if self.graph_pooling_type != None:
+                pooled_h = torch.spmm(graph_pool, h)
+            else:
+                pooled_h = h
 
             score_over_layer += F.dropout(self.linears_prediction[layer](pooled_h), self.final_dropout, training = self.training)
         

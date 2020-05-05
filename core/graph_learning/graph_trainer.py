@@ -31,9 +31,8 @@ class Config:
         self.parser.add_argument('--nclass', type=int, default=8, help="The number of classes for node.")
         self.parser.add_argument('--recursive', type=lambda x: (str(x).lower() == 'true'), default=False, help='Recursive loading scenegraphs')
         self.parser.add_argument('--batch_size', type=int, default=32, help='Number of graphs in a batch.')
-        self.parser.add_argument('--cuda', dest='cuda', action='store_true', help='Run with cuda.')
-        self.parser.add_argument('--cpu', dest='cuda', action='store_false', help='Run with cpu.')
-        self.parser.set_defaults(cuda=False)
+        self.parser.add_argument('--device', type=str, default="cpu", help='The device to run on models (cuda or cpu) cpu in default.')
+
         args_parsed = self.parser.parse_args(args)
         
         for arg_name in vars(args_parsed):
@@ -77,10 +76,7 @@ class GINTrainer:
         self.config = Config(args)
         np.random.seed(self.config.seed)
         torch.manual_seed(self.config.seed)
-        self.processor = "cpu"
-        if self.config.cuda:
-            self.processor = "cuda"
-            
+
         self.preprocess_scenegraph_data() # reduced scenegraph extraction
 
     def preprocess_scenegraph_data(self):
@@ -107,9 +103,7 @@ class GINTrainer:
 
     def build_model(self):
         
-        self.model = GraphCNN(4, 4, len(self.feature_list), 50, 2, 0.75, False, "average", "average", self.processor)
-        if self.processor == "cuda":
-            self.model = self.model.to(self.processor)
+        self.model = GraphCNN(4, 4, len(self.feature_list), 50, 2, 0.75, False, "average", "average", self.config.device).to(self.config.device)
 
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.config.learning_rate, weight_decay=self.config.weight_decay)
 
@@ -126,11 +120,8 @@ class GINTrainer:
                 self.optimizer.zero_grad()
                                
                 output = self.model.forward(data)
-                
-                if self.processor == "cuda":
-                    loss_train = nn.CrossEntropyLoss()(output, torch.LongTensor(label).to(self.processor))
-                else:
-                    loss_train = nn.CrossEntropyLoss()(output, torch.LongTensor(label))
+                    
+                loss_train = nn.CrossEntropyLoss()(output, torch.LongTensor(label).to(self.config.device))
                     
                 loss_train.backward()
 
@@ -154,9 +145,8 @@ class GINTrainer:
             self.model.eval()
 
             output = self.model.forward(data)
-            if self.processor=="cuda":
-                output = output.cpu()
-            result_embeddings = pd.concat([result_embeddings, pd.DataFrame(output.detach().numpy())], axis=0, ignore_index=True)
+
+            result_embeddings = pd.concat([result_embeddings, pd.DataFrame(output.cpu().detach().numpy())], axis=0, ignore_index=True)
             labels.append(label)
             acc_train = accuracy(output, torch.LongTensor(label))
 

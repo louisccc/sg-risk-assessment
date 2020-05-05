@@ -93,10 +93,10 @@ class NodeClassificationExtractor:
 
     def to_dataset(self, train_to_test_ratio=0.1):
         
-        node_embeddings = []
-        node_labels = []
-        adj_matrixes = []
-
+        # node_embeddings = []
+        # node_labels = []
+        # adj_matrixes = []
+        graphs = []
         feature_list = self.get_feature_list(num_classes=8)
 
         for scenegraphs in self.scenegraphs_sequence:
@@ -107,11 +107,16 @@ class NodeClassificationExtractor:
                 embeddings = torch.FloatTensor(np.array(normalize(sp.csr_matrix(embeddings.values)).todense()))
                 adjs = sparse_mx_to_torch_sparse_tensor(normalize(adjs + sp.eye(adjs.shape[0])))
 
-                node_embeddings.append(embeddings)
-                node_labels.append(labels)
-                adj_matrixes.append(adjs)
+                scenegraph.node_features = embeddings
+                scenegraph.node_labels = labels
+                scenegraph.adj_matrix = adjs
+                
+                sparse_mx = nx.convert_matrix.to_scipy_sparse_matrix(scenegraph.g).tocoo().astype(np.float32)
+                scenegraph.edge_mat = torch.from_numpy(np.vstack((sparse_mx.row, sparse_mx.col)).astype(np.int64))
 
-        train, test = train_test_split(list(zip(node_embeddings, node_labels, adj_matrixes)), test_size=train_to_test_ratio, shuffle=True)
+                graphs.append(scenegraph)
+
+        train, test = train_test_split(graphs, test_size=train_to_test_ratio, shuffle=True)
         
         # in train and test, each row stands for a scenegraph: 
         # 1) a list of node embeddings
@@ -119,9 +124,7 @@ class NodeClassificationExtractor:
         # 3) adjacency matrix for this scenegraph
         # return node_embeddings, node_labels, adj_matrixes
 
-        unzip_training_data = list(zip(*train)) 
-        unzip_testing_data  = list(zip(*test))
-        return_values = list(unzip_training_data[0]), list(unzip_training_data[1]), list(unzip_training_data[2]), list(unzip_testing_data[0]), list(unzip_testing_data[1]), list(unzip_testing_data[2])
+        return_values = train, test
 
         # Saving the objects:
         with open('node_embeddings.pkl', 'wb') as f:  # Python 3: open(..., 'wb')
@@ -293,7 +296,7 @@ class SceneGraphSequenceGenerator(SceneGraphExtractor):
     def read_cache(self):   
         with open('dyngraph_embeddings.pkl','rb') as f: 
             return pkl.load(f)
-            
+
     def to_dataset(self, number_of_frames=20, train_to_test_ratio=0.1):
         sequence_labels = []
         sequences = [] 

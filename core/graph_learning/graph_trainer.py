@@ -70,6 +70,7 @@ class Generator:
 
         return raw_data, raw_label
 
+
 class GINTrainer:
 
     def __init__(self, args):
@@ -137,7 +138,9 @@ class GINTrainer:
         # take training set as testing data temporarily
         
         result_embeddings = pd.DataFrame()
+        
         labels = []
+
         for i in range(self.test_generator.number_of_batch): # iterate through scenegraphs
             
             data, label = next(self.test_generator)

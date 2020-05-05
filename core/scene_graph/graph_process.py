@@ -93,9 +93,6 @@ class NodeClassificationExtractor:
 
     def to_dataset(self, train_to_test_ratio=0.1):
         
-        # node_embeddings = []
-        # node_labels = []
-        # adj_matrixes = []
         graphs = []
         feature_list = self.get_feature_list(num_classes=8)
 

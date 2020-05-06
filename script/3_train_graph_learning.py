@@ -31,6 +31,6 @@ if __name__ == "__main__":
     trainer.train()
     outputs, labels = trainer.predict()
     utils.save_outputs(trainer.config.input_base_dir, outputs, labels, config.task)
-    acc = utils.overall_accuracy(outputs, labels)
-    print("overall accuracy: " + str(acc))
+    metrics = utils.get_scoring_metrics(outputs, labels)
+    print(metrics)
     pdb.set_trace()

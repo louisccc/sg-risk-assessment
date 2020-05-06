@@ -5,6 +5,7 @@ import pandas as pd
 import networkx as nx
 import pdb
 from collections import defaultdict
+from sklearn.metrics import f1_score, confusion_matrix, precision_score, recall_score, roc_curve
 
 #returns onehot version of labels (unused)
 def encode_onehot(labels):
@@ -95,30 +96,46 @@ def accuracy(output, labels):
     correct = correct.sum()
     return correct / len(labels)
     
-def overall_accuracy(outputs, labels):
+def get_scoring_metrics(output, labels):
+    pdb.set_trace()
+    preds, labels = get_predictions(output, labels)
+    metrics = defaultdict()
+    metrics['acc'] = overall_accuracy(preds, labels)
+    metrics['f1'] = get_f1_score(preds, labels)
+    metrics['confusion'] = str(confusion_matrix(preds, labels))
+    
+    return metrics
+    
+def get_predictions(outputs, labels):
     if(len(outputs) > 1 and len(labels) > 1):
         labels = torch.LongTensor(np.concatenate(labels))
         preds = torch.cat(outputs).max(1)[1].type_as(labels)
+    else:
+        labels = torch.LongTensor(labels)
+        preds = torch.cat(outputs).max(0)[1].type_as(labels)
+    return preds, labels
+    
+def overall_accuracy(preds, labels):    
+    if(len(preds) > 1 and len(labels) > 1):
         correct = preds.eq(labels).double()
         correct = correct.sum()
         return correct.item() / len(labels)
     else:
         #if only one value in output (edge case)
-        labels = torch.LongTensor(labels)
-        preds = torch.cat(outputs).max(0)[1].type_as(labels)
         correct = preds.eq(labels).double()
         return correct.item()
         
-def f1_score(outputs, labels):
+#TODO: adapt for multi-class scoring as well
+def get_f1_score(preds, labels):
+    return f1_score(labels, preds)
+    
+def get_confusion_matrix(preds, labels):
+    return confusion_matrix(labels, preds)
+    
+def get_precision(preds, labels):
     pass
     
-def confusion_matrix(outputs, labels):
-    pass
-    
-def precision(outputs, labels):
-    pass
-    
-def recall(outputs, labels):
+def get_recall(labels, labels):
     pass
     
     

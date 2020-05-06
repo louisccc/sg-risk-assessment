@@ -115,10 +115,10 @@ class DynGINTrainer(BaseTrainer):
             labels.append(label)
             
             print(output, label)
-            acc_train = accuracy(output.view(-1, 2), torch.LongTensor([label]).to(self.config.device))
-            acc_predict.append(acc_train.item())
+            acc_test = accuracy(output.view(-1, 2), torch.LongTensor([label]).to(self.config.device))
+            acc_predict.append(acc_test.item())
 
-            print('Dynamic SceneGraph: {:04d}'.format(i), 'acc_train: {:.4f}'.format(acc_train.item()))
+            print('Dynamic SceneGraph: {:04d}'.format(i), 'acc_test: {:.4f}'.format(acc_test.item()))
 
         print('Dynamic SceneGraph precision', sum(acc_predict) / len(acc_predict))
         return torch.cat(outputs).reshape(-1,2).detach(), np.array(labels).flatten()

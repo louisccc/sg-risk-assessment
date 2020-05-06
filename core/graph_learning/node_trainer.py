@@ -118,9 +118,9 @@ class GCNTrainer:
                      
             output = self.model.forward([data[i]])
             outputs.append(output)
-            acc_train = utils.accuracy(output, torch.LongTensor(data[i].node_labels).to(self.config.device))
+            acc_test = utils.accuracy(output, torch.LongTensor(data[i].node_labels).to(self.config.device))
 
-            print('SceneGraph: {:04d}'.format(i), 'acc_train: {:.4f}'.format(acc_train.item()))
+            print('SceneGraph: {:04d}'.format(i), 'acc_test: {:.4f}'.format(acc_test.item()))
         
         for scenegraph in self.test_graphs: 
             labels.append(scenegraph.node_labels)

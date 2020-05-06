@@ -21,7 +21,7 @@ class Config:
     '''Argument Parser for script to train scenegraphs.'''
     def __init__(self, args):
         self.parser = ArgumentParser(description='The parameters for training the scene graph using GCN.')
-        self.parser.add_argument('--input_path', type=str, default="../input/synthesis_data/lane-change/0", help="Path to code directory.")
+        self.parser.add_argument('--input_path', type=str, default="../input/synthesis_data/lane-change/", help="Path to code directory.")
         self.parser.add_argument('--learning_rate', default=0.0001, type=float, help='The initial learning rate for GCN.')
         self.parser.add_argument('--seed', type=int, default=42, help='Random seed.')
         self.parser.add_argument('--epochs', type=int, default=200, help='Number of epochs to train.')
@@ -29,7 +29,7 @@ class Config:
         self.parser.add_argument('--hidden', type=int, default=200, help='Number of hidden units.')
         self.parser.add_argument('--dropout', type=float, default=0.5, help='Dropout rate (1 - keep probability).')
         self.parser.add_argument('--nclass', type=int, default=8, help="The number of classes for node.")
-        self.parser.add_argument('--recursive', type=lambda x: (str(x).lower() == 'true'), default=False, help='Recursive loading scenegraphs')
+        self.parser.add_argument('--recursive', type=lambda x: (str(x).lower() == 'true'), default=True, help='Recursive loading scenegraphs')
         self.parser.add_argument('--batch_size', type=int, default=32, help='Number of graphs in a batch.')
         self.parser.add_argument('--device', type=str, default="cpu", help='The device to run on models (cuda or cpu) cpu in default.')
 
@@ -135,7 +135,6 @@ class GINTrainer:
             print('')
 
     def predict(self):
-        # take training set as testing data temporarily        
         labels = []
         outputs = []
         
@@ -147,9 +146,9 @@ class GINTrainer:
             output = self.model.forward(data)
             outputs.append(output)
             labels.append(label)
-            acc_train = accuracy(output, torch.LongTensor(label))
+            acc_test = accuracy(output, torch.LongTensor(label))
 
-            print('SceneGraph: {:04d}'.format(i), 'acc_train: {:.4f}'.format(acc_train.item()))
+            print('SceneGraph: {:04d}'.format(i), 'acc_test: {:.4f}'.format(acc_test.item()))
         return torch.cat(outputs).reshape(-1,2).detach(), np.array(labels).flatten()
         
         

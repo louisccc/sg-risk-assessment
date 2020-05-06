@@ -91,7 +91,7 @@ class NodeClassificationExtractor:
         with open('node_embeddings.pkl','rb') as f: 
             return pkl.load(f)
 
-    def to_dataset(self, train_to_test_ratio=0.1):
+    def to_dataset(self, train_to_test_ratio=0.3):
         
         graphs = []
         feature_list = self.get_feature_list(num_classes=8)
@@ -251,7 +251,7 @@ class SceneGraphExtractor(NodeClassificationExtractor):
         with open('graph_embeddings.pkl','rb') as f: 
             return pkl.load(f)
 
-    def to_dataset(self, train_to_test_ratio=0.1):
+    def to_dataset(self, train_to_test_ratio=0.3):
         graph_labels = []
         graphs = []
 

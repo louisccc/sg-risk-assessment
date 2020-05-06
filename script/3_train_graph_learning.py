@@ -33,6 +33,6 @@ if __name__ == "__main__":
     outputs, labels = trainer.predict()
     utils.save_outputs(trainer.config.input_base_dir, outputs, labels, config.task)
     if config.task != "node_classification": #multiclass metrics not implemented
-        metrics = utils.get_scoring_metrics(outputs, labels)
+        metrics = utils.get_scoring_metrics(outputs, labels, config.task)
         print(metrics)
     pdb.set_trace()

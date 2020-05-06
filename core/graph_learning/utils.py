@@ -80,10 +80,8 @@ def sparse_mx_to_torch_sparse_tensor(sparse_mx):
 
 #generate TSV output file from outputs and labels
 def save_outputs(output_dir, outputs, labels, filename):
-    
-    outputs = torch.cat(outputs)
     outputs = pd.DataFrame(outputs.cpu().detach().numpy())
-    labels = np.concatenate(labels) if len(labels) > 1 else labels
+    labels = labels.flatten()
     pd.DataFrame(labels).to_csv(output_dir / str(filename + "_labels.tsv"), sep='\t', header=False, index=False)
     outputs.to_csv(output_dir / str(filename + "_outputs.tsv"), sep="\t", header=False, index=False)
 
@@ -98,7 +96,8 @@ def accuracy(output, labels):
     correct = correct.sum()
     return correct / len(labels)
     
-def get_scoring_metrics(output, labels):
+
+def get_scoring_metrics(output, labels, task):
     pdb.set_trace()
     preds, labels = get_predictions(output, labels)
     metrics = defaultdict()
@@ -111,18 +110,13 @@ def get_scoring_metrics(output, labels):
     return metrics
     
 def get_predictions(outputs, labels):
-    if(len(outputs) > 1 and len(labels) > 1):
-        labels = torch.LongTensor(np.concatenate(labels))
-        preds = torch.cat(outputs).max(1)[1].type_as(labels)
-    else:
-        labels = torch.LongTensor(labels)
-        preds = [torch.cat(outputs).max(0)[1].type_as(labels)]
+    labels = torch.LongTensor(labels)
+    preds = outputs.max(1)[1].type_as(labels)
     return preds, labels
 
 def get_auc(outputs, labels):
-    scores = torch.cat(outputs)
     try:
-        auc = roc_auc_score(labels, scores.detach().numpy())
+        auc = roc_auc_score(labels.numpy(), outputs.numpy())
     except ValueError: #thrown when labels only has one class
         print("Labels only has a single class in its values. AUC is 0.")
         auc = 0.0

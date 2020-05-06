@@ -122,9 +122,9 @@ class GCNTrainer:
 
             print('SceneGraph: {:04d}'.format(i), 'acc_train: {:.4f}'.format(acc_train.item()))
         
-        
+        pdb.set_trace()
         for scenegraph in self.test_graphs: 
             labels.append(scenegraph.node_labels)
-        return outputs, labels
+        return torch.cat(outputs).detach(), np.concatenate(labels)
         
         

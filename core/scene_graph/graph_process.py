@@ -274,7 +274,7 @@ class SceneGraphExtractor(NodeClassificationExtractor):
         # train_graphs, train_labels.
         # test_graphs, test_labels.
 
-        return_values = list(unzip_training_data[0]), list(unzip_training_data[1]), list(unzip_testing_data[0]), list(unzip_testing_data[1]), feature_list
+        return_values = np.array(unzip_training_data[0]), np.array(unzip_training_data[1]), np.array(unzip_testing_data[0]), np.array(unzip_testing_data[1]), feature_list
 
         # Saving the objects:
         with open('graph_embeddings.pkl', 'wb') as f:  # Python 3: open(..., 'wb')
@@ -294,7 +294,7 @@ class SceneGraphSequenceGenerator(SceneGraphExtractor):
         with open('dyngraph_embeddings.pkl','rb') as f: 
             return pkl.load(f)
 
-    def to_dataset(self, number_of_frames=20, train_to_test_ratio=0.1):
+    def to_dataset(self, number_of_frames=20, train_to_test_ratio=0.3):
         sequence_labels = []
         sequences = [] 
 
@@ -324,7 +324,7 @@ class SceneGraphSequenceGenerator(SceneGraphExtractor):
         # train_sequences, train_sequence_labels.
         # test_sequences, test_sequence_labels.
 
-        return_values = list(unzip_training_data[0]), list(unzip_training_data[1]), list(unzip_testing_data[0]), list(unzip_testing_data[1]), feature_list
+        return_values = np.array(unzip_training_data[0]), np.array(unzip_training_data[1]), np.array(unzip_testing_data[0]), np.array(unzip_testing_data[1]), feature_list
 
         # Saving the objects:
         with open('dyngraph_embeddings.pkl', 'wb') as f:  # Python 3: open(..., 'wb')

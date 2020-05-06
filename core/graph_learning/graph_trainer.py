@@ -144,13 +144,12 @@ class GINTrainer:
             data, label = next(self.test_generator)
             
             self.model.eval()
-
             output = self.model.forward(data)
             outputs.append(output)
             labels.append(label)
             acc_train = accuracy(output, torch.LongTensor(label))
 
             print('SceneGraph: {:04d}'.format(i), 'acc_train: {:.4f}'.format(acc_train.item()))
-        return outputs, labels
+        return torch.cat(outputs).reshape(-1,2).detach(), np.array(labels).flatten()
         
         

@@ -54,7 +54,7 @@ class DynGINTrainer(BaseTrainer):
     def preprocess_scenegraph_data(self):
         # load scene graph txts into memory 
         sge = SceneGraphSequenceGenerator()
-        
+
         if not sge.is_cache_exists():
             if self.config.recursive:
                 for sub_dir in tqdm([x for x in self.config.input_base_dir.iterdir() if x.is_dir()]):
@@ -80,7 +80,6 @@ class DynGINTrainer(BaseTrainer):
 
         for epoch_idx in tqdm(range(self.config.epochs)): # iterate through epoch
             acc_loss_train = 0
-            
             for i in range(len(self.training_sequences)): # iterate through scenegraphs
                 data, label = self.training_sequences[i], self.training_labels[i]
 
@@ -104,7 +103,6 @@ class DynGINTrainer(BaseTrainer):
     def predict(self):
         # take training set as testing data temporarily
         acc_predict = []
-        result_embeddings = pd.DataFrame()
         labels = []
         outputs = []
         
@@ -112,7 +110,6 @@ class DynGINTrainer(BaseTrainer):
             data, label = self.testing_sequences[i], self.testing_labels[i]
             
             self.model.eval()
-
             output = self.model.forward2(data)
             outputs.append(output)
             labels.append(label)
@@ -124,5 +121,4 @@ class DynGINTrainer(BaseTrainer):
             print('Dynamic SceneGraph: {:04d}'.format(i), 'acc_train: {:.4f}'.format(acc_train.item()))
 
         print('Dynamic SceneGraph precision', sum(acc_predict) / len(acc_predict))
-        
-        return outputs, labels
+        return torch.cat(outputs).reshape(-1,2).detach(), np.array(labels).flatten()

@@ -109,24 +109,22 @@ class GCNTrainer:
 
     def predict(self):
         # predict the node classification performance.
-
         data = self.test_graphs
-
-        result_embeddings = pd.DataFrame()
+        outputs = []
+        labels = []
         
         for i in range(self.num_testing_samples):
             self.model.eval()
                      
             output = self.model.forward([data[i]])
-
+            outputs.append(output)
             acc_train = utils.accuracy(output, torch.LongTensor(data[i].node_labels).to(self.config.device))
-
-            result_embeddings = pd.concat([result_embeddings, pd.DataFrame(output.cpu().detach().numpy())], axis=0, ignore_index=True)
 
             print('SceneGraph: {:04d}'.format(i), 'acc_train: {:.4f}'.format(acc_train.item()))
         
-        labels = []
+        
         for scenegraph in self.test_graphs: 
             labels.append(scenegraph.node_labels)
-
-        utils.save_embedding(self.config.input_base_dir, np.concatenate(labels), result_embeddings, "gcn_test")
+        return outputs, labels
+        
+        

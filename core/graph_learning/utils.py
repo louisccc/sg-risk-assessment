@@ -5,6 +5,7 @@ import pandas as pd
 import networkx as nx
 import pdb
 from collections import defaultdict
+from sklearn.metrics import accuracy_score, f1_score, confusion_matrix, precision_score, recall_score, roc_auc_score
 
 #returns onehot version of labels (unused)
 def encode_onehot(labels):
@@ -76,16 +77,53 @@ def sparse_mx_to_torch_sparse_tensor(sparse_mx):
     values = torch.from_numpy(sparse_mx.data)
     shape = torch.Size(sparse_mx.shape)
     return torch.sparse.FloatTensor(indices, values, shape)
+
+#generate TSV output file from outputs and labels
+def save_outputs(output_dir, outputs, labels, filename):
     
+    outputs = torch.cat(outputs)
+    outputs = pd.DataFrame(outputs.cpu().detach().numpy())
+    labels = np.concatenate(labels) if len(labels) > 1 else labels
+    pd.DataFrame(labels).to_csv(output_dir / str(filename + "_labels.tsv"), sep='\t', header=False, index=False)
+    outputs.to_csv(output_dir / str(filename + "_outputs.tsv"), sep="\t", header=False, index=False)
+
+
+#~~~~~~~~~~Scoring Metrics~~~~~~~~~~
+#note: these scoring metrics only work properly for binary classification use cases (graph classification, dyngraph classification) 
+
+#used for output of validation accuracy after each epoch
 def accuracy(output, labels):
     preds = output.max(1)[1].type_as(labels)
     correct = preds.eq(labels).double()
     correct = correct.sum()
     return correct / len(labels)
+    
+def get_scoring_metrics(output, labels):
+    pdb.set_trace()
+    preds, labels = get_predictions(output, labels)
+    metrics = defaultdict()
+    metrics['acc'] = accuracy_score(labels, preds)
+    metrics['f1'] = f1_score(labels, preds)
+    metrics['confusion'] = str(confusion_matrix(labels, preds))
+    metrics['precision'] = precision_score(labels, preds)
+    metrics['recall'] = recall_score(labels, preds)
+    metrics['auc'] = get_auc(output, labels)
+    return metrics
+    
+def get_predictions(outputs, labels):
+    if(len(outputs) > 1 and len(labels) > 1):
+        labels = torch.LongTensor(np.concatenate(labels))
+        preds = torch.cat(outputs).max(1)[1].type_as(labels)
+    else:
+        labels = torch.LongTensor(labels)
+        preds = [torch.cat(outputs).max(0)[1].type_as(labels)]
+    return preds, labels
 
-
-#generate TSV output file from embeddings and labels for visualization
-def save_embedding(output_dir, metadata, embeddings, filename):
-    pd.DataFrame(metadata).to_csv(output_dir / str(filename + "_meta.tsv"), sep='\t', header=False, index=False)
-    embeddings.to_csv(output_dir / str(filename + "_embeddings.tsv"), sep="\t", header=False, index=False)
-
+def get_auc(outputs, labels):
+    scores = torch.cat(outputs)
+    try:
+        auc = roc_auc_score(labels, scores.detach().numpy())
+    except ValueError: #thrown when labels only has one class
+        print("Labels only has a single class in its values. AUC is 0.")
+        auc = 0.0
+    return auc

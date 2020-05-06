@@ -4,6 +4,7 @@ from core.graph_learning.node_trainer import GCNTrainer
 from core.graph_learning.graph_trainer import GINTrainer
 from core.graph_learning.dyngraph_trainer import DynGINTrainer
 from core.graph_learning import utils
+import pandas as pd
 
 def get_config(args):
     task_parser = argparse.ArgumentParser()
@@ -31,6 +32,7 @@ if __name__ == "__main__":
     trainer.train()
     outputs, labels = trainer.predict()
     utils.save_outputs(trainer.config.input_base_dir, outputs, labels, config.task)
-    metrics = utils.get_scoring_metrics(outputs, labels)
-    print(metrics)
+    if config.task != "node_classification": #multiclass metrics not implemented
+        metrics = utils.get_scoring_metrics(outputs, labels)
+        print(metrics)
     pdb.set_trace()

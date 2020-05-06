@@ -5,7 +5,7 @@ import pandas as pd
 import networkx as nx
 import pdb
 from collections import defaultdict
-from sklearn.metrics import f1_score, confusion_matrix, precision_score, recall_score, roc_curve
+from sklearn.metrics import accuracy_score, f1_score, confusion_matrix, precision_score, recall_score, roc_auc_score
 
 #returns onehot version of labels (unused)
 def encode_onehot(labels):
@@ -89,7 +89,9 @@ def save_outputs(output_dir, outputs, labels, filename):
 
 
 #~~~~~~~~~~Scoring Metrics~~~~~~~~~~
+#note: these scoring metrics only work properly for binary classification use cases (graph classification, dyngraph classification) 
 
+#used for output of validation accuracy after each epoch
 def accuracy(output, labels):
     preds = output.max(1)[1].type_as(labels)
     correct = preds.eq(labels).double()
@@ -100,10 +102,12 @@ def get_scoring_metrics(output, labels):
     pdb.set_trace()
     preds, labels = get_predictions(output, labels)
     metrics = defaultdict()
-    metrics['acc'] = overall_accuracy(preds, labels)
-    metrics['f1'] = get_f1_score(preds, labels)
-    metrics['confusion'] = str(confusion_matrix(preds, labels))
-    
+    metrics['acc'] = accuracy_score(labels, preds)
+    metrics['f1'] = f1_score(labels, preds)
+    metrics['confusion'] = str(confusion_matrix(labels, preds))
+    metrics['precision'] = precision_score(labels, preds)
+    metrics['recall'] = recall_score(labels, preds)
+    metrics['auc'] = get_auc(output, labels)
     return metrics
     
 def get_predictions(outputs, labels):
@@ -112,33 +116,14 @@ def get_predictions(outputs, labels):
         preds = torch.cat(outputs).max(1)[1].type_as(labels)
     else:
         labels = torch.LongTensor(labels)
-        preds = torch.cat(outputs).max(0)[1].type_as(labels)
+        preds = [torch.cat(outputs).max(0)[1].type_as(labels)]
     return preds, labels
-    
-def overall_accuracy(preds, labels):    
-    if(len(preds) > 1 and len(labels) > 1):
-        correct = preds.eq(labels).double()
-        correct = correct.sum()
-        return correct.item() / len(labels)
-    else:
-        #if only one value in output (edge case)
-        correct = preds.eq(labels).double()
-        return correct.item()
-        
-#TODO: adapt for multi-class scoring as well
-def get_f1_score(preds, labels):
-    return f1_score(labels, preds)
-    
-def get_confusion_matrix(preds, labels):
-    return confusion_matrix(labels, preds)
-    
-def get_precision(preds, labels):
-    pass
-    
-def get_recall(labels, labels):
-    pass
-    
-    
 
-
-
+def get_auc(outputs, labels):
+    scores = torch.cat(outputs)
+    try:
+        auc = roc_auc_score(labels, scores.detach().numpy())
+    except ValueError: #thrown when labels only has one class
+        print("Labels only has a single class in its values. AUC is 0.")
+        auc = 0.0
+    return auc

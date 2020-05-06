@@ -109,7 +109,6 @@ class DynGINTrainer(BaseTrainer):
         outputs = []
         
         for i in range(len(self.testing_sequences)): # iterate through scenegraphs
-            pdb.set_trace()
             data, label = self.testing_sequences[i], self.testing_labels[i]
             
             self.model.eval()

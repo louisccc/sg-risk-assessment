@@ -7,9 +7,12 @@ import pdb
 from collections import defaultdict
 from sklearn.metrics import accuracy_score, f1_score, confusion_matrix, precision_score, recall_score, roc_auc_score
 
-#returns onehot version of labels (unused)
-def encode_onehot(labels):
-    classes = set(labels)
+#returns onehot version of labels. can specify n_classes to force onehot size.
+def encode_onehot(labels, n_classes=None):
+    if(n_classes):
+        classes = set(range(n_classes))
+    else:
+        classes = set(labels)
     classes_dict = {c: np.identity(len(classes))[i, :] for i, c in
                     enumerate(classes)}
     labels_onehot = np.array(list(map(classes_dict.get, labels)),
@@ -98,15 +101,14 @@ def accuracy(output, labels):
     
 
 def get_scoring_metrics(output, labels, task):
-    pdb.set_trace()
     preds, labels = get_predictions(output, labels)
     metrics = defaultdict()
     metrics['acc'] = accuracy_score(labels, preds)
-    metrics['f1'] = f1_score(labels, preds)
+    metrics['f1'] = f1_score(labels, preds, average="micro")
     metrics['confusion'] = str(confusion_matrix(labels, preds))
-    metrics['precision'] = precision_score(labels, preds)
-    metrics['recall'] = recall_score(labels, preds)
-    metrics['auc'] = get_auc(output, labels)
+    metrics['precision'] = precision_score(labels, preds, average="micro")
+    metrics['recall'] = recall_score(labels, preds, average="micro")
+    metrics['auc'] = get_auc(output, labels, task)
     return metrics
     
 def get_predictions(outputs, labels):
@@ -114,10 +116,16 @@ def get_predictions(outputs, labels):
     preds = outputs.max(1)[1].type_as(labels)
     return preds, labels
 
-def get_auc(outputs, labels):
+
+def get_auc(outputs, labels, task):
     try:
-        auc = roc_auc_score(labels.numpy(), outputs.numpy())
-    except ValueError: #thrown when labels only has one class
-        print("Labels only has a single class in its values. AUC is 0.")
+        if(task == "node_classification"):
+            labels = encode_onehot(labels.numpy().tolist(), 8) #multiclass labels
+            auc = roc_auc_score(labels, outputs.numpy(), average="weighted")
+        else:
+            labels = encode_onehot(labels.numpy().tolist(), 2) #binary labels
+            auc = roc_auc_score(labels, outputs.numpy(), average="micro")
+    except ValueError as err: 
+        print("error calculating AUC: ", err)
         auc = 0.0
     return auc

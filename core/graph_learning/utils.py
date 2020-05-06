@@ -5,7 +5,9 @@ import pandas as pd
 import networkx as nx
 import pdb
 from collections import defaultdict
-from sklearn.metrics import accuracy_score, f1_score, confusion_matrix, precision_score, recall_score, roc_auc_score
+from sklearn.metrics import accuracy_score, f1_score, confusion_matrix, precision_score, recall_score, roc_auc_score, roc_curve
+from sklearn import preprocessing
+from matplotlib import pyplot as plt
 
 #returns onehot version of labels. can specify n_classes to force onehot size.
 def encode_onehot(labels, n_classes=None):
@@ -18,48 +20,6 @@ def encode_onehot(labels, n_classes=None):
     labels_onehot = np.array(list(map(classes_dict.get, labels)),
                              dtype=np.int32)
     return labels_onehot
-
-
-#copied from https://github.com/tkipf/pygcn/tree/master/data/cora to load cora dataset
-def load_cora_data(path="../../input/cora/", dataset="cora"):
-    """Load citation network dataset"""
-    print('Loading {} dataset...'.format(dataset))
-
-    idx_features_labels = np.genfromtxt("{}{}.content".format(path, dataset),
-                                        dtype=np.dtype(str))
-    features = sp.csr_matrix(idx_features_labels[:, 1:-1], dtype=np.float32)
-    labels = encode_onehot(idx_features_labels[:, -1])
-
-    # build graph
-    idx = np.array(idx_features_labels[:, 0], dtype=np.int32)
-    idx_map = {j: i for i, j in enumerate(idx)}
-    edges_unordered = np.genfromtxt("{}{}.cites".format(path, dataset),
-                                    dtype=np.int32)
-    edges = np.array(list(map(idx_map.get, edges_unordered.flatten())),
-                     dtype=np.int32).reshape(edges_unordered.shape)
-    adj = sp.coo_matrix((np.ones(edges.shape[0]), (edges[:, 0], edges[:, 1])),
-                        shape=(labels.shape[0], labels.shape[0]),
-                        dtype=np.float32)
-
-    # build symmetric adjacency matrix
-    adj = adj + adj.T.multiply(adj.T > adj) - adj.multiply(adj.T > adj)
-
-    features = normalize(features)
-    adj = normalize(adj + sp.eye(adj.shape[0]))
-
-    idx_train = range(140)
-    idx_val = range(200, 500)
-    idx_test = range(500, 1500)
-
-    features = torch.FloatTensor(np.array(features.todense()))
-    labels = torch.LongTensor(np.where(labels)[1])
-    adj = sparse_mx_to_torch_sparse_tensor(adj)
-
-    idx_train = torch.LongTensor(idx_train)
-    idx_val = torch.LongTensor(idx_val)
-    idx_test = torch.LongTensor(idx_test)
-
-    return adj, features, labels, idx_train, idx_val, idx_test
     
     
 def normalize(mx):
@@ -109,6 +69,7 @@ def get_scoring_metrics(output, labels, task):
     metrics['precision'] = precision_score(labels, preds, average="micro")
     metrics['recall'] = recall_score(labels, preds, average="micro")
     metrics['auc'] = get_auc(output, labels, task)
+    get_roc_curve(output, labels, task)
     return metrics
     
 def get_predictions(outputs, labels):
@@ -129,3 +90,27 @@ def get_auc(outputs, labels, task):
         print("error calculating AUC: ", err)
         auc = 0.0
     return auc
+
+#NOTE: ROC curve is only generated for positive class (risky label) confidence values 
+def get_roc_curve(outputs, labels, task):
+    if task == "node_classification":
+        print("Node classification ROC not implemented")
+        return None
+    else:
+        risk_scores = []
+       #pdb.set_trace()
+        outputs = preprocessing.normalize(outputs.numpy(), axis=0)
+        for i in outputs:
+            risk_scores.append(i[1])
+
+        fpr, tpr, thresholds = roc_curve(labels.numpy(), risk_scores)
+        plt.figure(figsize=(8,8))
+        plt.xlim((0,1))
+        plt.ylim((0,1))
+        plt.ylabel("TPR")
+        plt.xlabel("FPR")
+        plt.title("Receiver Operating Characteristic for " + task)
+        plt.plot([0,1],[0,1], linestyle='dashed')
+        plt.plot(fpr,tpr, linewidth=2)
+        plt.savefig("ROC_curve_"+task+".svg")
+        plt.show()

@@ -10,7 +10,6 @@ class Config:
     def __init__(self, args):
         self.parser = ArgumentParser(description='The parameters for writing to LCTable.')
         self.parser.add_argument('--input_path', type=str, default="../input/synthesis_data", help="Path to input.")
-        self.parser.add_argument('--recursive', type=lambda x: (str(x).lower() == 'true'), default=False, help='Recursive writing to table')
 
         args_parsed = self.parser.parse_args(args)
         

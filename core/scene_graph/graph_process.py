@@ -251,12 +251,10 @@ class SceneGraphExtractor(NodeClassificationExtractor):
         with open('graph_embeddings.pkl','rb') as f: 
             return pkl.load(f)
 
-    def to_dataset(self, train_to_test_ratio=0.3):
+    def process_graph_sequence(self, feature_list, sequence):
         graph_labels = []
         graphs = []
-
-        feature_list = self.get_feature_list(num_classes=8)
-        for scenegraphs, risk_label in self.scenegraphs_sequence:
+        for scenegraphs, risk_label in sequence:
             for timeframe, scenegraph in scenegraphs.items():
                 graphs.append(scenegraph)
                 graph_labels.append(risk_label)
@@ -265,8 +263,14 @@ class SceneGraphExtractor(NodeClassificationExtractor):
                 
                 sparse_mx = nx.convert_matrix.to_scipy_sparse_matrix(scenegraph.g).tocoo().astype(np.float32)
                 scenegraph.edge_mat = torch.from_numpy(np.vstack((sparse_mx.row, sparse_mx.col)).astype(np.int64))
+        return list(zip(graphs, graph_labels))
 
-        train, test = train_test_split(list(zip(graphs, graph_labels)), test_size=train_to_test_ratio, shuffle=True)
+    def to_dataset(self, train_to_test_ratio=0.3):
+        feature_list = self.get_feature_list(num_classes=8)
+        
+        train_sequence, test_sequence = train_test_split(self.scenegraphs_sequence, test_size = train_to_test_ratio)
+        train = self.process_graph_sequence(feature_list, train_sequence)
+        test = self.process_graph_sequence(feature_list, test_sequence)
 
         unzip_training_data = list(zip(*train)) 
         unzip_testing_data  = list(zip(*test))

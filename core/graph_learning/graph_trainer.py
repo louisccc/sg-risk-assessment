@@ -100,7 +100,7 @@ class GINTrainer:
         self.generator = Generator(self.training_graphs, self.training_labels, self.config.batch_size)
         self.test_generator = Generator(self.testing_graphs, self.testing_labels, 1)
 
-        print("Number of Scene Graphs included: ", len(self.training_graphs))
+        print("Number of Training Scene Graphs included: ", len(self.training_graphs))
 
     def build_model(self):
         

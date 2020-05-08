@@ -23,8 +23,9 @@ def write_data_path(file_path):
 	input_path = file_path / 'lane-change'
 
 	df = pd.read_csv(lctable, header=None, index_col=None)
-
-	foldernames = sorted(os.listdir(input_path),key=int)
+	
+	foldernames = [f for f in sorted(os.listdir(input_path)) if f.isnumeric()]
+	foldernames = sorted(foldernames,key=int)
 
 	for foldername in tqdm(foldernames):
 		video_path = input_path / foldername
@@ -36,7 +37,24 @@ def write_data_path(file_path):
 		
 	df.to_csv(lctable,header=None,index=None)
 
+def write_risk_label(file_path):
+	lctable = file_path / 'LCTable.csv'
+	input_path = file_path / 'lane-change'
+
+	df = pd.read_csv(lctable, header=None, index_col=None)
+	
+	foldernames = [f for f in sorted(os.listdir(input_path)) if f.isnumeric()]
+	foldernames = sorted(foldernames,key=int)
+	print(foldernames)
+
+	for foldername in tqdm(foldernames):
+		fout = open(input_path / foldername / 'risk_label.txt', 'w')
+		label = df.iloc[int(foldername),-1]
+		fout.write(str(label))
+		fout.close()
+
 
 if __name__ == '__main__':
 	config = Config(sys.argv[1:])
-	write_data_path(config.input_base_dir)
+	write_risk_label(config.input_base_dir)
+	#write_data_path(config.input_base_dir)

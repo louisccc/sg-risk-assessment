@@ -48,7 +48,7 @@ def write_risk_label(file_path):
 	print(foldernames)
 
 	for foldername in tqdm(foldernames):
-		fout = open(input_path / foldername / 'risk_label.txt', 'w')
+		fout = open(input_path / foldername / 'label.txt', 'w')
 		label = df.iloc[int(foldername),-1]
 		fout.write(str(label))
 		fout.close()

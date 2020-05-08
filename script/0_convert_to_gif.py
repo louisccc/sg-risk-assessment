@@ -37,8 +37,9 @@ if __name__ == "__main__":
 
 	if config.recursive:
 		input_path = Path(os.path.split(config.input_base_dir)[0]).resolve()
-		foldernames = os.listdir(input_path)
-		
+		foldernames = [f for f in sorted(os.listdir(input_path)) if f.isnumeric()]
+		foldernames = sorted(foldernames,key=int)
+
 		for foldername in tqdm(foldernames):
 			gif_path = input_path / foldername
 			convert_gif(gif_path)

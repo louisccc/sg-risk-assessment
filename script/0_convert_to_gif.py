@@ -29,7 +29,7 @@ def convert_gif(path):
 	if (not exists):
 		for filename in img_path:
 			images.append(imageio.imread(str(filename)))
-		imageio.mimsave(path / 'movie.gif', images, format='GIF')
+		imageio.mimsave(path / 'lane_change.gif', images, format='GIF')
 
 
 if __name__ == "__main__":

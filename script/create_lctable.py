@@ -10,6 +10,8 @@ class Config:
     def __init__(self, args):
         self.parser = ArgumentParser(description='The parameters for writing to LCTable.')
         self.parser.add_argument('--input_path', type=str, default="../input/synthesis_data", help="Path to input.")
+        self.parser.add_argument('--risk_label', type=lambda x: (str(x).lower() == 'true'), default=False, help='Recursive loading gifs')
+        self.parser.add_argument('--data_path', type=lambda x: (str(x).lower() == 'true'), default=False, help='Recursive loading gifs')
 
         args_parsed = self.parser.parse_args(args)
         
@@ -30,6 +32,8 @@ def write_data_path(file_path):
 	for foldername in tqdm(foldernames):
 		video_path = input_path / foldername
 		gif_path = video_path / "lane_change.gif"
+
+		df.iloc[int(foldername),0] = int(foldername)
 
 		#video path in column 3, gif path in column 4
 		df.iloc[int(foldername),3] = video_path
@@ -56,5 +60,11 @@ def write_risk_label(file_path):
 
 if __name__ == '__main__':
 	config = Config(sys.argv[1:])
-	write_risk_label(config.input_base_dir)
-	#write_data_path(config.input_base_dir)
+
+	#write video and gif path to table
+	if config.data_path == True:
+		write_data_path(config.input_base_dir)	
+
+	#write label.txt to video folder
+	if config.risk_label == True:
+		write_risk_label(config.input_base_dir)

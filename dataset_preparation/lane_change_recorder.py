@@ -47,9 +47,9 @@ class LaneChangeRecorder:
         self.sensors_dict["camera_manager"] = sensors.CameraManager(self.ego, gamma, dimensions, root_path)
         self.sensors_dict["camera_manager"].transform_index = cam_pos_index
         self.sensors_dict["camera_manager"].set_sensor(cam_index, notify=False)
-        self.sensors_dict["camera_manager_ss"] = sensors.CameraManager(self.ego, gamma, dimensions, root_path)
-        self.sensors_dict["camera_manager_ss"].transform_index = cam_pos_index
-        self.sensors_dict["camera_manager_ss"].set_sensor(cam_index+5, notify=False)
+        # self.sensors_dict["camera_manager_ss"] = sensors.CameraManager(self.ego, gamma, dimensions, root_path)
+        # self.sensors_dict["camera_manager_ss"].transform_index = cam_pos_index
+        # self.sensors_dict["camera_manager_ss"].set_sensor(cam_index+5, notify=False)
 
     def destroy_sensors(self):
         for _, sensor in self.sensors_dict.items():
@@ -233,7 +233,7 @@ class DataExtractor(object):
         lanedict['road_id'] = waypoint.road_id
         egodict = get_vehicle_attributes(self.ego, waypoint)
         
-        #export data from surrounding vehicles
+        # export data from surrounding vehicles
         if len(vehicles) > 1:
             for vehicle in vehicles:
                 # TODO: change the 100m condition to field of view. 

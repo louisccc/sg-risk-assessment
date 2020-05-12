@@ -102,7 +102,9 @@ def main():
     client = carla.Client(args.host, args.port)
     client.set_timeout(20.0)
 
-    world = client.load_world('Town04')
+    # Town 5: Squared-grid town with cross junctions and a bridge. 
+    # It has multiple lanes per direction. Useful to perform lane changes.
+    world = client.load_world('Town05')
     CarlaDataProvider.set_world(world)
     
     try:
@@ -261,6 +263,8 @@ def main():
         # if you want to trigger the recorder, run this file in synchronous mode
         lanechangerecorder = LaneChangeRecorder(traffic_manager, world, client)
         lanechangerecorder.set_vehicles_list(vehicles_list)
+
+
 
         while True:
 

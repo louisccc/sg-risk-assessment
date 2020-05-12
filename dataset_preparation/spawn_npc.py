@@ -264,7 +264,19 @@ def main():
         lanechangerecorder = LaneChangeRecorder(traffic_manager, world, client)
         lanechangerecorder.set_vehicles_list(vehicles_list)
 
-
+        # set random weather
+        weather = carla.WeatherParameters(
+            cloudiness=random.uniform(0.0, 100.0), 
+            precipitation=random.uniform(0.0, 100.0), 
+            precipitation_deposits=random.uniform(0.0, 100.0), 
+            wind_intensity=random.uniform(0.0, 100.0), 
+            sun_azimuth_angle=random.uniform(0.0, 180.0), 
+            sun_altitude_angle=random.uniform(-90.0, 90.0), 
+            fog_density=random.uniform(0.0, 100.0), 
+            fog_distance=random.uniform(20.0, 100.0), 
+            wetness=random.uniform(0.0, 100.0), 
+            )
+        world.set_weather(weather)
 
         while True:
 

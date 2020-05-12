@@ -166,9 +166,9 @@ class CameraManager(object):
         
         if self.recording:
             if self.index == 0:
-                image.save_to_disk('%s/raw_images/%08d' % (str(self.storing_path), image.frame))
+                image.save_to_disk('%s/raw_images/%08d.jpg' % (str(self.storing_path), image.frame))
             else:
-                image.save_to_disk('%s/ss_images/%08d' % (str(self.storing_path), image.frame))
+                image.save_to_disk('%s/ss_images/%08d.jpg' % (str(self.storing_path), image.frame))
 
 
     def destroy(self):

@@ -61,13 +61,13 @@ def main():
         metavar='N',
         default=10,
         type=int,
-        help='number of vehicles (default: 10)')
+        help='max number of vehicles (default: 10)')
     argparser.add_argument(
         '-w', '--number-of-walkers',
         metavar='W',
         default=50,
         type=int,
-        help='number of walkers (default: 50)')
+        help='max number of walkers (default: 50)')
     argparser.add_argument(
         '--safe',
         action='store_true',
@@ -107,6 +107,11 @@ def main():
     world = client.load_world('Town05')
     CarlaDataProvider.set_world(world)
     
+    # set number of vehicles randomly
+    args.number_of_vehicles = random.randrange(max(2, args.number_of_vehicles / 2), args.number_of_vehicles)
+    # set number of pedestrians randomly 
+    args.number_of_walkers = random.randrange(1, args.number_of_walkers)
+
     try:
 
         traffic_manager = client.get_trafficmanager(args.tm_port)

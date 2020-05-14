@@ -22,7 +22,8 @@ class LaneChangeRecorder:
         self.sensors_dict = {}
         self.root_path = Path("./_out")
         self.root_path.mkdir(exist_ok=True)
-
+        self.new_path = None
+        
         self.num_of_existing_datapoints = len(list(self.root_path.glob('*')))
         self.dir_index = 0
 
@@ -97,9 +98,9 @@ class LaneChangeRecorder:
             print("Start Lane Changing and Recording...")
             self.lane_changing= True 
 
-            new_path = "%s/%s" % (str(self.root_path), self.num_of_existing_datapoints + self.dir_index)
-            self.extractor = DataExtractor(self.ego, new_path)
-            self.attach_sensors(new_path)
+            self.new_path = "%s/%s" % (str(self.root_path), self.num_of_existing_datapoints + self.dir_index)
+            self.extractor = DataExtractor(self.ego, self.new_path)
+            self.attach_sensors(self.new_path)
             self.dir_index += 1
             self.toggle_recording()
 
@@ -113,6 +114,17 @@ class LaneChangeRecorder:
             self.extractor.extract_frame(self.carla_world, self.map, frame_num)
             success = self.lane_change_controller.update()
             if success == py_trees.common.Status.SUCCESS:
+                #write to metadata file
+                with open((Path(self.new_path) / 'metadata.txt').resolve(),'w') as file:
+                    weather=self.carla_world.get_weather()
+                    
+                    metadata_dict={"wetness":weather.wetness,"wind_intensity":weather.wind_intensity,"precipitation_deposits":weather.precipitation_deposits,
+                    "precipitation": weather.precipitation,"cloudiness": weather.cloudiness,"fog_density": weather.fog_density,"fog_distance": weather.fog_distance,
+                    "sun_altitude_angle": weather.sun_altitude_angle,"sun_azimuth_angle": weather.sun_azimuth_angle}
+                    
+                    file.write(json.dumps(metadata_dict))
+
+
                 self.lane_changing = False
                 print('set set_autopilot back to true')
                 self.client.apply_batch_sync([carla.command.SetAutopilot(self.ego, True)], True)

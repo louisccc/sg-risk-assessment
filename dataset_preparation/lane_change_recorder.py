@@ -68,6 +68,20 @@ class LaneChangeRecorder:
         self.tick_count += 1
         
         if self.tick_count == 100:
+            # set random weather
+            weather = carla.WeatherParameters(
+                cloudiness=random.uniform(0.0, 100.0), 
+                precipitation=random.uniform(0.0, 100.0), 
+                precipitation_deposits=random.uniform(0.0, 100.0), 
+                wind_intensity=random.uniform(0.0, 100.0), 
+                sun_azimuth_angle=random.uniform(0.0, 180.0), 
+                sun_altitude_angle=random.uniform(-90.0, 90.0), 
+                fog_density=random.uniform(0.0, 100.0), 
+                fog_distance=random.uniform(20.0, 100.0), 
+                wetness=random.uniform(0.0, 100.0), 
+                )
+            self.carla_world.set_weather(weather)
+
             # choose random vehicle and prepare for recording
             print("Picking vehicle and attaching sensors...")
             self.ego = self.carla_world.get_actor(random.choice(self.vehicles_list))

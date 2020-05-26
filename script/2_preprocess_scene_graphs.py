@@ -1,16 +1,14 @@
 import os, pdb, sys
-sys.path.append(os.path.dirname(sys.path[0]))
-from core.graph_learning import utils
-from core.scene_graph import scene_graph, relation_extractor
 import pickle as pkl
 from collections import defaultdict
 import numpy as np
 import pandas as pd
+from pathlib import Path
 
-#preprocess data for input to graph learning algorithms.
-base_dir = "input/synthesis_data/lane-change-9.8/"
-input_source = base_dir + "scenes/"
-save_dir = base_dir + "processed_scenes/"
+sys.path.append(os.path.dirname(sys.path[0]))
+from core.graph_learning import utils
+from core.scene_graph import scene_graph, relation_extractor
+
 
 def get_scene_graphs(dir):
     scenegraphs = defaultdict()
@@ -47,8 +45,8 @@ def save_preprocessed_data(savedir, scenegraphs, embeddings, adj_matrix, labels)
             
     print("processed data saved to: " + savedir)
 
-if __name__ == "__main__":
-    scenegraphs = get_scene_graphs(input_source)
+def preprocess_scenegraph(inputdir, savedir):
+    scenegraphs = get_scene_graphs(inputdir)
     embeddings = defaultdict()
     adj_matrix = defaultdict()
     labels = defaultdict()
@@ -56,5 +54,18 @@ if __name__ == "__main__":
     for frame_id, scenegraph in scenegraphs.items():
         labels[frame_id], embeddings[frame_id] = utils.create_node_embeddings(scenegraph, feature_list)
         adj_matrix[frame_id] = utils.get_adj_matrix(scenegraph)
-    save_preprocessed_data(save_dir, scenegraphs, embeddings, adj_matrix, labels)
-    pdb.set_trace()
+    save_preprocessed_data(savedir, scenegraphs, embeddings, adj_matrix, labels)
+
+if __name__ == "__main__":
+    #preprocess data for input to graph learning algorithms.
+    base_dir = Path("input/synthesis_data/lane-change-9.8/").resolve()
+    # input_source = base_dir + "scenes/"
+    # save_dir = base_dir + "processed_scenes/"
+
+    samples = [x for x in base_dir.iterdir() if x.is_dir()]
+
+    for sample_dir in samples:
+        scene_dir = sample_dir / "scenes"
+        if scene_dir.is_dir():
+            save_dir = sample_dir / "processed_scenes"
+            preprocess_scenegraph(scene_dir, save_dir)

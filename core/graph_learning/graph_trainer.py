@@ -149,6 +149,10 @@ class GINTrainer:
             acc_test = accuracy(output, torch.LongTensor(label))
 
             print('SceneGraph: {:04d}'.format(i), 'acc_test: {:.4f}'.format(acc_test.item()))
-        return torch.cat(outputs).reshape(-1,2).detach(), np.array(labels).flatten()
+        outputs = torch.cat(outputs).reshape(-1,2).detach()
+        if self.config.device == "cuda":
+            # move tensor back to cpu
+            outputs = outputs.cpu()
+        return outputs, np.array(labels).flatten()
         
         

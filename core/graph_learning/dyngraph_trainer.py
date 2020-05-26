@@ -121,4 +121,7 @@ class DynGINTrainer(BaseTrainer):
             print('Dynamic SceneGraph: {:04d}'.format(i), 'acc_test: {:.4f}'.format(acc_test.item()))
 
         print('Dynamic SceneGraph precision', sum(acc_predict) / len(acc_predict))
-        return torch.cat(outputs).reshape(-1,2).detach(), np.array(labels).flatten()
+        outputs = torch.cat(outputs).reshape(-1,2).detach()
+        if self.config.device == "cuda":
+            outputs = outputs.cpu()
+        return outputs, np.array(labels).flatten()

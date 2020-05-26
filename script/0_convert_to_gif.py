@@ -22,7 +22,7 @@ class Config:
 
 def convert_gif(path):
 	folder_path = path / 'raw_images'
-	img_path = folder_path.glob('**/*.png')
+	img_path = folder_path.glob('**/*.jpg')
 	images = []
 	exists = os.path.isfile(path / 'lane_change.gif')
 

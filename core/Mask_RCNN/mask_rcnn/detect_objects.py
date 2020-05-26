@@ -69,7 +69,11 @@ class DetectObjects:
         for foldername in foldernames:
             CURRENT_IMAGE_DIR = IMAGE_DIR / foldername / 'raw_images'
             CURRENT_OUTPUT_DIR = OUTPUT_DIR / foldername
+            exists = os.path.isdir(CURRENT_OUTPUT_DIR)
 
+            if exists:
+                continue
+                
             print('Processing Folder %s' % str(CURRENT_IMAGE_DIR))
             
             CURRENT_OUTPUT_DIR.mkdir(exist_ok=True)

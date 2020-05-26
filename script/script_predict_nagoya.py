@@ -25,6 +25,7 @@ if __name__ == '__main__':
 
 	true_label = np.argmax(dataset.risk_one_hot,axis=-1)
 	output = model.predict_proba(dataset.video)
-	utils.get_scoring_metrics(output,true_label,"risk_classification") 
+	metrics = utils.get_scoring_metrics(output,true_label,"risk_classification") 
+	print(metrics)
 	print(' safe | dangerous \n', model.predict_proba(dataset.video))
 	import pdb;pdb.set_trace()

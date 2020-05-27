@@ -63,6 +63,8 @@ def accuracy(output, labels):
 def get_scoring_metrics(output, labels, task):
     preds, labels = get_predictions(output, labels)
     metrics = defaultdict()
+    output = torch.FloatTensor(output)
+    #import pdb;pdb.set_trace()
     metrics['acc'] = accuracy_score(labels, preds)
     metrics['f1'] = f1_score(labels, preds, average="micro")
     metrics['confusion'] = str(confusion_matrix(labels, preds))
@@ -74,6 +76,7 @@ def get_scoring_metrics(output, labels, task):
     
 def get_predictions(outputs, labels):
     labels = torch.LongTensor(labels)
+    outputs = torch.FloatTensor(outputs)
     preds = outputs.max(1)[1].type_as(labels)
     return preds, labels
 

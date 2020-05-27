@@ -73,7 +73,7 @@ class DetectObjects:
 
             if exists:
                 continue
-                
+	
             print('Processing Folder %s' % str(CURRENT_IMAGE_DIR))
             
             CURRENT_OUTPUT_DIR.mkdir(exist_ok=True)

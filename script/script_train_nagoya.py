@@ -2,8 +2,22 @@ import sys
 sys.path.append('../core')
 from nagoya.dataset import *
 from nagoya.models import Models
-
+from argparse import ArgumentParser
 from pathlib import Path
+
+class Config:
+
+    def __init__(self, args):
+        self.parser = ArgumentParser(description='The parameters for creating gifs of input videos.')
+        self.parser.add_argument('--input_path', type=str, default="../input/synthesis_data", help="Path to data directory.")
+
+        args_parsed = self.parser.parse_args(args)
+        
+        for arg_name in vars(args_parsed):
+            self.__dict__[arg_name] = getattr(args_parsed, arg_name)
+
+        self.input_base_dir = Path(self.input_path).resolve()
+
 
 def train_cnn_to_lstm(dataset):
 	'''
@@ -42,22 +56,26 @@ def process_raw_images_to_masked_images(src_path: Path, dst_path: Path, coco_pat
 
 if __name__ == '__main__':
 	
-	root_folder_path = Path('../input/synthesis_data').resolve()
-	raw_image_path = root_folder_path / 'lane-change'
-	label_table_path = root_folder_path / "LCTable.csv"
+	config = Config(sys.argv[1:])
+	
+	root_folder_path = config.input_base_dir #Path('../input/synthesis_data').resolve()
+	raw_image_path = root_folder_path / 'lane-change-100-old'
+	label_table_path = raw_image_path / "LCTable.csv"
 	
 	do_mask_rcnn = True
 
 	if do_mask_rcnn: 
-		coco_model_path = Path('../pretrained_models')
+		coco_model_path = config.input_base_dir / 'pretrained_models' #Path('../pretrained_models')
 		masked_image_path = root_folder_path / (raw_image_path.stem + '_masked') # the path in parallel with raw_image_path
 		masked_image_path.mkdir(exist_ok=True)
 
 		#check if masked images already exist
 		raw_folders = [f for f in os.listdir(raw_image_path) if f.isnumeric() and not f.startswith('.')]
 		masked_folders = [f for f in os.listdir(masked_image_path) if f.isnumeric() and not f.startswith('.')]
-
-		if raw_folders[-1]!=masked_folders[-1]:
+		
+		print(raw_folders,masked_folders)
+		if len(raw_folders)!=len(masked_folders):
+		#if raw_folders[-1]!=masked_folders[-1]:
 			process_raw_images_to_masked_images(raw_image_path, masked_image_path, coco_model_path)
 		
 		#load masked images

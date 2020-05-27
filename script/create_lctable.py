@@ -21,8 +21,8 @@ class Config:
         self.input_base_dir = Path(self.input_path).resolve()
 
 def write_data_path(file_path):
-	lctable = file_path / 'LCTable.csv'
 	input_path = file_path / 'lane-change'
+	lctable = input_path / 'LCTable.csv'	
 
 	df = pd.read_csv(lctable, header=None, index_col=None)
 	
@@ -42,8 +42,8 @@ def write_data_path(file_path):
 	df.to_csv(lctable,header=None,index=None)
 
 def write_risk_label(file_path):
-	lctable = file_path / 'LCTable.csv'
 	input_path = file_path / 'lane-change'
+	lctable = input_path / 'LCTable.csv'
 
 	df = pd.read_csv(lctable, header=None, index_col=None)
 	

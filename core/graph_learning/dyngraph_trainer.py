@@ -32,7 +32,7 @@ class Config:
         self.parser.add_argument('--recursive', type=lambda x: (str(x).lower() == 'true'), default=True, help='Recursive loading scenegraphs')
         self.parser.add_argument('--batch_size', type=int, default=32, help='Number of graphs in a batch.')
         self.parser.add_argument('--device', type=str, default="cpu", help='The device to run on models (cuda or cpu) cpu in default.')
-
+        #TODO: test_step
         args_parsed = self.parser.parse_args(args)
         
         for arg_name in vars(args_parsed):

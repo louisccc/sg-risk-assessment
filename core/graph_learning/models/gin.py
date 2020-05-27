@@ -191,6 +191,14 @@ class GraphCNN(nn.Module):
         #non-linearity
         h = F.relu(h)
         return h
+    
+    def message_propagation(self):
+        #TODO
+        pass
+    
+    def graph_pooling(self):
+        #TODO
+        pass
 
     def forward(self, batch_graph):
         X_concat = torch.cat([graph.node_features for graph in batch_graph], 0).to(self.device)
@@ -232,6 +240,10 @@ class GraphCNN(nn.Module):
             score_over_layer += F.dropout(self.linears_prediction[layer](pooled_h), self.final_dropout, training = self.training)
         
         return score_over_layer
+
+    def forward_sequence(self):
+        #TODO
+        pass
 
     def forward2(self, graph_sequence):
         output = self.forward(graph_sequence)

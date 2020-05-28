@@ -32,7 +32,8 @@ class Config:
         self.parser.add_argument('--recursive', type=lambda x: (str(x).lower() == 'true'), default=True, help='Recursive loading scenegraphs')
         self.parser.add_argument('--batch_size', type=int, default=32, help='Number of graphs in a batch.')
         self.parser.add_argument('--device', type=str, default="cpu", help='The device to run on models (cuda or cpu) cpu in default.')
-        #TODO: test_step
+        self.parser.add_argument('--test_step', type=int, default=10, help='Number of epochs before testing the model.')
+        
         args_parsed = self.parser.parse_args(args)
         
         for arg_name in vars(args_parsed):
@@ -99,6 +100,9 @@ class DynGINTrainer(BaseTrainer):
             print('')
             print('Epoch: {:04d},'.format(epoch_idx), 'loss_train: {:.4f}'.format(acc_loss_train))
             print('')
+
+            if epoch_idx % self.config.test_step == 0:
+                self.predict()
 
     def predict(self):
         # take training set as testing data temporarily

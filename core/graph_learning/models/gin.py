@@ -2,6 +2,11 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+class GIN(nn.Module):
+    
+    def __init__(self, args):
+        super(GIN, self).__init__()
+
 
 class GraphCNN(nn.Module):
     
@@ -192,7 +197,7 @@ class GraphCNN(nn.Module):
         h = F.relu(h)
         return h
     
-    def message_propagation(self, X_concat):
+    def message_propagation(self, X_concat, batch_graph):
         if self.neighbor_pooling_type == "max":
             padded_neighbor_list = self.__preprocess_neighbors_maxpool(batch_graph)
         else:
@@ -232,7 +237,7 @@ class GraphCNN(nn.Module):
 
     def forward(self, batch_graph):
         X_concat = torch.cat([graph.node_features for graph in batch_graph], 0).to(self.device)
-        hidden_rep = self.message_propagation(X_concat)
+        hidden_rep = self.message_propagation(X_concat, batch_graph)
         score_over_layer = self.graph_pooling(batch_graph, hidden_rep)
         
         return score_over_layer

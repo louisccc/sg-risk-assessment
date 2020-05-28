@@ -192,23 +192,12 @@ class GraphCNN(nn.Module):
         h = F.relu(h)
         return h
     
-    def message_propagation(self):
-        #TODO
-        pass
-    
-    def graph_pooling(self):
-        #TODO
-        pass
-
-    def forward(self, batch_graph):
-        X_concat = torch.cat([graph.node_features for graph in batch_graph], 0).to(self.device)
-        
-        
+    def message_propagation(self, X_concat):
         if self.neighbor_pooling_type == "max":
             padded_neighbor_list = self.__preprocess_neighbors_maxpool(batch_graph)
         else:
             Adj_block = self.__preprocess_neighbors_sumavepool(batch_graph)
-        
+
         #list of hidden representation at each layer (including input)
         hidden_rep = [X_concat]
         h = X_concat
@@ -224,9 +213,10 @@ class GraphCNN(nn.Module):
                 h = self.next_layer(h, layer, Adj_block = Adj_block)
 
             hidden_rep.append(h)
-
-        score_over_layer = 0
+        return hidden_rep
     
+    def graph_pooling(self, batch_graph, hidden_rep):
+        score_over_layer = 0
         #perform pooling over all nodes in each graph in every layer
         if self.graph_pooling_type != None:
             graph_pool = self.__preprocess_graphpool(batch_graph)
@@ -237,19 +227,28 @@ class GraphCNN(nn.Module):
             else:
                 pooled_h = h
 
-            score_over_layer += F.dropout(self.linears_prediction[layer](pooled_h), self.final_dropout, training = self.training)
+            score_over_layer += F.dropout(self.linears_prediction[layer](pooled_h), self.final_dropout, training = self.training)       
+        return score_over_layer
+
+    def forward(self, batch_graph):
+        X_concat = torch.cat([graph.node_features for graph in batch_graph], 0).to(self.device)
+        hidden_rep = self.message_propagation(X_concat)
+        score_over_layer = self.graph_pooling(batch_graph, hidden_rep)
         
         return score_over_layer
 
-    def forward_sequence(self):
-        #TODO
-        pass
+    def forward_sequence(self, output, pooling_type):
+        pool_output = None
+        if pooling_type == "average":
+            pool_output = output.mean(axis=0)
+        else:
+            pool_output = None
+        return pool_output
 
     def forward2(self, graph_sequence):
         output = self.forward(graph_sequence)
-
         ### average pooling
-        pool_output = output.mean(axis=0)
+        pool_output = self.forward_sequence(output, "average")
         return pool_output
 
 ###MLP with lienar output

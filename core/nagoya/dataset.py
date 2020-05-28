@@ -152,9 +152,14 @@ class DataSet:
         # assigning one hot vector [0,1] for risky and [1,0] for not risky
         # if risk threshold is 0.5, 50% risky (upper half of indexes array) 50% not risky (lower half of indexes array)
         for counter, index in enumerate(indexes[::-1]):
-            if counter < top_risky_threshold:
+            #import pdb;pdb.set_trace()
+            if self.risk_scores[index] > 0:
                 self.risk_one_hot[index, :] = [0, 1]
             else:
+
+            # if counter < top_risky_threshold:
+            #     self.risk_one_hot[index, :] = [0, 1]
+            # else:
                 self.risk_one_hot[index, :] = [1, 0]
 
 

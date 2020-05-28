@@ -16,6 +16,7 @@ from core.graph_learning.models.gin import *
 from argparse import ArgumentParser
 from pathlib import Path
 from tqdm import tqdm
+from torch_geometric.data import Data, DataLoader
 
 class Config:
 
@@ -80,25 +81,28 @@ class GCNTrainer:
 
 
     def build_model(self):
-        self.model = GraphCNN(1, 1, self.num_features, self.config.hidden, self.config.nclass, self.config.dropout, \
-            False, None, "average", self.config.device).to(self.config.device)
+        self.model = GCN(self.num_features, self.config.hidden, self.config.nclass, self.config.dropout).to(self.config.device)
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.config.learning_rate, weight_decay=self.config.weight_decay)
 
     def train(self):
 
         data = self.train_graphs
+        
+        data_list = [Data(x=g.node_features, edge_index=g.edge_mat, y=torch.LongTensor(g.node_labels)) for g in self.train_graphs]
+        
+        loader = DataLoader(data_list, batch_size=32)
 
         for epoch_idx in tqdm(range(self.config.epochs)):
             acc_loss_train = 0
 
-            for i in range(self.num_training_samples):
-            
+            for data in loader: 
+
                 self.model.train()
                 self.optimizer.zero_grad()
 
-                output = self.model.forward([data[i]])
-
-                loss_train = nn.CrossEntropyLoss()(output, torch.LongTensor(data[i].node_labels).to(self.config.device))
+                output = self.model.forward(data.x.to(self.config.device), data.edge_index.to(self.config.device))
+                
+                loss_train = nn.CrossEntropyLoss()(output, torch.LongTensor(data.y).to(self.config.device))
 
                 loss_train.backward()
                 self.optimizer.step()
@@ -112,7 +116,7 @@ class GCNTrainer:
         data = self.test_graphs
         outputs = []
         labels = []
-        
+
         for i in range(self.num_testing_samples):
             self.model.eval()
                      

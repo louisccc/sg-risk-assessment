@@ -17,8 +17,8 @@ class GCN(nn.Module):
         self.gc2 = GCNConv(nhid, nclass)
         self.dropout = dropout
 
-    def forward(self, x, adj):
-        edge_index = dense_to_sparse(adj)
+    def forward(self, x, edge_index):
+        ''' graphs_in_batch is a list of graph instances; '''
         x = F.relu(self.gc1(x, edge_index))
         x = F.dropout(x, self.dropout, training=self.training)
         x = self.gc2(x, edge_index)

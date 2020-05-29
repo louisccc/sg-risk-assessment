@@ -15,7 +15,7 @@ from argparse import ArgumentParser
 from pathlib import Path
 from tqdm import tqdm
 from core.graph_learning.models.gin import *
-
+from torch_geometric.data import Data, DataLoader
 
 class Config:
     '''Argument Parser for script to train scenegraphs.'''
@@ -97,6 +97,11 @@ class GINTrainer:
         else:
             self.training_graphs, self.training_labels, self.testing_graphs, self.testing_labels, self.feature_list = sge.read_cache()
         
+        train_data_list = [Data(x=g.node_features, edge_index=g.edge_mat, y=torch.LongTensor([label])) for g, label in zip(self.training_graphs, self.training_labels)]
+        self.train_loader = DataLoader(train_data_list, batch_size=32)
+        test_data_list = [Data(x=g.node_features, edge_index=g.edge_mat, y=torch.LongTensor([label])) for g, label in zip(self.testing_graphs, self.testing_labels)]
+        self.test_loader = DataLoader(test_data_list, batch_size=1)
+
         self.generator = Generator(self.training_graphs, self.training_labels, self.config.batch_size)
         self.test_generator = Generator(self.testing_graphs, self.testing_labels, 1)
 
@@ -104,7 +109,7 @@ class GINTrainer:
 
     def build_model(self):
         
-        self.model = GraphCNN(4, 4, len(self.feature_list), 50, 2, 0.75, False, "average", "average", self.config.device).to(self.config.device)
+        self.model = GIN(None, len(self.feature_list), 2).to(self.config.device)
 
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.config.learning_rate, weight_decay=self.config.weight_decay)
 
@@ -113,16 +118,16 @@ class GINTrainer:
         for epoch_idx in tqdm(range(self.config.epochs)): # iterate through epoch
             acc_loss_train = 0
             
-            for i in range(self.generator.number_of_batch): # iterate through scenegraphs
+            for data in self.train_loader: # iterate through scenegraphs
                 
-                data, label = next(self.generator)
+                data.to(self.config.device)
 
                 self.model.train()
                 self.optimizer.zero_grad()
                                
-                output = self.model.forward(data)
+                output = self.model.forward(data.x, data.edge_index, data.batch)
                     
-                loss_train = nn.CrossEntropyLoss()(output, torch.LongTensor(label).to(self.config.device))
+                loss_train = nn.CrossEntropyLoss()(output, data.y)
                     
                 loss_train.backward()
 

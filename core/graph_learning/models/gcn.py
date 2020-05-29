@@ -7,7 +7,7 @@ from torch.nn.modules.module import Module
 
 from torch_geometric.nn import GCNConv
 from torch_geometric.utils import dense_to_sparse
-from torch_geometric.nn import global_max_pool
+from torch_geometric.nn import global_add_pool, global_mean_pool, global_max_pool, global_sort_pool
 
 class GCN(nn.Module):
     def __init__(self, nfeat, nhid, nclass, dropout):
@@ -42,6 +42,16 @@ class GCN_Graph(nn.Module):
         x = F.relu(self.gc1(x, edge_index))
         x = F.dropout(x, self.dropout, training=self.training)
         x = self.gc2(x, edge_index)
-        x = global_max_pool(x, batch)
+        
+        if self.pooling_type == "add":
+            x = global_add_pool(x, batch)
+        elif self.pooling_type == "mean":
+            x = global_mean_pool(x, batch)
+        elif self.pooling_type == "max":
+            x = global_max_pool(x, batch)
+        elif self.pooling_type == "sort":
+            x = global_sort_pool(x, batch, k=100)
+        else:
+            pass
 
         return F.log_softmax(x, dim=1)

@@ -34,6 +34,7 @@ class Config:
         self.parser.add_argument('--batch_size', type=int, default=32, help='Number of graphs in a batch.')
         self.parser.add_argument('--device', type=str, default="cpu", help='The device to run on models (cuda or cpu) cpu in default.')
         self.parser.add_argument('--model', type=str, default="gcn", help="Model to be used intrinsically.")
+        self.parser.add_argument('--num_layers', type=int, default=5, help="Number of layers in the neural network.")
 
         args_parsed = self.parser.parse_args(args)
         
@@ -115,21 +116,18 @@ class GraphTrainer(BaseTrainer):
         labels = []
         outputs = []
         
-        for i in range(self.test_generator.number_of_batch): # iterate through scenegraphs
-            
-            data, label = next(self.test_generator)
+        for i, data in enumerate(self.test_loader): # iterate through scenegraphs
             
             self.model.eval()
-            output = self.model.forward(data)
-            outputs.append(output)
-            labels.append(label)
-            acc_test = accuracy(output, torch.LongTensor(label))
+            output = self.model.forward(data.x, data.edge_index, data.batch)
+            acc_test = accuracy(output, data.y)
 
             print('SceneGraph: {:04d}'.format(i), 'acc_test: {:.4f}'.format(acc_test.item()))
+
+            outputs.append(output.cpu())
+            labels.append(data.y.cpu().numpy())
+            
         outputs = torch.cat(outputs).reshape(-1,2).detach()
-        if self.config.device == "cuda":
-            # move tensor back to cpu
-            outputs = outputs.cpu()
         return outputs, np.array(labels).flatten()
         
         

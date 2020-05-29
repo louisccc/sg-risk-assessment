@@ -35,6 +35,7 @@ class Config:
         self.parser.add_argument('--device', type=str, default="cpu", help='The device to run on models (cuda or cpu) cpu in default.')
         self.parser.add_argument('--test_step', type=int, default=10, help='Number of epochs before testing the model.')
         self.parser.add_argument('--model', type=str, default="gcn", help="Model to be used intrinsically.")
+        self.parser.add_argument('--num_layers', type=int, default=5, help="Number of layers in the neural network.")
         
         args_parsed = self.parser.parse_args(args)
         
@@ -123,19 +124,23 @@ class DynGraphTrainer(BaseTrainer):
         for i in range(len(self.testing_sequences)): # iterate through scenegraphs
             data, label = self.testing_sequences[i], self.testing_labels[i]
             
+            data_list = [Data(x=g.node_features, edge_index=g.edge_mat) for g in data]
+            self.test_loader = DataLoader(data_list, batch_size=len(data_list))
+            sequence = next(iter(self.train_loader)).to(self.config.device)
+
             self.model.eval()
-            output = self.model.forward(data)
-            outputs.append(output)
-            labels.append(label)
+            output = self.model.forward(sequence.x, sequence.edge_index, sequence.batch)
             
             print(output, label)
             acc_test = accuracy(output.view(-1, 2), torch.LongTensor([label]).to(self.config.device))
             acc_predict.append(acc_test.item())
 
+            outputs.append(output.cpu())
+            labels.append(label)
+
             print('Dynamic SceneGraph: {:04d}'.format(i), 'acc_test: {:.4f}'.format(acc_test.item()))
 
         print('Dynamic SceneGraph precision', sum(acc_predict) / len(acc_predict))
         outputs = torch.cat(outputs).reshape(-1,2).detach()
-        if self.config.device == "cuda":
-            outputs = outputs.cpu()
+       
         return outputs, np.array(labels).flatten()

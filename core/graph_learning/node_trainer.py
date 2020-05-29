@@ -1,7 +1,7 @@
 import os, pdb, sys
 sys.path.append(os.path.dirname(sys.path[0]))
 from core.graph_learning import utils
-from core.graph_learning.models import base_model
+from core.graph_learning.bases import BaseTrainer
 
 import torch
 import torch.nn.functional as F
@@ -34,6 +34,7 @@ class Config:
         self.parser.add_argument('--nclass', type=int, default=8, help="The number of classes for node.")
         self.parser.add_argument('--recursive', type=lambda x: (str(x).lower() == 'true'), default=False, help='Recursive loading scenegraphs')
         self.parser.add_argument('--device', type=str, default="cpu", help='The device to run on models (cuda or cpu) cpu in default.')
+        self.parser.add_argument('--model', type=str, default="gcn", help="Model to be used intrinsically.")
 
         args_parsed = self.parser.parse_args(args)
         
@@ -43,7 +44,7 @@ class Config:
         self.input_base_dir = Path(self.input_path).resolve()
 
 
-class GCNTrainer:
+class GCNTrainer(BaseTrainer):
 
     def __init__(self, args):
         self.config = Config(args)
@@ -87,6 +88,7 @@ class GCNTrainer:
 
 
     def build_model(self):
+        # self.model = GIN(self.num_features, ...)
         self.model = GCN(self.num_features, self.config.hidden, self.config.nclass, self.config.dropout).to(self.config.device)
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.config.learning_rate, weight_decay=self.config.weight_decay)
 

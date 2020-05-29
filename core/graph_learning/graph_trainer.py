@@ -8,7 +8,7 @@ import numpy as np
 import scipy.sparse as sp
 import pandas as pd
 
-from core.graph_learning.models import base_model
+from core.graph_learning.bases import BaseTrainer
 from core.scene_graph.graph_process import SceneGraphExtractor
 from core.graph_learning.utils import accuracy
 from argparse import ArgumentParser
@@ -43,7 +43,7 @@ class Config:
         self.input_base_dir = Path(self.input_path).resolve()
 
 
-class GraphTrainer:
+class GraphTrainer(BaseTrainer):
 
     def __init__(self, args):
         self.config = Config(args)

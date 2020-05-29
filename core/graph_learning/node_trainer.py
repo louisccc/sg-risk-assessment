@@ -72,6 +72,12 @@ class GCNTrainer:
         self.num_features = self.train_graphs[0].node_features.shape[1]
         self.num_training_samples = len(self.train_graphs)
         self.num_testing_samples  = len(self.test_graphs)
+        
+        # data loader for training and testing
+        train_data_list = [Data(x=g.node_features, edge_index=g.edge_mat, y=torch.LongTensor(g.node_labels)) for g in self.train_graphs]
+        self.train_loader = DataLoader(train_data_list, batch_size=32)
+        test_data_list = [Data(x=g.node_features, edge_index=g.edge_mat, y=torch.LongTensor(g.node_labels)) for g in self.test_graphs]
+        self.test_loader = DataLoader(test_data_list, batch_size=1)
 
         print("Number of SceneGraphs in the training set: ", self.num_training_samples)
         print("Number of SceneGraphs in the testing set:  ", self.num_testing_samples)
@@ -87,15 +93,11 @@ class GCNTrainer:
     def train(self):
 
         data = self.train_graphs
-        
-        data_list = [Data(x=g.node_features, edge_index=g.edge_mat, y=torch.LongTensor(g.node_labels)) for g in self.train_graphs]
-        
-        loader = DataLoader(data_list, batch_size=32)
 
         for epoch_idx in tqdm(range(self.config.epochs)):
             acc_loss_train = 0
 
-            for data in loader: 
+            for data in self.train_loader: 
 
                 self.model.train()
                 self.optimizer.zero_grad()
@@ -113,21 +115,21 @@ class GCNTrainer:
 
     def predict(self):
         # predict the node classification performance.
-        data = self.test_graphs
+        
         outputs = []
         labels = []
-
-        for i in range(self.num_testing_samples):
+        
+        for i, data in enumerate(self.test_loader):
             self.model.eval()
                      
-            output = self.model.forward([data[i]])
+            output = self.model.forward(data.x, data.edge_index)
             outputs.append(output)
-            acc_test = utils.accuracy(output, torch.LongTensor(data[i].node_labels).to(self.config.device))
+            acc_test = utils.accuracy(output, data.y.to(self.config.device))
 
             print('SceneGraph: {:04d}'.format(i), 'acc_test: {:.4f}'.format(acc_test.item()))
+
+            labels.append(data.y.cpu().numpy())
         
-        for scenegraph in self.test_graphs: 
-            labels.append(scenegraph.node_labels)
         return torch.cat(outputs).detach(), np.concatenate(labels)
         
         

@@ -75,7 +75,7 @@ class GCNTrainer:
         
         # data loader for training and testing
         train_data_list = [Data(x=g.node_features, edge_index=g.edge_mat, y=torch.LongTensor(g.node_labels)) for g in self.train_graphs]
-        self.train_loader = DataLoader(train_data_list, batch_size=32, pin_memory=True)
+        self.train_loader = DataLoader(train_data_list, batch_size=32)
         test_data_list = [Data(x=g.node_features, edge_index=g.edge_mat, y=torch.LongTensor(g.node_labels)) for g in self.test_graphs]
         self.test_loader = DataLoader(test_data_list, batch_size=1)
 
@@ -98,13 +98,15 @@ class GCNTrainer:
             acc_loss_train = 0
 
             for data in self.train_loader: 
+                
+                data.to(self.config.device)
 
                 self.model.train()
                 self.optimizer.zero_grad()
 
                 output = self.model.forward(data.x, data.edge_index)
                 
-                loss_train = nn.CrossEntropyLoss()(output, torch.LongTensor(data.y))
+                loss_train = nn.CrossEntropyLoss()(output, data.y)
 
                 loss_train.backward()
                 self.optimizer.step()
@@ -115,19 +117,22 @@ class GCNTrainer:
 
     def predict(self):
         # predict the node classification performance.
-        
         outputs = []
         labels = []
         
         for i, data in enumerate(self.test_loader):
+            
+            data.to(self.config.device)
+
             self.model.eval()
                      
-            output = self.model.forward(data.x.to(self.config.device), data.edge_index.to(self.config.device))
-            outputs.append(output)
-            acc_test = utils.accuracy(output, data.y.to(self.config.device))
+            output = self.model.forward(data.x, data.edge_index)
+            
+            acc_test = utils.accuracy(output, data.y)
 
             print('SceneGraph: {:04d}'.format(i), 'acc_test: {:.4f}'.format(acc_test.item()))
-
+            
+            outputs.append(output.cpu())
             labels.append(data.y.cpu().numpy())
         
         return torch.cat(outputs).detach(), np.concatenate(labels)

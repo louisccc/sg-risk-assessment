@@ -81,7 +81,7 @@ class GraphTrainer(BaseTrainer):
             self.model = GCN_Graph(len(self.feature_list), self.config.hidden, 2, self.config.dropout, "max").to(self.config.device)
         
         elif self.config.model == "gin":
-            self.model = GIN(None, len(self.feature_list), 2).to(self.config.device)
+            self.model = GIN_Graph(None, len(self.feature_list), 2).to(self.config.device)
 
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.config.learning_rate, weight_decay=self.config.weight_decay)
 

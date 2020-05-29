@@ -38,6 +38,55 @@ class GIN(nn.Module):
         self.fc1 = Linear(self.hidden_dim, self.hidden_dim)
         self.fc2 = Linear(self.hidden_dim, self.num_classes)
 
+    def forward(self, x, edge_index):
+        x = F.relu(self.conv1(x, edge_index))
+        x = self.bn1(x)
+        x = F.relu(self.conv2(x, edge_index))
+        x = self.bn2(x)
+        x = F.relu(self.conv3(x, edge_index))
+        x = self.bn3(x)
+        x = F.relu(self.conv4(x, edge_index))
+        x = self.bn4(x)
+        x = F.relu(self.conv5(x, edge_index))
+        x = self.bn5(x)
+        # x = global_add_pool(x, batch)
+        x = F.relu(self.fc1(x))
+        x = F.dropout(x, p=0.5, training=self.training)
+        x = self.fc2(x)
+        return F.log_softmax(x, dim=-1)
+
+class GIN_Graph(nn.Module):
+    
+    def __init__(self, args, num_features, num_classes):
+        super(GIN_Graph, self).__init__()
+
+        self.num_features = num_features
+        self.num_classes  = num_classes
+        self.hidden_dim = 32
+
+        nn1 = Sequential(Linear(num_features, self.hidden_dim), ReLU(), Linear(self.hidden_dim, self.hidden_dim))
+        self.conv1 = GINConv(nn1)
+        self.bn1 = torch.nn.BatchNorm1d(self.hidden_dim)
+
+        nn2 = Sequential(Linear(self.hidden_dim, self.hidden_dim), ReLU(), Linear(self.hidden_dim, self.hidden_dim))
+        self.conv2 = GINConv(nn2)
+        self.bn2 = torch.nn.BatchNorm1d(self.hidden_dim)
+
+        nn3 = Sequential(Linear(self.hidden_dim, self.hidden_dim), ReLU(), Linear(self.hidden_dim, self.hidden_dim))
+        self.conv3 = GINConv(nn3)
+        self.bn3 = torch.nn.BatchNorm1d(self.hidden_dim)
+
+        nn4 = Sequential(Linear(self.hidden_dim, self.hidden_dim), ReLU(), Linear(self.hidden_dim, self.hidden_dim))
+        self.conv4 = GINConv(nn4)
+        self.bn4 = torch.nn.BatchNorm1d(self.hidden_dim)
+
+        nn5 = Sequential(Linear(self.hidden_dim, self.hidden_dim), ReLU(), Linear(self.hidden_dim, self.hidden_dim))
+        self.conv5 = GINConv(nn5)
+        self.bn5 = torch.nn.BatchNorm1d(self.hidden_dim)
+
+        self.fc1 = Linear(self.hidden_dim, self.hidden_dim)
+        self.fc2 = Linear(self.hidden_dim, self.num_classes)
+
     def forward(self, x, edge_index, batch):
         x = F.relu(self.conv1(x, edge_index))
         x = self.bn1(x)

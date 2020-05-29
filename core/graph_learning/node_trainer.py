@@ -88,8 +88,11 @@ class GCNTrainer(BaseTrainer):
 
 
     def build_model(self):
-        # self.model = GIN(self.num_features, ...)
-        self.model = GCN(self.num_features, self.config.hidden, self.config.nclass, self.config.dropout).to(self.config.device)
+        if self.config.model == "gcn":
+            self.model = GCN(self.num_features, self.config.hidden, self.config.nclass, self.config.dropout).to(self.config.device)
+        elif self.config.model == "gin":
+            self.model = GIN(None, self.num_features, 2).to(self.config.device)
+                
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.config.learning_rate, weight_decay=self.config.weight_decay)
 
     def train(self):

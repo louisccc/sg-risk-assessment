@@ -75,7 +75,7 @@ class GCNTrainer:
         
         # data loader for training and testing
         train_data_list = [Data(x=g.node_features, edge_index=g.edge_mat, y=torch.LongTensor(g.node_labels)) for g in self.train_graphs]
-        self.train_loader = DataLoader(train_data_list, batch_size=32)
+        self.train_loader = DataLoader(train_data_list, batch_size=32, pin_memory=True)
         test_data_list = [Data(x=g.node_features, edge_index=g.edge_mat, y=torch.LongTensor(g.node_labels)) for g in self.test_graphs]
         self.test_loader = DataLoader(test_data_list, batch_size=1)
 
@@ -102,9 +102,9 @@ class GCNTrainer:
                 self.model.train()
                 self.optimizer.zero_grad()
 
-                output = self.model.forward(data.x.to(self.config.device), data.edge_index.to(self.config.device))
+                output = self.model.forward(data.x, data.edge_index)
                 
-                loss_train = nn.CrossEntropyLoss()(output, torch.LongTensor(data.y).to(self.config.device))
+                loss_train = nn.CrossEntropyLoss()(output, torch.LongTensor(data.y))
 
                 loss_train.backward()
                 self.optimizer.step()
@@ -122,7 +122,7 @@ class GCNTrainer:
         for i, data in enumerate(self.test_loader):
             self.model.eval()
                      
-            output = self.model.forward(data.x, data.edge_index)
+            output = self.model.forward(data.x.to(self.config.device), data.edge_index.to(self.config.device))
             outputs.append(output)
             acc_test = utils.accuracy(output, data.y.to(self.config.device))
 

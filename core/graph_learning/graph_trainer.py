@@ -15,6 +15,7 @@ from argparse import ArgumentParser
 from pathlib import Path
 from tqdm import tqdm
 from core.graph_learning.models.gin import *
+from core.graph_learning.models.gcn import *
 from torch_geometric.data import Data, DataLoader
 
 class Config:
@@ -32,6 +33,7 @@ class Config:
         self.parser.add_argument('--recursive', type=lambda x: (str(x).lower() == 'true'), default=True, help='Recursive loading scenegraphs')
         self.parser.add_argument('--batch_size', type=int, default=32, help='Number of graphs in a batch.')
         self.parser.add_argument('--device', type=str, default="cpu", help='The device to run on models (cuda or cpu) cpu in default.')
+        self.parser.add_argument('--model', type=str, default="gcn", help="Model to be used intrinsically.")
 
         args_parsed = self.parser.parse_args(args)
         
@@ -41,37 +43,7 @@ class Config:
         self.input_base_dir = Path(self.input_path).resolve()
 
 
-class Generator:
-
-    def __init__(self, data, label, batch_size):
-        self.data = data
-        self.label = label
-        self.batch_size = batch_size
-        
-        self.number_of_batch = len(data) // self.batch_size
-        
-        self.random_ids = np.random.permutation(len(data))
-        self.batch_idx = 0
-
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        pos_start = self.batch_size * self.batch_idx
-        pos_end   = self.batch_size * (self.batch_idx+1)
-
-        raw_data  = [self.data[x]  for x in self.random_ids[pos_start:pos_end]]
-        raw_label = [self.label[x] for x in self.random_ids[pos_start:pos_end]]
-        
-        self.batch_idx += 1
-        if  self.batch_idx == self.number_of_batch:
-            self.batch_idx = 0
-            self.random_ids = np.random.permutation(len(self.data))
-
-        return raw_data, raw_label
-
-
-class GINTrainer:
+class GraphTrainer:
 
     def __init__(self, args):
         self.config = Config(args)
@@ -102,14 +74,14 @@ class GINTrainer:
         test_data_list = [Data(x=g.node_features, edge_index=g.edge_mat, y=torch.LongTensor([label])) for g, label in zip(self.testing_graphs, self.testing_labels)]
         self.test_loader = DataLoader(test_data_list, batch_size=1)
 
-        self.generator = Generator(self.training_graphs, self.training_labels, self.config.batch_size)
-        self.test_generator = Generator(self.testing_graphs, self.testing_labels, 1)
-
         print("Number of Training Scene Graphs included: ", len(self.training_graphs))
 
     def build_model(self):
+        if self.config.model == "gcn":
+            self.model = GCN_Graph(len(self.feature_list), self.config.hidden, 2, self.config.dropout, "max").to(self.config.device)
         
-        self.model = GIN(None, len(self.feature_list), 2).to(self.config.device)
+        elif self.config.model == "gin":
+            self.model = GIN(None, len(self.feature_list), 2).to(self.config.device)
 
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.config.learning_rate, weight_decay=self.config.weight_decay)
 

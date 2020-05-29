@@ -1,16 +1,15 @@
 import sys, os, argparse, pdb
 sys.path.append(os.path.dirname(sys.path[0]))
 from core.graph_learning.node_trainer import GCNTrainer
-from core.graph_learning.graph_trainer import GINTrainer
+from core.graph_learning.graph_trainer import GraphTrainer
 from core.graph_learning.dyngraph_trainer import DynGINTrainer
-from core.graph_learning.graph_gcn_trainer import GCNGraphTrainer
 from core.graph_learning import utils
 import pandas as pd
 
 def get_config(args):
     task_parser = argparse.ArgumentParser()
     task_parser.add_argument('--task', type=str, default="node_classification", help="Task to be executed.")
-    task_parser.add_argument('--model', type=str, default="gcn", help="Model to be used intrinsically.")
+    
     config = task_parser.parse_known_args(args)
     return config # <parsed config>, <unknown list of argv>
 
@@ -24,10 +23,7 @@ if __name__ == "__main__":
 
     elif config.task == "graph_classification":
         # classify graph by duplicating the risk label.
-        if config.model == "gcn":
-            trainer = GCNGraphTrainer(other_argvs)
-        elif config.model == "gin":
-            trainer = GINTrainer(other_argvs)
+        trainer = GraphTrainer(other_argvs)
 
     elif config.task =="dyngraph_classification":
         # classify a sequence of graphs using the risk label.

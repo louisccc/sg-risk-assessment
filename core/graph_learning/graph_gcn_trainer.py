@@ -98,23 +98,21 @@ class GCNGraphTrainer:
         else:
             self.training_graphs, self.training_labels, self.testing_graphs, self.testing_labels, self.feature_list = sge.read_cache()
         
-        self.generator = Generator(self.training_graphs, self.training_labels, self.config.batch_size)
-        self.test_generator = Generator(self.testing_graphs, self.testing_labels, 1)
+        train_data_list = [Data(x=g.node_features, edge_index=g.edge_mat, y=torch.LongTensor([label])) for g, label in zip(self.training_graphs, self.training_labels)]
+        self.train_loader = DataLoader(train_data_list, batch_size=32)
+        test_data_list = [Data(x=g.node_features, edge_index=g.edge_mat, y=torch.LongTensor([label])) for g, label in zip(self.testing_graphs, self.testing_labels)]
+        self.test_loader = DataLoader(test_data_list, batch_size=1)
 
         print("Number of Training Scene Graphs included: ", len(self.training_graphs))
 
     def build_model(self):
         
-        self.model = GCN_Graph(len(self.feature_list), self.config.hidden, 2, self.config.dropout, "123").to(self.config.device)
+        self.model = GCN_Graph(len(self.feature_list), self.config.hidden, 2, self.config.dropout, "max").to(self.config.device)
 
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.config.learning_rate, weight_decay=self.config.weight_decay)
 
     def train(self):
         
-        data_list = [Data(x=g.node_features, edge_index=g.edge_mat, y=torch.LongTensor([label])) for g, label in zip(self.training_graphs, self.training_labels)]
-
-        self.train_loader = DataLoader(data_list, batch_size=32)
-
         for epoch_idx in tqdm(range(self.config.epochs)): # iterate through epoch
             acc_loss_train = 0
             
@@ -143,21 +141,19 @@ class GCNGraphTrainer:
         labels = []
         outputs = []
         
-        for i in range(self.test_generator.number_of_batch): # iterate through scenegraphs
+        for i, data in enumerate(self.test_loader): # iterate through scenegraphs
             
-            data, label = next(self.test_generator)
+            data.to(self.config.device)
             
             self.model.eval()
-            output = self.model.forward(data)
-            outputs.append(output)
-            labels.append(label)
-            acc_test = accuracy(output, torch.LongTensor(label))
-
+            output = self.model.forward(data.x, data.edge_index, data.batch)
+            acc_test = accuracy(output, data.y)
             print('SceneGraph: {:04d}'.format(i), 'acc_test: {:.4f}'.format(acc_test.item()))
+
+            outputs.append(output.cpu())
+            labels.append(data.y.cpu())
+
         outputs = torch.cat(outputs).reshape(-1,2).detach()
-        if self.config.device == "cuda":
-            # move tensor back to cpu
-            outputs = outputs.cpu()
         return outputs, np.array(labels).flatten()
         
         

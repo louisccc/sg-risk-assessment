@@ -2,7 +2,7 @@ import sys, os, argparse, pdb
 sys.path.append(os.path.dirname(sys.path[0]))
 from core.graph_learning.node_trainer import GCNTrainer
 from core.graph_learning.graph_trainer import GraphTrainer
-from core.graph_learning.dyngraph_trainer import DynGINTrainer
+from core.graph_learning.dyngraph_trainer import DynGraphTrainer
 from core.graph_learning import utils
 import pandas as pd
 
@@ -27,7 +27,7 @@ if __name__ == "__main__":
 
     elif config.task =="dyngraph_classification":
         # classify a sequence of graphs using the risk label.
-        trainer = DynGINTrainer(other_argvs)
+        trainer = DynGraphTrainer(other_argvs)
 
     trainer.build_model()
     trainer.train()

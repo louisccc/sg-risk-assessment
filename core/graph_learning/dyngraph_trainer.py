@@ -14,8 +14,9 @@ from core.graph_learning.utils import accuracy
 from argparse import ArgumentParser
 from pathlib import Path
 from tqdm import tqdm
+from core.graph_learning.models.gcn import *
 from core.graph_learning.models.gin import *
-
+from torch_geometric.data import Data, DataLoader
 
 class Config:
     '''Argument Parser for script to train scenegraphs.'''
@@ -33,6 +34,7 @@ class Config:
         self.parser.add_argument('--batch_size', type=int, default=32, help='Number of graphs in a batch.')
         self.parser.add_argument('--device', type=str, default="cpu", help='The device to run on models (cuda or cpu) cpu in default.')
         self.parser.add_argument('--test_step', type=int, default=10, help='Number of epochs before testing the model.')
+        self.parser.add_argument('--model', type=str, default="gcn", help="Model to be used intrinsically.")
         
         args_parsed = self.parser.parse_args(args)
         
@@ -42,7 +44,7 @@ class Config:
         self.input_base_dir = Path(self.input_path).resolve()
 
 
-class DynGINTrainer(BaseTrainer):
+class DynGraphTrainer(BaseTrainer):
 
     def __init__(self, args):
         self.config = Config(args)
@@ -74,7 +76,11 @@ class DynGINTrainer(BaseTrainer):
 
 
     def build_model(self):
-        self.model = GraphCNN(4, 4, len(self.feature_list), 50, 2, 0.75, False, "average", "average", self.config.device).to(self.config.device)
+        if self.config.model == "gcn":
+            self.model = GCN_Graph_Sequence(len(self.feature_list), self.config.hidden, 2, 0.75, "mean", "mean").to(self.config.device)
+        elif self.config.model == "gin":
+            self.model = GIN_Graph_Sequence(None, len(self.feature_list), 2, "mean").to(self.config.device)
+
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.config.learning_rate, weight_decay=self.config.weight_decay)
 
     def train(self):
@@ -84,10 +90,14 @@ class DynGINTrainer(BaseTrainer):
             for i in range(len(self.training_sequences)): # iterate through scenegraphs
                 data, label = self.training_sequences[i], self.training_labels[i]
 
+                data_list = [Data(x=g.node_features, edge_index=g.edge_mat) for g in data]
+                self.train_loader = DataLoader(data_list, batch_size=len(data_list))
+                sequence = next(iter(self.train_loader)).to(self.config.device)
+
                 self.model.train()
                 self.optimizer.zero_grad()
                                
-                output = self.model.forward2(data)
+                output = self.model.forward(sequence.x, sequence.edge_index, sequence.batch)
                 
                 loss_train = nn.CrossEntropyLoss()(output.view(-1, 2), torch.LongTensor([label]).to(self.config.device))
 
@@ -101,8 +111,8 @@ class DynGINTrainer(BaseTrainer):
             print('Epoch: {:04d},'.format(epoch_idx), 'loss_train: {:.4f}'.format(acc_loss_train))
             print('')
 
-            if epoch_idx % self.config.test_step == 0:
-                self.predict()
+            # if epoch_idx % self.config.test_step == 0:
+            #     self.predict()
 
     def predict(self):
         # take training set as testing data temporarily
@@ -114,7 +124,7 @@ class DynGINTrainer(BaseTrainer):
             data, label = self.testing_sequences[i], self.testing_labels[i]
             
             self.model.eval()
-            output = self.model.forward2(data)
+            output = self.model.forward(data)
             outputs.append(output)
             labels.append(label)
             

@@ -5,7 +5,7 @@ import torch.nn.functional as F
 from torch.nn.parameter import Parameter
 from torch.nn.modules.module import Module
 
-from torch_geometric.nn import GCNConv
+from torch_geometric.nn import GCNConv, SAGPooling
 from torch_geometric.utils import dense_to_sparse
 from torch_geometric.nn import global_add_pool, global_mean_pool, global_max_pool, global_sort_pool
 
@@ -27,15 +27,19 @@ class GCN(nn.Module):
 
 class GCN_Graph(nn.Module):
     ''' graph level model '''
-    def __init__(self, nfeat, nhid, nclass, dropout, pooling_type):
+    def __init__(self, nfeat, nhid, nclass, dropout, pooling_type, readout_type):
         super(GCN_Graph, self).__init__()
+
+        self.pooling_type = pooling_type
+        # switch between average/max/mean/sort.
+        self.readout_type = readout_type
 
         self.gc1 = GCNConv(nfeat, nhid)
         self.gc2 = GCNConv(nhid, nclass)
         self.dropout = dropout
 
-        # switch between average/max/mean/sort.
-        self.pooling_type = pooling_type
+        if self.pooling_type == "sagpool":
+            self.pool1 = SAGPooling(self.hidden_dim, ratio=0.8)
 
     def forward(self, x, edge_index, batch):
         ''' graphs_in_batch is a list of graph instances; '''
@@ -43,13 +47,16 @@ class GCN_Graph(nn.Module):
         x = F.dropout(x, self.dropout, training=self.training)
         x = self.gc2(x, edge_index)
         
-        if self.pooling_type == "add":
+        if self.pooling_type == "sagpool":
+            x, edge_index, _, batch, perm, score = self.pool1(x, edge_index)
+
+        if self.readout_type == "add":
             x = global_add_pool(x, batch)
-        elif self.pooling_type == "mean":
+        elif self.readout_type == "mean":
             x = global_mean_pool(x, batch)
-        elif self.pooling_type == "max":
+        elif self.readout_type == "max":
             x = global_max_pool(x, batch)
-        elif self.pooling_type == "sort":
+        elif self.readout_type == "sort":
             x = global_sort_pool(x, batch, k=100)
         else:
             pass
@@ -58,17 +65,20 @@ class GCN_Graph(nn.Module):
 
 class GCN_Graph_Sequence(nn.Module):
     ''' graph_sequence level model '''
-    def __init__(self, nfeat, nhid, nclass, dropout, pooling_type, temporal_type):
+    def __init__(self, nfeat, nhid, nclass, dropout, pooling_type, readout_type, temporal_type):
         super(GCN_Graph_Sequence, self).__init__()
 
         self.gc1 = GCNConv(nfeat, nhid)
         self.gc2 = GCNConv(nhid, nclass)
         self.dropout = dropout
 
-        # switch between average/max/mean/sort.
         self.pooling_type = pooling_type
-
+        # switch between average/max/mean/sort.
+        self.readout_type = readout_type
         self.temporal_type = temporal_type
+
+        if self.pooling_type == "sagpool":
+            self.pool1 = SAGPooling(self.hidden_dim, ratio=0.8)
 
         self.lstm = nn.LSTM(nclass, nhid, batch_first=True, bidirectional=True)
         self.fc1 = nn.Linear(2*nhid, nclass)
@@ -78,14 +88,17 @@ class GCN_Graph_Sequence(nn.Module):
         x = F.relu(self.gc1(x, edge_index))
         x = F.dropout(x, self.dropout, training=self.training)
         x = self.gc2(x, edge_index)
+
+        if self.pooling_type == "sagpool":
+            x, edge_index, _, batch, perm, score = self.pool1(x, edge_index)
         
-        if self.pooling_type == "add":
+        if self.readout_type == "add":
             x = global_add_pool(x, batch)
-        elif self.pooling_type == "mean":
+        elif self.readout_type == "mean":
             x = global_mean_pool(x, batch)
-        elif self.pooling_type == "max":
+        elif self.readout_type == "max":
             x = global_max_pool(x, batch)
-        elif self.pooling_type == "sort":
+        elif self.readout_type == "sort":
             x = global_sort_pool(x, batch, k=100)
         else:
             pass

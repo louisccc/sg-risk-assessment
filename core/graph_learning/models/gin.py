@@ -44,7 +44,7 @@ class GIN(nn.Module):
 
 class GIN_Graph(nn.Module):
     
-    def __init__(self, args, num_features, num_classes, num_layers):
+    def __init__(self, args, num_features, num_classes, num_layers, pooling_type, readout_type):
         super(GIN_Graph, self).__init__()
 
         self.num_features = num_features
@@ -55,6 +55,9 @@ class GIN_Graph(nn.Module):
         self.gin_convs = torch.nn.ModuleList()
         self.batch_norms = torch.nn.ModuleList()
 
+        self.pooling_type = pooling_type
+        self.readout_type = readout_type
+
         for layer in range(self.num_layers-1):
             if layer == 0:
                 nn = Sequential(Linear(num_features, self.hidden_dim), ReLU(), Linear(self.hidden_dim, self.hidden_dim))
@@ -62,6 +65,9 @@ class GIN_Graph(nn.Module):
                 nn = Sequential(Linear(self.hidden_dim, self.hidden_dim), ReLU(), Linear(self.hidden_dim, self.hidden_dim))
             self.gin_convs.append(GINConv(nn))
             self.batch_norms.append(torch.nn.BatchNorm1d(self.hidden_dim))
+
+        if self.pooling_type == "sagpool":
+            self.pool1 = SAGPooling(self.hidden_dim, ratio=0.8)
 
         self.fc1 = Linear(self.hidden_dim, self.hidden_dim)
         self.fc2 = Linear(self.hidden_dim, self.num_classes)
@@ -71,7 +77,20 @@ class GIN_Graph(nn.Module):
             x = F.relu(self.gin_convs[layer](x, edge_index))
             x = self.batch_norms[layer](x)
 
-        x = global_add_pool(x, batch)
+        if self.pooling_type == "sagpool":
+            x, edge_index, _, batch, perm, score = self.pool1(x, edge_index)
+
+        if self.readout_type == "add":
+            x = global_add_pool(x, batch)
+        elif self.readout_type == "mean":
+            x = global_mean_pool(x, batch)
+        elif self.readout_type == "max":
+            x = global_max_pool(x, batch)
+        elif self.readout_type == "sort":
+            x = global_sort_pool(x, batch, k=100)
+        else:
+            pass
+        
         x = F.relu(self.fc1(x))
         x = F.dropout(x, p=0.5, training=self.training)
         x = self.fc2(x)

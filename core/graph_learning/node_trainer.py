@@ -35,6 +35,7 @@ class Config:
         self.parser.add_argument('--recursive', type=lambda x: (str(x).lower() == 'true'), default=False, help='Recursive loading scenegraphs')
         self.parser.add_argument('--device', type=str, default="cpu", help='The device to run on models (cuda or cpu) cpu in default.')
         self.parser.add_argument('--model', type=str, default="gcn", help="Model to be used intrinsically.")
+        self.parser.add_argument('--num_layers', type=int, default=5, help="Number of layers in the neural network.")
 
         args_parsed = self.parser.parse_args(args)
         
@@ -91,7 +92,7 @@ class GCNTrainer(BaseTrainer):
         if self.config.model == "gcn":
             self.model = GCN(self.num_features, self.config.hidden, self.config.nclass, self.config.dropout).to(self.config.device)
         elif self.config.model == "gin":
-            self.model = GIN(None, self.num_features, 2).to(self.config.device)
+            self.model = GIN(None, self.num_features, 2, self.config.num_layers).to(self.config.device)
                 
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.config.learning_rate, weight_decay=self.config.weight_decay)
 

@@ -82,7 +82,7 @@ class GraphTrainer(BaseTrainer):
             self.model = GCN_Graph(len(self.feature_list), self.config.hidden, 2, self.config.dropout, "max").to(self.config.device)
         
         elif self.config.model == "gin":
-            self.model = GIN_Graph(None, len(self.feature_list), 2).to(self.config.device)
+            self.model = GIN_Graph(None, len(self.feature_list), 2,  self.config.num_layers).to(self.config.device)
 
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.config.learning_rate, weight_decay=self.config.weight_decay)
 
@@ -117,7 +117,7 @@ class GraphTrainer(BaseTrainer):
         outputs = []
         
         for i, data in enumerate(self.test_loader): # iterate through scenegraphs
-            
+            data.to(self.config.device)
             self.model.eval()
             output = self.model.forward(data.x, data.edge_index, data.batch)
             acc_test = accuracy(output, data.y)

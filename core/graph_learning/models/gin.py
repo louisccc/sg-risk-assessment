@@ -13,6 +13,7 @@ class GIN(nn.Module):
 
         self.num_features = num_features
         self.num_classes  = num_classes
+        self.num_layers = num_layers
         self.hidden_dim = 32
 
         self.gin_convs = torch.nn.ModuleList()
@@ -43,11 +44,12 @@ class GIN(nn.Module):
 
 class GIN_Graph(nn.Module):
     
-    def __init__(self, args, num_features, num_classes):
+    def __init__(self, args, num_features, num_classes, num_layers):
         super(GIN_Graph, self).__init__()
 
         self.num_features = num_features
         self.num_classes  = num_classes
+        self.num_layers = num_layers
         self.hidden_dim = 32
 
         self.gin_convs = torch.nn.ModuleList()
@@ -77,11 +79,12 @@ class GIN_Graph(nn.Module):
 
 class GIN_Graph_Sequence(nn.Module):
     
-    def __init__(self, args, num_features, num_classes, temporal_type):
+    def __init__(self, args, num_features, num_classes, temporal_type, num_layers):
         super(GIN_Graph_Sequence, self).__init__()
 
         self.num_features = num_features
         self.num_classes  = num_classes
+        self.num_layers = num_layers
         self.hidden_dim = 32
 
         self.temporal_type = temporal_type

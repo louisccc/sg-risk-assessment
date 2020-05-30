@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from torch.nn import Sequential, Linear, ReLU
+from torch.nn import Sequential, Linear, ReLU, LSTM
 from torch_geometric.nn import GINConv
 from torch_geometric.nn import global_add_pool, global_mean_pool, global_max_pool, global_sort_pool
 
@@ -104,7 +104,7 @@ class GIN_Graph_Sequence(nn.Module):
         self.fc1 = Linear(self.hidden_dim, self.hidden_dim)
         self.fc2 = Linear(self.hidden_dim, self.num_classes)
 
-        self.lstm = nn.LSTM(self.num_classes, self.hidden_dim, batch_first=True, bidirectional=True)
+        self.lstm = LSTM(self.num_classes, self.hidden_dim, batch_first=True, bidirectional=True)
         self.reduce_h = Linear(self.hidden_dim * 2, self.num_classes)
 
     def forward(self, x, edge_index, batch):

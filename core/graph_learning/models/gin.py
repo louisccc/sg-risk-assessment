@@ -30,9 +30,6 @@ class GIN(nn.Module):
         self.fc1 = Linear(self.hidden_dim, self.hidden_dim)
         self.fc2 = Linear(self.hidden_dim, self.num_classes)
 
-        self.lstm = nn.LSTM(self.num_classes, self.hidden_dim, batch_first=True, bidirectional=True)
-        self.reduce_h = Linear(self.hidden_dim * 2, self.num_classes)
-
     def forward(self, x, edge_index):
         for layer in range(self.num_layers-1):
             x = F.relu(self.gin_convs[layer](x, edge_index))
@@ -42,9 +39,6 @@ class GIN(nn.Module):
         x = F.relu(self.fc1(x))
         x = F.dropout(x, p=0.5, training=self.training)
         x = self.fc2(x)
-
-        x_predicted, (h, c) = self.lstm(x.unsqueeze(0))
-        x = F.relu(self.reduce_h(h.flatten()))
 
         return F.log_softmax(x, dim=-1)
 
@@ -110,6 +104,9 @@ class GIN_Graph_Sequence(nn.Module):
         self.fc1 = Linear(self.hidden_dim, self.hidden_dim)
         self.fc2 = Linear(self.hidden_dim, self.num_classes)
 
+        self.lstm = nn.LSTM(self.num_classes, self.hidden_dim, batch_first=True, bidirectional=True)
+        self.reduce_h = Linear(self.hidden_dim * 2, self.num_classes)
+
     def forward(self, x, edge_index, batch):
         for layer in range(self.num_layers-1):
             x = F.relu(self.gin_convs[layer](x, edge_index))
@@ -122,7 +119,10 @@ class GIN_Graph_Sequence(nn.Module):
 
         if self.temporal_type == "mean":
             x = x.mean(axis=0)
-        else: # lstm or others.
+        elif self.temporal_type == "lstm":
+            x_predicted, (h, c) = self.lstm(x.unsqueeze(0))
+            x = F.relu(self.reduce_h(h.flatten()))
+        else:
             pass
 
         return F.log_softmax(x, dim=-1)

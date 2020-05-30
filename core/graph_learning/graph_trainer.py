@@ -117,7 +117,7 @@ class GraphTrainer(BaseTrainer):
         outputs = []
         
         for i, data in enumerate(self.test_loader): # iterate through scenegraphs
-            
+            data.to(self.config.device)
             self.model.eval()
             output = self.model.forward(data.x, data.edge_index, data.batch)
             acc_test = accuracy(output, data.y)

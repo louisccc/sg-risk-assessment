@@ -89,6 +89,9 @@ class GIN_Graph_Sequence(nn.Module):
 
         self.temporal_type = temporal_type
         
+        self.gin_convs = torch.nn.ModuleList()
+        self.batch_norms = torch.nn.ModuleList()
+
         for layer in range(self.num_layers-1):
             if layer == 0:
                 nn = Sequential(Linear(num_features, self.hidden_dim), ReLU(), Linear(self.hidden_dim, self.hidden_dim))

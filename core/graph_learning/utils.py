@@ -116,4 +116,4 @@ def get_roc_curve(outputs, labels, task):
         plt.plot([0,1],[0,1], linestyle='dashed')
         plt.plot(fpr,tpr, linewidth=2)
         plt.savefig("ROC_curve_"+task+".svg")
-        plt.show()
+        # plt.show()

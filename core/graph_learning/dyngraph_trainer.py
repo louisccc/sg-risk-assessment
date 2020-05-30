@@ -78,9 +78,9 @@ class DynGraphTrainer(BaseTrainer):
 
     def build_model(self):
         if self.config.model == "gcn":
-            self.model = GCN_Graph_Sequence(len(self.feature_list), self.config.hidden, 2, 0.75, "mean", "mean").to(self.config.device)
+            self.model = GCN_Graph_Sequence(len(self.feature_list), self.config.hidden, 2, 0.75, "mean", "lstm").to(self.config.device)
         elif self.config.model == "gin":
-            self.model = GIN_Graph_Sequence(None, len(self.feature_list), 2, "mean").to(self.config.device)
+            self.model = GIN_Graph_Sequence(None, len(self.feature_list), 2, "mean", 5).to(self.config.device)
 
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.config.learning_rate, weight_decay=self.config.weight_decay)
 

@@ -70,6 +70,9 @@ class GCN_Graph_Sequence(nn.Module):
 
         self.temporal_type = temporal_type
 
+        self.lstm = nn.LSTM(nclass, nhid, batch_first=True, bidirectional=True)
+        self.fc1 = nn.Linear(2*nhid, nclass)
+
     def forward(self, x, edge_index, batch):
         ''' graphs_in_batch is a list of graph instances; indicating a graph_sequence. '''
         x = F.relu(self.gc1(x, edge_index))
@@ -89,7 +92,9 @@ class GCN_Graph_Sequence(nn.Module):
 
         if self.temporal_type == "mean":
             x = x.mean(axis=0)
-        else: # lstm or others.
-            pass
-        
+        else:
+            x_predicted, (h, c) = self.lstm(x.unsqueeze(0))
+            x = self.fc1(h.flatten())
+            x = F.relu(x)
+
         return F.log_softmax(x, dim=0)

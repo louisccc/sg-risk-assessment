@@ -13,8 +13,6 @@ class GCN(nn.Module):
     def __init__(self, nfeat, nhid, nclass, dropout, pooling_type=None, readout_type=None, temporal_type=None):
         super(GCN, self).__init__()
 
-        self.hidden_dim = 32
-
         self.pooling_type = pooling_type
         # switch between average/max/mean/sort.
         self.readout_type = readout_type
@@ -26,11 +24,11 @@ class GCN(nn.Module):
         self.pooling_type = pooling_type
         self.readout_type = readout_type
         self.temporal_type = temporal_type
-        
+
         if self.pooling_type == "sagpool":
-            self.pool1 = SAGPooling(self.hidden_dim, ratio=0.8)
+            self.pool1 = SAGPooling(nclass, ratio=0.8)
         
-        if self.pooling_type == "lstm":
+        if self.temporal_type == "lstm":
             self.lstm = nn.LSTM(nclass, nhid, batch_first=True, bidirectional=True)
             self.fc1 = nn.Linear(2*nhid, nclass)
 

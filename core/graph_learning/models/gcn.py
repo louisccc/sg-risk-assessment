@@ -35,7 +35,7 @@ class GCN(nn.Module):
         x = self.gc2(x, edge_index)
 
         if self.pooling_type == "sagpool":
-            x, edge_index, _, batch, perm, score = self.pool1(x, edge_index)
+            x, edge_index, _, batch, perm, score = self.pool1(x, edge_index, batch=batch)
 
         if self.readout_type == "add":
             x = global_add_pool(x, batch)

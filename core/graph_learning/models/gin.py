@@ -8,13 +8,12 @@ from torch_geometric.nn import global_add_pool, global_mean_pool, global_max_poo
 
 class GIN(nn.Module):
     
-    def __init__(self, args, num_features, num_classes, num_layers, pooling_type=None, readout_type=None, temporal_type=None):
+    def __init__(self, args, num_features, num_classes, num_layers, hidden_dim, pooling_type=None, readout_type=None, temporal_type=None):
         super(GIN, self).__init__()
 
         self.num_features = num_features
         self.num_classes  = num_classes
         self.num_layers = num_layers
-        self.hidden_dim = 32
 
         self.gin_convs = torch.nn.ModuleList()
         self.batch_norms = torch.nn.ModuleList()

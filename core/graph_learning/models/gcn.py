@@ -13,6 +13,8 @@ class GCN(nn.Module):
     def __init__(self, nfeat, nhid, nclass, dropout, pooling_type=None, readout_type=None, temporal_type=None):
         super(GCN, self).__init__()
 
+        self.hidden_dim = 32
+        
         self.pooling_type = pooling_type
         # switch between average/max/mean/sort.
         self.readout_type = readout_type

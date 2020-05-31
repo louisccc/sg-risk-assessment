@@ -36,7 +36,11 @@ class Config:
         self.parser.add_argument('--test_step', type=int, default=10, help='Number of epochs before testing the model.')
         self.parser.add_argument('--model', type=str, default="gcn", help="Model to be used intrinsically.")
         self.parser.add_argument('--num_layers', type=int, default=5, help="Number of layers in the neural network.")
-        
+        self.parser.add_argument('--hidden_dim', type=int, default=32, help="Hidden dimension in GIN.")
+        self.parser.add_argument('--pooling_type', type=str, default="sagpool", help="Graph pooling type.")
+        self.parser.add_argument('--readout_type', type=str, default="mean", help="Readout type.")
+        self.parser.add_argument('--temporal_type', type=str, default="lstm", help="Temporal type.")
+
         args_parsed = self.parser.parse_args(args)
         
         for arg_name in vars(args_parsed):
@@ -78,9 +82,9 @@ class DynGraphTrainer(BaseTrainer):
 
     def build_model(self):
         if self.config.model == "gcn":
-            self.model = GCN(len(self.feature_list), self.config.hidden, 2, 0.75, "sagpool", "mean", "lstm").to(self.config.device)
+            self.model = GCN(len(self.feature_list), self.config.hidden, 2, 0.75, self.config.pooling_type, self.config.readout_type, self.config.temporal_type).to(self.config.device)
         elif self.config.model == "gin":
-            self.model = GIN(None, len(self.feature_list), 2, self.config.num_layers, "sagpool", "mean", "lstm").to(self.config.device)
+            self.model = GIN(None, len(self.feature_list), 2, self.config.num_layers, self.config.hidden_dim, self.config.pooling_type, self.config.readout_type, self.config.temporal_type).to(self.config.device)
 
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.config.learning_rate, weight_decay=self.config.weight_decay)
 

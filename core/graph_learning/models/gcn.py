@@ -61,6 +61,9 @@ class GCN(nn.Module):
         else:
             pass
         
+        if self.temporal_type:
+            return F.log_softmax(x, dim=0)
+            
         return F.log_softmax(x, dim=1)
 
 

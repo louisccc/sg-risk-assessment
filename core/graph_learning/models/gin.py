@@ -74,9 +74,12 @@ class GIN(nn.Module):
 
         if self.temporal_type == "mean":
             x = x.mean(axis=0)
-        elif self.temporal_type == "lstm":
+        elif self.temporal_type == "lstm_last":
             x_predicted, (h, c) = self.lstm(x.unsqueeze(0))
             x = F.relu(self.reduce_h(h.flatten()))
+        elif self.temporal_type =="lstm_sum":
+            x_predicted, (h, c) = self.lstm(x.unsqueeze(0))
+            x = F.relu(self.reduce_h(x_predicted.sum(dim=1).flatten()))
         else:
             pass
 

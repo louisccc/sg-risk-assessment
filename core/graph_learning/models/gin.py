@@ -1,10 +1,11 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
+from torchnlp.nn import Attention
 from torch.nn import Sequential, Linear, ReLU, LSTM
 from torch_geometric.nn import GINConv, SAGPooling, TopKPooling, ASAPooling
 from torch_geometric.nn import global_add_pool, global_mean_pool, global_max_pool, global_sort_pool
+
 
 class GIN(nn.Module):
     
@@ -38,12 +39,15 @@ class GIN(nn.Module):
         elif self.pooling_type == "asa":
             self.pool1 = ASAPooling(self.hidden_dim, ratio=0.8)
 
-        if self.temporal_type == "lstm":
+        if "lstm" in self.temporal_type:
             self.lstm = LSTM(self.num_classes, self.hidden_dim, batch_first=True, bidirectional=True)
             self.reduce_h = Linear(self.hidden_dim * 2, self.num_classes)
+            self.attn = Attention(self.hidden_dim * 2)
+            self.fc3 = Linear(self.hidden_dim*2, self.num_classes)
 
         self.fc1 = Linear(self.hidden_dim, self.hidden_dim)
         self.fc2 = Linear(self.hidden_dim, self.num_classes)
+
 
     def forward(self, x, edge_index, batch=None):
         for layer in range(self.num_layers-1):
@@ -77,10 +81,14 @@ class GIN(nn.Module):
         elif self.temporal_type == "lstm_last":
             x_predicted, (h, c) = self.lstm(x.unsqueeze(0))
             x = F.relu(self.reduce_h(h.flatten()))
-        elif self.temporal_type =="lstm_sum":
+        elif self.temporal_type == "lstm_sum":
             x_predicted, (h, c) = self.lstm(x.unsqueeze(0))
             x = F.relu(self.reduce_h(x_predicted.sum(dim=1).flatten()))
+        elif self.temporal_type == "lstm_attn":
+            x_predicted, (h, c) = self.lstm(x.unsqueeze(0))
+            x, weights = self.attn(h.view(1,1,-1), x_predicted)
+            x = self.fc3(x.flatten())
         else:
             pass
-
+            
         return F.log_softmax(x, dim=-1)

@@ -39,7 +39,7 @@ class Config:
         self.parser.add_argument('--hidden_dim', type=int, default=32, help="Hidden dimension in GIN.")
         self.parser.add_argument('--pooling_type', type=str, default="sagpool", help="Graph pooling type.")
         self.parser.add_argument('--readout_type', type=str, default="mean", help="Readout type.")
-        self.parser.add_argument('--temporal_type', type=str, default="lstm", help="Temporal type.")
+        self.parser.add_argument('--temporal_type', type=str, default="lstm_sum", help="Temporal type.")
 
         args_parsed = self.parser.parse_args(args)
         

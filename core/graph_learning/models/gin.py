@@ -33,6 +33,10 @@ class GIN(nn.Module):
 
         if self.pooling_type == "sagpool":
             self.pool1 = SAGPooling(self.hidden_dim, ratio=0.8)
+        elif self.pooling_type == "topk":
+            self.pool1 = TopKPooling(self.hidden_dim, ratio=0.8)
+        elif self.pooling_type == "asa":
+            self.pool1 = ASAPooling(self.hidden_dim, ratio=0.8)
 
         if self.temporal_type == "lstm":
             self.lstm = LSTM(self.num_classes, self.hidden_dim, batch_first=True, bidirectional=True)
@@ -46,7 +50,7 @@ class GIN(nn.Module):
             x = F.relu(self.gin_convs[layer](x, edge_index))
             x = self.batch_norms[layer](x)
 
-        if self.pooling_type == "sagpool":
+        if self.pooling_type:
             x, edge_index, _, batch, perm, score = self.pool1(x, edge_index, batch=batch)
 
         if self.readout_type == "add":

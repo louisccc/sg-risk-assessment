@@ -5,7 +5,7 @@ import torch.nn.functional as F
 from torch.nn.parameter import Parameter
 from torch.nn.modules.module import Module
 
-from torch_geometric.nn import GCNConv, SAGPooling
+from torch_geometric.nn import GCNConv, SAGPooling, TopKPooling, ASAPooling
 from torch_geometric.utils import dense_to_sparse
 from torch_geometric.nn import global_add_pool, global_mean_pool, global_max_pool, global_sort_pool
 
@@ -27,6 +27,10 @@ class GCN(nn.Module):
 
         if self.pooling_type == "sagpool":
             self.pool1 = SAGPooling(nclass, ratio=0.8)
+        elif self.pooling_type == "topk":
+            self.pool1 = TopKPooling(nclass, ratio=0.8)
+        elif self.pooling_type == "asa":
+            self.pool1 = ASAPooling(nclass, ratio=0.8)
         
         if self.temporal_type == "lstm":
             self.lstm = nn.LSTM(nclass, nhid, batch_first=True, bidirectional=True)
@@ -38,7 +42,7 @@ class GCN(nn.Module):
         x = F.dropout(x, self.dropout, training=self.training)
         x = self.gc2(x, edge_index)
 
-        if self.pooling_type == "sagpool":
+        if self.pooling_type:
             x, edge_index, _, batch, perm, score = self.pool1(x, edge_index, batch=batch)
 
         if self.readout_type == "add":
@@ -63,7 +67,7 @@ class GCN(nn.Module):
         
         if self.temporal_type:
             return F.log_softmax(x, dim=0)
-            
+
         return F.log_softmax(x, dim=1)
 
 

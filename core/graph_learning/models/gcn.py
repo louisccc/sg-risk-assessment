@@ -14,7 +14,7 @@ class GCN(nn.Module):
         super(GCN, self).__init__()
 
         self.hidden_dim = 32
-        
+
         self.pooling_type = pooling_type
         # switch between average/max/mean/sort.
         self.readout_type = readout_type
@@ -23,6 +23,10 @@ class GCN(nn.Module):
         self.gc2 = GCNConv(nhid, nclass)
         self.dropout = dropout
 
+        self.pooling_type = pooling_type
+        self.readout_type = readout_type
+        self.temporal_type = temporal_type
+        
         if self.pooling_type == "sagpool":
             self.pool1 = SAGPooling(self.hidden_dim, ratio=0.8)
         

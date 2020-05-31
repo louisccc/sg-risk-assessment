@@ -23,13 +23,6 @@ class GIN(nn.Module):
         self.readout_type = readout_type
         self.temporal_type = temporal_type
 
-        if self.pooling_type == "sagpool":
-            self.pool1 = SAGPooling(self.hidden_dim, ratio=0.8)
-
-        if self.temporal_type == "lstm":
-            self.lstm = LSTM(self.num_classes, self.hidden_dim, batch_first=True, bidirectional=True)
-            self.reduce_h = Linear(self.hidden_dim * 2, self.num_classes)
-
         for layer in range(self.num_layers-1):
             if layer == 0:
                 nn = Sequential(Linear(num_features, self.hidden_dim), ReLU(), Linear(self.hidden_dim, self.hidden_dim))
@@ -37,6 +30,13 @@ class GIN(nn.Module):
                 nn = Sequential(Linear(self.hidden_dim, self.hidden_dim), ReLU(), Linear(self.hidden_dim, self.hidden_dim))
             self.gin_convs.append(GINConv(nn))
             self.batch_norms.append(torch.nn.BatchNorm1d(self.hidden_dim))
+
+        if self.pooling_type == "sagpool":
+            self.pool1 = SAGPooling(self.hidden_dim, ratio=0.8)
+
+        if self.temporal_type == "lstm":
+            self.lstm = LSTM(self.num_classes, self.hidden_dim, batch_first=True, bidirectional=True)
+            self.reduce_h = Linear(self.hidden_dim * 2, self.num_classes)
 
         self.fc1 = Linear(self.hidden_dim, self.hidden_dim)
         self.fc2 = Linear(self.hidden_dim, self.num_classes)

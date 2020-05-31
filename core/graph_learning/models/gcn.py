@@ -42,8 +42,12 @@ class GCN(nn.Module):
         x = F.dropout(x, self.dropout, training=self.training)
         x = self.gc2(x, edge_index)
 
-        if self.pooling_type:
+        if self.pooling_type == "sagpool":
             x, edge_index, _, batch, perm, score = self.pool1(x, edge_index, batch=batch)
+        elif self.pooling_type == "topk":
+            x, edge_index, _, batch, perm, score = self.pool1(x, edge_index, batch=batch)
+        elif self.pooling_type == "asa":
+            x, edge_index, _, batch, perm = self.pool1(x, edge_index, batch=batch)
 
         if self.readout_type == "add":
             x = global_add_pool(x, batch)

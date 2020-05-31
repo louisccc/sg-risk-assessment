@@ -79,10 +79,10 @@ class GraphTrainer(BaseTrainer):
 
     def build_model(self):
         if self.config.model == "gcn":
-            self.model = GCN_Graph(len(self.feature_list), self.config.hidden, 2, self.config.dropout, "sag_pool", "max").to(self.config.device)
+            self.model = GCN(len(self.feature_list), self.config.hidden, 2, self.config.dropout, "sag_pool", "max").to(self.config.device)
         
         elif self.config.model == "gin":
-            self.model = GIN_Graph(None, len(self.feature_list), 2,  self.config.num_layers, "sag_pool", "max").to(self.config.device)
+            self.model = GIN(None, len(self.feature_list), 2,  self.config.num_layers, "sag_pool", "max").to(self.config.device)
 
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.config.learning_rate, weight_decay=self.config.weight_decay)
 

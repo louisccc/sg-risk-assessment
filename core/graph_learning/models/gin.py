@@ -8,7 +8,7 @@ from torch_geometric.nn import global_add_pool, global_mean_pool, global_max_poo
 
 class GIN(nn.Module):
     
-    def __init__(self, args, num_features, num_classes, num_layers, pooling_type, readout_type, temporal_type):
+    def __init__(self, args, num_features, num_classes, num_layers, pooling_type=None, readout_type=None, temporal_type=None):
         super(GIN, self).__init__()
 
         self.num_features = num_features

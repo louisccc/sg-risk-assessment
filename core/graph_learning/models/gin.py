@@ -14,6 +14,7 @@ class GIN(nn.Module):
         self.num_features = num_features
         self.num_classes  = num_classes
         self.num_layers = num_layers
+        self.hidden_dim = hidden_dim
 
         self.gin_convs = torch.nn.ModuleList()
         self.batch_norms = torch.nn.ModuleList()

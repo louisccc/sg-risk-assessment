@@ -106,7 +106,7 @@ class DynGraphTrainer(BaseTrainer):
                                
                 output = self.model.forward(sequence.x, sequence.edge_index, sequence.batch)
                 
-                loss_train = nn.CrossEntropyLoss(weight=self.class_weights.float())(output.view(-1, 2), torch.LongTensor([label]).to(self.config.device))
+                loss_train = nn.CrossEntropyLoss(weight=self.class_weights.float().to(self.config.device))(output.view(-1, 2), torch.LongTensor([label]).to(self.config.device))
 
                 loss_train.backward()
 

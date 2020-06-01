@@ -25,7 +25,7 @@ class Config:
         self.parser = ArgumentParser(description='The parameters for training the scene graph using GCN.')
         self.parser.add_argument('--input_path', type=str, default="../input/synthesis_data/lane-change/", help="Path to code directory.")
         self.parser.add_argument('--learning_rate', default=0.0001, type=float, help='The initial learning rate for GCN.')
-        self.parser.add_argument('--seed', type=int, default=42, help='Random seed.')
+        self.parser.add_argument('--seed', type=int, default=random.randint(0,2**32), help='Random seed.')
         self.parser.add_argument('--epochs', type=int, default=200, help='Number of epochs to train.')
         self.parser.add_argument('--weight_decay', type=float, default=5e-4, help='Weight decay (L2 loss on parameters).')
         self.parser.add_argument('--hidden', type=int, default=200, help='Number of hidden units.')
@@ -41,6 +41,7 @@ class Config:
         self.parser.add_argument('--pooling_type', type=str, default="sagpool", help="Graph pooling type.")
         self.parser.add_argument('--readout_type', type=str, default="mean", help="Readout type.")
         self.parser.add_argument('--temporal_type', type=str, default="lstm_sum", help="Temporal type.")
+        self.parser.add_argument('--nocache', action='store_true', default=False, dest="nocache", help="Don't use cached version of dataset.")
 
         args_parsed = self.parser.parse_args(args)
         
@@ -64,7 +65,7 @@ class DynGraphTrainer(BaseTrainer):
         # load scene graph txts into memory 
         sge = SceneGraphSequenceGenerator()
 
-        if not sge.is_cache_exists():
+        if not sge.is_cache_exists() or self.config.nocache:
             if self.config.recursive:
                 for sub_dir in tqdm([x for x in self.config.input_base_dir.iterdir() if x.is_dir()]):
                     data_source = sub_dir

@@ -268,7 +268,7 @@ class SceneGraphExtractor(NodeClassificationExtractor):
     def to_dataset(self, train_to_test_ratio=0.3):
         feature_list = self.get_feature_list(num_classes=8)
         
-        train_sequence, test_sequence = train_test_split(self.scenegraphs_sequence, test_size = train_to_test_ratio)
+        train_sequence, test_sequence = train_test_split(self.scenegraphs_sequence, test_size=train_to_test_ratio, shuffle=True)
         train = self.process_graph_sequence(feature_list, train_sequence)
         test = self.process_graph_sequence(feature_list, test_sequence)
 

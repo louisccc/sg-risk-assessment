@@ -40,6 +40,7 @@ class Config:
         self.parser.add_argument('--hidden_dim', type=int, default=32, help="Hidden dimension in GIN.")
         self.parser.add_argument('--pooling_type', type=str, default="sagpool", help="Graph pooling type.")
         self.parser.add_argument('--readout_type', type=str, default="max", help="Readout type.")
+        self.parser.add_argument('--nocache', action='store_true', default=False, dest="nocache", help="Don't use cached version of dataset.")
 
         args_parsed = self.parser.parse_args(args)
         
@@ -62,7 +63,7 @@ class GraphTrainer(BaseTrainer):
         # load scene graph txts into memory 
         sge = SceneGraphExtractor()
 
-        if not sge.is_cache_exists():
+        if not sge.is_cache_exists() or self.config.nocache:
             if self.config.recursive:
                 for sub_dir in tqdm([x for x in self.config.input_base_dir.iterdir() if x.is_dir()]):
                     data_source = sub_dir

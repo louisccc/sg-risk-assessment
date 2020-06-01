@@ -106,7 +106,7 @@ class GraphTrainer(BaseTrainer):
                                
                 output = self.model.forward(data.x, data.edge_index, data.batch)
                     
-                loss_train = nn.CrossEntropyLoss(weight=self.class_weights.float())(output, data.y)
+                loss_train = nn.CrossEntropyLoss(weight=self.class_weights.float().to(self.config.device))(output, data.y)
                     
                 loss_train.backward()
 

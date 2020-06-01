@@ -17,6 +17,7 @@ from tqdm import tqdm
 from core.graph_learning.models.gcn import *
 from core.graph_learning.models.gin import *
 from torch_geometric.data import Data, DataLoader
+from sklearn.utils.class_weight import compute_class_weight
 
 class Config:
     '''Argument Parser for script to train scenegraphs.'''
@@ -56,7 +57,7 @@ class DynGraphTrainer(BaseTrainer):
 
         np.random.seed(self.config.seed)
         torch.manual_seed(self.config.seed)
-        
+        self.class_weights = None
         self.preprocess_scenegraph_data() # reduced scenegraph extraction
 
     def preprocess_scenegraph_data(self):
@@ -76,8 +77,9 @@ class DynGraphTrainer(BaseTrainer):
         
         else:
             self.training_sequences, self.training_labels, self.testing_sequences, self.testing_labels, self.feature_list = sge.read_cache()
-
-        print("Number of Sequences included: ", len(self.training_sequences))
+        self.class_weights = torch.from_numpy(compute_class_weight('balanced', np.unique(self.training_labels), self.training_labels))
+        print("Number of Sequences Included: ", len(self.training_sequences))
+        print("Num Labels in Each Class: " + str(np.unique(self.training_labels, return_counts=True)[1]) + ", Class Weights: " + str(self.class_weights))
 
 
     def build_model(self):
@@ -104,7 +106,7 @@ class DynGraphTrainer(BaseTrainer):
                                
                 output = self.model.forward(sequence.x, sequence.edge_index, sequence.batch)
                 
-                loss_train = nn.CrossEntropyLoss()(output.view(-1, 2), torch.LongTensor([label]).to(self.config.device))
+                loss_train = nn.CrossEntropyLoss(weight=self.class_weights.float())(output.view(-1, 2), torch.LongTensor([label]).to(self.config.device))
 
                 loss_train.backward()
 

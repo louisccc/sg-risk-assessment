@@ -32,7 +32,7 @@ class GCN(nn.Module):
         elif self.pooling_type == "asa":
             self.pool1 = ASAPooling(nclass, ratio=0.8)
         
-        if self.temporal_type == "lstm":
+        if "lstm" in self.temporal_type:
             self.lstm = nn.LSTM(nclass, nhid, batch_first=True, bidirectional=True)
             self.attn = Attention(self.hidden_dim * 2)
             self.fc1 = nn.Linear(2*nhid, nclass)

@@ -60,7 +60,7 @@ class GCNTrainer(BaseTrainer):
         # load scene graph txts into memory 
         sge = NodeClassificationExtractor()
 
-        if not sge.is_cache_exists():
+        if not sge.cache_exists():
             if self.config.recursive:
                 for sub_dir in tqdm([x for x in self.config.input_base_dir.iterdir() if x.is_dir()]):
                     sge.load(sub_dir)

@@ -62,8 +62,7 @@ class GraphTrainer(BaseTrainer):
     def preprocess_scenegraph_data(self):
         # load scene graph txts into memory 
         sge = SceneGraphExtractor()
-
-        if not sge.is_cache_exists() or self.config.nocache:
+        if not sge.cache_exists() or self.config.nocache:
             if self.config.recursive:
                 for sub_dir in tqdm([x for x in self.config.input_base_dir.iterdir() if x.is_dir()]):
                     data_source = sub_dir
@@ -72,10 +71,7 @@ class GraphTrainer(BaseTrainer):
                 data_source = self.config.input_base_dir
                 sge.load(data_source)
 
-            self.training_graphs, self.training_labels, self.testing_graphs, self.testing_labels, self.feature_list = sge.to_dataset()
-        else:
-            self.training_graphs, self.training_labels, self.testing_graphs, self.testing_labels, self.feature_list = sge.read_cache()
-        
+        self.training_graphs, self.training_labels, self.testing_graphs, self.testing_labels, self.feature_list = sge.to_dataset(nocache=self.config.nocache)
         train_data_list = [Data(x=g.node_features, edge_index=g.edge_mat, y=torch.LongTensor([label])) for g, label in zip(self.training_graphs, self.training_labels)]
         self.train_loader = DataLoader(train_data_list, batch_size=32)
         test_data_list = [Data(x=g.node_features, edge_index=g.edge_mat, y=torch.LongTensor([label])) for g, label in zip(self.testing_graphs, self.testing_labels)]

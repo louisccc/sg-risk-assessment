@@ -84,7 +84,7 @@ class NodeClassificationExtractor:
 
         self.scenegraphs_sequence.append(scenegraphs)
 
-    def is_cache_exists(self):
+    def cache_exists(self):
         return Path('node_embeddings.pkl').exists()
 
     def read_cache(self):   
@@ -244,46 +244,40 @@ class SceneGraphExtractor(NodeClassificationExtractor):
 
         self.scenegraphs_sequence.append((scenegraphs, risk_label))
     
-    def is_cache_exists(self):
+    def cache_exists(self):
         return Path('graph_embeddings.pkl').exists()
 
     def read_cache(self):   
         with open('graph_embeddings.pkl','rb') as f: 
-            return pkl.load(f)
+            self.processed_graph_sequence, self.feature_list = pkl.load(f)
 
-    def process_graph_sequence(self, feature_list, sequence):
+    def process_graph_sequence(self, sequence):
         graph_labels = []
         graphs = []
         for scenegraphs, risk_label in sequence:
             for timeframe, scenegraph in scenegraphs.items():
                 graphs.append(scenegraph)
                 graph_labels.append(risk_label)
-                _, node_features = self.create_node_embeddings(scenegraph, feature_list)
+                _, node_features = self.create_node_embeddings(scenegraph, self.feature_list)
                 scenegraph.node_features = torch.FloatTensor(node_features.values)
                 
                 sparse_mx = nx.convert_matrix.to_scipy_sparse_matrix(scenegraph.g).tocoo().astype(np.float32)
                 scenegraph.edge_mat = torch.from_numpy(np.vstack((sparse_mx.row, sparse_mx.col)).astype(np.int64))
         return list(zip(graphs, graph_labels))
 
-    def to_dataset(self, train_to_test_ratio=0.3):
-        feature_list = self.get_feature_list(num_classes=8)
-        
-        train_sequence, test_sequence = train_test_split(self.scenegraphs_sequence, test_size=train_to_test_ratio, shuffle=True)
-        train = self.process_graph_sequence(feature_list, train_sequence)
-        test = self.process_graph_sequence(feature_list, test_sequence)
-
+    def to_dataset(self, nocache=False, train_to_test_ratio=0.3):
+        if not self.cache_exists() or nocache:
+            self.feature_list = self.get_feature_list(num_classes=8)
+            self.processed_graph_sequence = self.process_graph_sequence(self.feature_list, self.scenegraphs_sequence)
+            #cache processed graph sequences
+            with open('graph_embeddings.pkl', 'wb') as f:
+                pkl.dump((self.processed_graph_sequence, self.feature_list), f)
+        else:
+            self.read_cache()
+        train, test = train_test_split(self.processed_graph_sequence, test_size=train_to_test_ratio, shuffle=True)
         unzip_training_data = list(zip(*train)) 
         unzip_testing_data  = list(zip(*test))
-
-        # train_graphs, train_labels.
-        # test_graphs, test_labels.
-
-        return_values = np.array(unzip_training_data[0]), np.array(unzip_training_data[1]), np.array(unzip_testing_data[0]), np.array(unzip_testing_data[1]), feature_list
-
-        # Saving the objects:
-        with open('graph_embeddings.pkl', 'wb') as f:  # Python 3: open(..., 'wb')
-            pkl.dump(return_values, f)
-
+        return_values = np.array(unzip_training_data[0]), np.array(unzip_training_data[1]), np.array(unzip_testing_data[0]), np.array(unzip_testing_data[1]), self.feature_list
         return return_values
 
 
@@ -291,18 +285,16 @@ class SceneGraphSequenceGenerator(SceneGraphExtractor):
     def __init__(self):
         super(SceneGraphSequenceGenerator, self).__init__()
 
-    def is_cache_exists(self):
+    def cache_exists(self):
         return Path('dyngraph_embeddings.pkl').exists()
 
     def read_cache(self):   
         with open('dyngraph_embeddings.pkl','rb') as f: 
-            return pkl.load(f)
-
-    def to_dataset(self, number_of_frames=20, train_to_test_ratio=0.3):
+            self.processed_graph_sequences, self.feature_list = pkl.load(f)
+            
+    def process_graph_sequences(self, number_of_frames):
         sequence_labels = []
         sequences = [] 
-
-        feature_list = self.get_feature_list(num_classes=8)
         for scenegraphs, risk_label in self.scenegraphs_sequence:
             sequence = []
             acc_number = 0
@@ -311,7 +303,7 @@ class SceneGraphSequenceGenerator(SceneGraphExtractor):
                 if idx % modulo == 0 and acc_number < number_of_frames:
                     sequence.append(scenegraph)
                     
-                    _, node_features = self.create_node_embeddings(scenegraph, feature_list)
+                    _, node_features = self.create_node_embeddings(scenegraph, self.feature_list)
                     scenegraph.node_features = torch.FloatTensor(node_features.values)
                     
                     sparse_mx = nx.convert_matrix.to_scipy_sparse_matrix(scenegraph.g).tocoo().astype(np.float32)
@@ -319,19 +311,21 @@ class SceneGraphSequenceGenerator(SceneGraphExtractor):
                     acc_number+=1
             sequences.append(sequence)
             sequence_labels.append(risk_label)
+        return list(zip(sequences, sequence_labels))
 
-        train, test = train_test_split(list(zip(sequences, sequence_labels)), test_size=train_to_test_ratio, shuffle=True)
-
+    def to_dataset(self, nocache=False, number_of_frames=20, train_to_test_ratio=0.3):
+        if not self.cache_exists() or nocache:
+            self.feature_list = self.get_feature_list(num_classes=8)
+            self.processed_graph_sequences = self.process_graph_sequences(number_of_frames)
+            with open('dyngraph_embeddings.pkl', 'wb') as f:
+                pkl.dump((self.processed_graph_sequences, self.feature_list), f)
+        else:
+            self.read_cache()
+            
+        train, test = train_test_split(self.processed_graph_sequences, test_size=train_to_test_ratio, shuffle=True)
         unzip_training_data = list(zip(*train)) 
         unzip_testing_data  = list(zip(*test))
-
-        # train_sequences, train_sequence_labels.
-        # test_sequences, test_sequence_labels.
-
-        return_values = np.array(unzip_training_data[0]), np.array(unzip_training_data[1]), np.array(unzip_testing_data[0]), np.array(unzip_testing_data[1]), feature_list
-
-        # Saving the objects:
-        with open('dyngraph_embeddings.pkl', 'wb') as f:  # Python 3: open(..., 'wb')
-            pkl.dump(return_values, f)
-
+        return_values = np.array(unzip_training_data[0]), np.array(unzip_training_data[1]), np.array(unzip_testing_data[0]), np.array(unzip_testing_data[1]), self.feature_list
         return return_values
+        
+        

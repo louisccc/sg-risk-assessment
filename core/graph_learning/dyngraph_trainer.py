@@ -65,8 +65,7 @@ class DynGraphTrainer(BaseTrainer):
     def preprocess_scenegraph_data(self):
         # load scene graph txts into memory 
         sge = SceneGraphSequenceGenerator()
-
-        if not sge.is_cache_exists() or self.config.nocache:
+        if not sge.cache_exists() or self.config.nocache:
             if self.config.recursive:
                 for sub_dir in tqdm([x for x in self.config.input_base_dir.iterdir() if x.is_dir()]):
                     data_source = sub_dir
@@ -75,10 +74,7 @@ class DynGraphTrainer(BaseTrainer):
                 data_source = self.config.input_base_dir
                 sge.load(data_source)
 
-            self.training_sequences, self.training_labels, self.testing_sequences, self.testing_labels, self.feature_list = sge.to_dataset()
-        
-        else:
-            self.training_sequences, self.training_labels, self.testing_sequences, self.testing_labels, self.feature_list = sge.read_cache()
+        self.training_sequences, self.training_labels, self.testing_sequences, self.testing_labels, self.feature_list = sge.to_dataset(nocache=self.config.nocache)
         self.class_weights = torch.from_numpy(compute_class_weight('balanced', np.unique(self.training_labels), self.training_labels))
         print("Number of Sequences Included: ", len(self.training_sequences))
         print("Num Labels in Each Class: " + str(np.unique(self.training_labels, return_counts=True)[1]) + ", Class Weights: " + str(self.class_weights))

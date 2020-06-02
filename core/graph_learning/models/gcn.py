@@ -5,6 +5,7 @@ import torch.nn.functional as F
 from torch.nn.parameter import Parameter
 from torch.nn.modules.module import Module
 
+from torchnlp.nn import Attention
 from torch_geometric.nn import GCNConv, SAGPooling, TopKPooling, ASAPooling
 from torch_geometric.utils import dense_to_sparse
 from torch_geometric.nn import global_add_pool, global_mean_pool, global_max_pool, global_sort_pool

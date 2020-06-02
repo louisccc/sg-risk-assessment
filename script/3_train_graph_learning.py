@@ -11,7 +11,7 @@ import numpy as np
 def get_config(args):
     task_parser = argparse.ArgumentParser()
     task_parser.add_argument('--task', type=str, default="node_classification", help="Task to be executed.")
-    task_parser.add_argument('--iterations', type=int, default=1, help="Number of times the model should be built and scored for averaging.")
+    task_parser.add_argument('--iterations', type=int, default=3, help="Number of times the model should be built and scored for averaging.")
     config = task_parser.parse_known_args(args)
     return config # <parsed config>, <unknown list of argv>
     

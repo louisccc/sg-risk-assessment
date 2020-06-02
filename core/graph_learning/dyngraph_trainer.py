@@ -7,6 +7,7 @@ import torch.optim as optim
 import numpy as np
 import scipy.sparse as sp
 import pandas as pd
+import random
 
 from core.graph_learning.bases import BaseTrainer
 from core.scene_graph.graph_process import SceneGraphSequenceGenerator

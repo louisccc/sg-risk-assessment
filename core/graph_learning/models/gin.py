@@ -41,9 +41,8 @@ class GIN(nn.Module):
 
         if "lstm" in self.temporal_type:
             self.lstm = LSTM(self.num_classes, self.hidden_dim, batch_first=True, bidirectional=True)
-            self.reduce_h = Linear(self.hidden_dim * 2, self.num_classes)
             self.attn = Attention(self.hidden_dim * 2)
-            self.fc3 = Linear(self.hidden_dim*2, self.num_classes)
+            self.fc3 = Linear(self.hidden_dim * 2, self.num_classes)
 
         self.fc1 = Linear(self.hidden_dim, self.hidden_dim)
         self.fc2 = Linear(self.hidden_dim, self.num_classes)
@@ -80,10 +79,10 @@ class GIN(nn.Module):
             x = x.mean(axis=0)
         elif self.temporal_type == "lstm_last":
             x_predicted, (h, c) = self.lstm(x.unsqueeze(0))
-            x = F.relu(self.reduce_h(h.flatten()))
+            x = F.relu(self.fc3(h.flatten()))
         elif self.temporal_type == "lstm_sum":
             x_predicted, (h, c) = self.lstm(x.unsqueeze(0))
-            x = F.relu(self.reduce_h(x_predicted.sum(dim=1).flatten()))
+            x = F.relu(self.fc3(x_predicted.sum(dim=1).flatten()))
         elif self.temporal_type == "lstm_attn":
             x_predicted, (h, c) = self.lstm(x.unsqueeze(0))
             x, weights = self.attn(h.view(1,1,-1), x_predicted)

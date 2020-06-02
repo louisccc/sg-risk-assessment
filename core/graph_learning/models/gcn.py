@@ -34,6 +34,7 @@ class GCN(nn.Module):
         
         if self.temporal_type == "lstm":
             self.lstm = nn.LSTM(nclass, nhid, batch_first=True, bidirectional=True)
+            self.attn = Attention(self.hidden_dim * 2)
             self.fc1 = nn.Linear(2*nhid, nclass)
 
     def forward(self, x, edge_index, batch=None):
@@ -62,10 +63,16 @@ class GCN(nn.Module):
         
         if self.temporal_type == "mean":
             x = x.mean(axis=0)
-        elif self.temporal_type == "lstm":
+        elif self.temporal_type == "lstm_last":
             x_predicted, (h, c) = self.lstm(x.unsqueeze(0))
-            x = self.fc1(h.flatten())
-            x = F.relu(x)
+            x = F.relu(self.fc1(h.flatten()))
+        elif self.temporal_type == "lstm_sum":
+            x_predicted, (h, c) = self.lstm(x.unsqueeze(0))
+            x = F.relu(self.fc1(x_predicted.sum(dim=1).flatten()))
+        elif self.temporal_type == "lstm_attn":
+            x_predicted, (h, c) = self.lstm(x.unsqueeze(0))
+            x, weights = self.attn(h.view(1,1,-1), x_predicted)
+            x = self.fc1(x.flatten())
         else:
             pass
         

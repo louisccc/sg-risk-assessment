@@ -35,7 +35,7 @@ class GCN(nn.Module):
         
         if "lstm" in self.temporal_type:
             self.lstm = nn.LSTM(nclass, nhid, batch_first=True, bidirectional=True)
-            self.attn = Attention(self.hidden_dim * 2)
+            self.attn = Attention(nhid * 2)
             self.fc1 = nn.Linear(2*nhid, nclass)
 
     def forward(self, x, edge_index, batch=None):

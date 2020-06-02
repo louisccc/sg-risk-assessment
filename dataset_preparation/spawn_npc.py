@@ -259,11 +259,13 @@ def main():
         print('spawned %d vehicles and %d walkers, press Ctrl+C to exit.' % (len(vehicles_list), len(walkers_list)))
 
         # example of how to use parameters
-        traffic_manager.global_percentage_speed_difference(30.0)
+        traffic_manager.global_percentage_speed_difference(0.0)
+        traffic_manager.global_distance_to_leading_vehicle(0.5)
 
-        # disable auto lane change
-        # for v in vehicles_list:
-        #     traffic_manager.auto_lane_change(world.get_actor(v), False)
+        # change global vehicle behavior
+        for v in vehicles_list:
+            # disable auto lane change
+            traffic_manager.auto_lane_change(world.get_actor(v), False)
 
         # if you want to trigger the recorder, run this file in synchronous mode
         lanechangerecorder = LaneChangeRecorder(traffic_manager, world, client)

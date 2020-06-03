@@ -72,7 +72,7 @@ def get_scoring_metrics(output, labels, task):
     metrics['recall'] = recall_score(labels, preds, average="micro")
     metrics['auc'] = get_auc(output, labels, task)
     metrics['label_distribution'] = str(np.unique(labels, return_counts=True)[1])
-    get_roc_curve(output, labels, task)
+    # get_roc_curve(output, labels, task)
     return metrics
     
 def get_predictions(outputs, labels):

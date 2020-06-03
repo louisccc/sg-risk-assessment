@@ -87,6 +87,7 @@ class DynGraphTrainer(BaseTrainer):
             self.model = GIN(None, len(self.feature_list), 2, self.config.num_layers, self.config.hidden_dim, self.config.pooling_type, self.config.readout_type, self.config.temporal_type).to(self.config.device)
 
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.config.learning_rate, weight_decay=self.config.weight_decay)
+        self.loss_func = nn.CrossEntropyLoss(weight=self.class_weights.float().to(self.config.device))
 
     def train(self):
 
@@ -104,7 +105,7 @@ class DynGraphTrainer(BaseTrainer):
                                
                 output = self.model.forward(sequence.x, sequence.edge_index, sequence.batch)
                 
-                loss_train = nn.CrossEntropyLoss(weight=self.class_weights.float().to(self.config.device))(output.view(-1, 2), torch.LongTensor([label]).to(self.config.device))
+                loss_train = self.loss_func(output.view(-1, 2), torch.LongTensor([label]).to(self.config.device))
 
                 loss_train.backward()
 

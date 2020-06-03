@@ -268,7 +268,7 @@ class SceneGraphExtractor(NodeClassificationExtractor):
     def to_dataset(self, nocache=False, train_to_test_ratio=0.3):
         if not self.cache_exists() or nocache:
             self.feature_list = self.get_feature_list(num_classes=8)
-            self.processed_graph_sequence = self.process_graph_sequence(self.feature_list, self.scenegraphs_sequence)
+            self.processed_graph_sequence = self.process_graph_sequence(self.scenegraphs_sequence)
             #cache processed graph sequences
             with open('graph_embeddings.pkl', 'wb') as f:
                 pkl.dump((self.processed_graph_sequence, self.feature_list), f)

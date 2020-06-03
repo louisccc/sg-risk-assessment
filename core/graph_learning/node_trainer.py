@@ -122,7 +122,7 @@ class GCNTrainer(BaseTrainer):
 
             print('Epoch: {:04d}'.format(epoch_idx), 'loss_train: {:.4f}'.format(acc_loss_train))
 
-    def predict(self):
+    def evaluate(self):
         # predict the node classification performance.
         outputs = []
         labels = []

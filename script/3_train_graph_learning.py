@@ -39,9 +39,9 @@ if __name__ == "__main__":
         trainer.build_model()
         trainer.train()
         if i == 0:
-            outputs, labels = trainer.predict()
+            outputs, labels = trainer.evaluate()
         else:
-            o, l = trainer.predict()
+            o, l = trainer.evaluate()
             outputs = torch.cat((outputs, o))
             labels = np.concatenate((labels, l))
             

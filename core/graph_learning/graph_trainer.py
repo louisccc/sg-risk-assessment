@@ -116,7 +116,7 @@ class GraphTrainer(BaseTrainer):
             print('Epoch: {:04d},'.format(epoch_idx), 'loss_train: {:.4f}'.format(acc_loss_train))
             print('')
 
-    def predict(self):
+    def evaluate(self):
         labels = []
         outputs = []
         

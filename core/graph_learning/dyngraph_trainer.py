@@ -104,7 +104,7 @@ class DynGraphTrainer(BaseTrainer):
                 self.optimizer.zero_grad()
                                
                 output = self.model.forward(sequence.x, sequence.edge_index, sequence.batch)
-                
+
                 loss_train = self.loss_func(output.view(-1, 2), torch.LongTensor([label]).to(self.config.device))
 
                 loss_train.backward()
@@ -118,16 +118,14 @@ class DynGraphTrainer(BaseTrainer):
             print('')
 
             # if epoch_idx % self.config.test_step == 0:
-            #     self.predict()
+            #     self.evaluate()
 
-    def predict(self):
-        # take training set as testing data temporarily
+    def inference(self, testing_sequences, testing_labels):
         acc_predict = []
         labels = []
         outputs = []
-        
-        for i in range(len(self.testing_sequences)): # iterate through scenegraphs
-            data, label = self.testing_sequences[i], self.testing_labels[i]
+        for i in range(len(testing_sequences)): # iterate through scenegraphs
+            data, label = testing_sequences[i], testing_labels[i]
             
             data_list = [Data(x=g.node_features, edge_index=g.edge_mat) for g in data]
             self.test_loader = DataLoader(data_list, batch_size=len(data_list))
@@ -145,7 +143,16 @@ class DynGraphTrainer(BaseTrainer):
 
             print('Dynamic SceneGraph: {:04d}'.format(i), 'acc_test: {:.4f}'.format(acc_test.item()))
 
+        return outputs, labels, acc_predict
+
+    def evaluate(self):
+        
+        outputs, labels, acc_predict = self.inference(self.training_sequences, self.training_labels)
         print('Dynamic SceneGraph precision', sum(acc_predict) / len(acc_predict))
+
+        outputs, labels, acc_predict = self.inference(self.testing_sequences, self.testing_labels)
+        print('Dynamic SceneGraph precision', sum(acc_predict) / len(acc_predict))
+        
         outputs = torch.cat(outputs).reshape(-1,2).detach()
        
         return outputs, np.array(labels).flatten()

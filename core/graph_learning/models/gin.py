@@ -40,9 +40,9 @@ class GIN(nn.Module):
             self.pool1 = ASAPooling(self.hidden_dim, ratio=0.8)
 
         if "lstm" in self.temporal_type:
-            self.lstm = LSTM(self.num_classes, self.hidden_dim, batch_first=True, bidirectional=True)
+            self.lstm = LSTM(self.hidden_dim, self.hidden_dim, batch_first=True, bidirectional=True)
             self.attn = Attention(self.hidden_dim * 2)
-            self.fc3 = Linear(self.hidden_dim * 2, self.num_classes)
+            self.fc3 = Linear(self.hidden_dim * 2, self.hidden_dim)
 
         self.fc1 = Linear(self.hidden_dim, self.hidden_dim)
         self.fc2 = Linear(self.hidden_dim, self.num_classes)
@@ -75,10 +75,6 @@ class GIN(nn.Module):
         else:
             pass
 
-        x = F.relu(self.fc1(x))
-        x = F.dropout(x, p=0.5, training=self.training)
-        x = self.fc2(x)
-
         if self.temporal_type == "mean":
             x = x.mean(axis=0)
         elif self.temporal_type == "lstm_last":
@@ -93,5 +89,9 @@ class GIN(nn.Module):
             x = self.fc3(x.flatten())
         else:
             pass
-    
+            
+        x = F.relu(self.fc1(x))
+        x = F.dropout(x, p=0.5, training=self.training)
+        x = self.fc2(x)
+
         return F.log_softmax(x, dim=-1)

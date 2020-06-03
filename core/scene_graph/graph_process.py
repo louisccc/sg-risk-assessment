@@ -8,6 +8,7 @@ from .scene_graph import SceneGraph
 from glob import glob
 from collections import defaultdict
 from sklearn.model_selection import train_test_split
+from sklearn.utils import shuffle
 
 from pygcn.utils import sparse_mx_to_torch_sparse_tensor, normalize, accuracy
 import scipy.sparse as sp
@@ -251,10 +252,12 @@ class SceneGraphExtractor(NodeClassificationExtractor):
         with open('graph_embeddings.pkl','rb') as f: 
             self.processed_graph_sequence, self.feature_list = pkl.load(f)
 
+    #sequence is a list of tuples, each containing (list of scenegraphs, risk_label)
     def process_graph_sequence(self, sequence):
-        graph_labels = []
-        graphs = []
+        processed_sequences = []
         for scenegraphs, risk_label in sequence:
+            graph_labels = []
+            graphs = []
             for timeframe, scenegraph in scenegraphs.items():
                 graphs.append(scenegraph)
                 graph_labels.append(risk_label)
@@ -263,7 +266,8 @@ class SceneGraphExtractor(NodeClassificationExtractor):
                 
                 sparse_mx = nx.convert_matrix.to_scipy_sparse_matrix(scenegraph.g).tocoo().astype(np.float32)
                 scenegraph.edge_mat = torch.from_numpy(np.vstack((sparse_mx.row, sparse_mx.col)).astype(np.int64))
-        return list(zip(graphs, graph_labels))
+            processed_sequences.append(list(zip(graphs, graph_labels)))
+        return processed_sequences
 
     def to_dataset(self, nocache=False, train_to_test_ratio=0.3):
         if not self.cache_exists() or nocache:
@@ -275,7 +279,9 @@ class SceneGraphExtractor(NodeClassificationExtractor):
         else:
             self.read_cache()
         train, test = train_test_split(self.processed_graph_sequence, test_size=train_to_test_ratio, shuffle=True)
-        unzip_training_data = list(zip(*train)) 
+        train = shuffle([item for sublist in train for item in sublist]) #flatten list of lists and shuffle
+        test = shuffle([item for sublist in test for item in sublist]) #flatten list of lists and shuffle
+        unzip_training_data = list(zip(*train))
         unzip_testing_data  = list(zip(*test))
         return_values = np.array(unzip_training_data[0]), np.array(unzip_training_data[1]), np.array(unzip_testing_data[0]), np.array(unzip_testing_data[1]), self.feature_list
         return return_values

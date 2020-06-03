@@ -17,5 +17,5 @@ class BaseTrainer(ABC):
 		pass
 	
 	@abstractmethod
-	def predict(self):
+	def evaluate(self):
 		pass

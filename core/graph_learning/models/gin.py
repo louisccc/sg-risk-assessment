@@ -49,16 +49,20 @@ class GIN(nn.Module):
 
 
     def forward(self, x, edge_index, batch=None):
+        attn_weights = dict()
+
         for layer in range(self.num_layers-1):
             x = F.relu(self.gin_convs[layer](x, edge_index))
             x = self.batch_norms[layer](x)
 
         if self.pooling_type == "sagpool":
-            x, edge_index, _, batch, perm, score = self.pool1(x, edge_index, batch=batch)
+            x, edge_index, _, batch, attn_weights['pool_perm'], attn_weights['pool_score'] = self.pool1(x, edge_index, batch=batch)
         elif self.pooling_type == "topk":
-            x, edge_index, _, batch, perm, score = self.pool1(x, edge_index, batch=batch)
+            x, edge_index, _, batch, attn_weights['pool_perm'], attn_weights['pool_score'] = self.pool1(x, edge_index, batch=batch)
         elif self.pooling_type == "asa":
-            x, edge_index, _, batch, perm = self.pool1(x, edge_index, batch=batch)
+            x, edge_index, _, batch, attn_weights['pool_perm'] = self.pool1(x, edge_index, batch=batch)
+        else: 
+            pass
 
         if self.readout_type == "add":
             x = global_add_pool(x, batch)
@@ -85,9 +89,9 @@ class GIN(nn.Module):
             x = F.relu(self.fc3(x_predicted.sum(dim=1).flatten()))
         elif self.temporal_type == "lstm_attn":
             x_predicted, (h, c) = self.lstm(x.unsqueeze(0))
-            x, weights = self.attn(h.view(1,1,-1), x_predicted)
+            x, attn_weights['lstm_attn_weights'] = self.attn(h.view(1,1,-1), x_predicted)
             x = self.fc3(x.flatten())
         else:
             pass
-            
+    
         return F.log_softmax(x, dim=-1)

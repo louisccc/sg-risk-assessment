@@ -40,16 +40,18 @@ class GCN(nn.Module):
 
     def forward(self, x, edge_index, batch=None):
         ''' graphs_in_batch is a list of graph instances; '''
+        attn_weights = dict()
+
         x = F.relu(self.gc1(x, edge_index))
         x = F.dropout(x, self.dropout, training=self.training)
         x = self.gc2(x, edge_index)
 
         if self.pooling_type == "sagpool":
-            x, edge_index, _, batch, perm, score = self.pool1(x, edge_index, batch=batch)
+            x, edge_index, _, batch, attn_weights['pool_perm'], attn_weights['pool_score'] = self.pool1(x, edge_index, batch=batch)
         elif self.pooling_type == "topk":
-            x, edge_index, _, batch, perm, score = self.pool1(x, edge_index, batch=batch)
+            x, edge_index, _, batch, attn_weights['pool_perm'], attn_weights['pool_score'] = self.pool1(x, edge_index, batch=batch)
         elif self.pooling_type == "asa":
-            x, edge_index, _, batch, perm = self.pool1(x, edge_index, batch=batch)
+            x, edge_index, _, batch, attn_weights['pool_perm'] = self.pool1(x, edge_index, batch=batch)
 
         if self.readout_type == "add":
             x = global_add_pool(x, batch)
@@ -72,7 +74,7 @@ class GCN(nn.Module):
             x = F.relu(self.fc1(x_predicted.sum(dim=1).flatten()))
         elif self.temporal_type == "lstm_attn":
             x_predicted, (h, c) = self.lstm(x.unsqueeze(0))
-            x, weights = self.attn(h.view(1,1,-1), x_predicted)
+            x, attn_weights['lstm_attn_weights'] = self.attn(h.view(1,1,-1), x_predicted)
             x = self.fc1(x.flatten())
         else:
             pass

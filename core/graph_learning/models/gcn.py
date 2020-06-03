@@ -19,7 +19,7 @@ class GCN(nn.Module):
         self.readout_type = readout_type
 
         self.gc1 = GCNConv(nfeat, nhid)
-        self.gc2 = GCNConv(nhid, nclass)
+        self.gc2 = GCNConv(nhid, nhid)
         self.dropout = dropout
 
         self.pooling_type = pooling_type
@@ -27,16 +27,18 @@ class GCN(nn.Module):
         self.temporal_type = temporal_type
 
         if self.pooling_type == "sagpool":
-            self.pool1 = SAGPooling(nclass, ratio=0.8)
+            self.pool1 = SAGPooling(nhid, ratio=0.8)
         elif self.pooling_type == "topk":
-            self.pool1 = TopKPooling(nclass, ratio=0.8)
+            self.pool1 = TopKPooling(nhid, ratio=0.8)
         elif self.pooling_type == "asa":
-            self.pool1 = ASAPooling(nclass, ratio=0.8)
+            self.pool1 = ASAPooling(nhid, ratio=0.8)
         
         if "lstm" in self.temporal_type:
-            self.lstm = nn.LSTM(nclass, nhid, batch_first=True, bidirectional=True)
+            self.lstm = nn.LSTM(nhid, nhid, batch_first=True, bidirectional=True)
             self.attn = Attention(nhid * 2)
-            self.fc1 = nn.Linear(2*nhid, nclass)
+            self.fc1 = nn.Linear(2*nhid, nhid)
+
+        self.fc = nn.Linear(nhid, nclass)
 
     def forward(self, x, edge_index, batch=None):
         ''' graphs_in_batch is a list of graph instances; '''
@@ -79,6 +81,7 @@ class GCN(nn.Module):
         else:
             pass
         
+        x = self.fc(x)
         if self.temporal_type:
             return F.log_softmax(x, dim=0)
 

@@ -72,7 +72,7 @@ def get_scoring_metrics(output, labels, task):
     metrics['recall'] = recall_score(labels, preds, average="micro")
     metrics['auc'] = get_auc(output, labels, task)
     metrics['label_distribution'] = str(np.unique(labels, return_counts=True)[1])
-    # get_roc_curve(output, labels, task)
+    get_roc_curve(output, labels, task, render=False)
     return metrics
     
 def get_predictions(outputs, labels):
@@ -96,7 +96,8 @@ def get_auc(outputs, labels, task):
     return auc
 
 #NOTE: ROC curve is only generated for positive class (risky label) confidence values 
-def get_roc_curve(outputs, labels, task):
+#render parameter determines if the figure is actually generated. If false, it saves the values to a csv file.
+def get_roc_curve(outputs, labels, task, render=False):
     if task == "node_classification":
         print("Node classification ROC not implemented")
         return None
@@ -106,15 +107,21 @@ def get_roc_curve(outputs, labels, task):
         outputs = preprocessing.normalize(outputs.numpy(), axis=0)
         for i in outputs:
             risk_scores.append(i[1])
-
         fpr, tpr, thresholds = roc_curve(labels.numpy(), risk_scores)
-        plt.figure(figsize=(8,8))
-        plt.xlim((0,1))
-        plt.ylim((0,1))
-        plt.ylabel("TPR")
-        plt.xlabel("FPR")
-        plt.title("Receiver Operating Characteristic for " + task)
-        plt.plot([0,1],[0,1], linestyle='dashed')
-        plt.plot(fpr,tpr, linewidth=2)
-        plt.savefig("ROC_curve_"+task+".svg")
-        # plt.show()
+        roc = pd.DataFrame()
+        roc['fpr'] = fpr
+        roc['tpr'] = tpr
+        roc['thresholds'] = thresholds
+        roc.to_csv("ROC_data_"+task+".csv")
+
+        if(render):
+            plt.figure(figsize=(8,8))
+            plt.xlim((0,1))
+            plt.ylim((0,1))
+            plt.ylabel("TPR")
+            plt.xlabel("FPR")
+            plt.title("Receiver Operating Characteristic for " + task)
+            plt.plot([0,1],[0,1], linestyle='dashed')
+            plt.plot(fpr,tpr, linewidth=2)
+            plt.savefig("ROC_curve_"+task+".svg")
+

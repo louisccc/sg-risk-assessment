@@ -31,6 +31,14 @@ class LaneChangeRecorder:
         self.lane_changing= False
 
         self.client = client
+
+        self.weather_presets = [carla.WeatherParameters.ClearNoon, carla.WeatherParameters.CloudyNoon, 
+                carla.WeatherParameters.WetNoon, carla.WeatherParameters.WetCloudyNoon, 
+                carla.WeatherParameters.SoftRainNoon, carla.WeatherParameters.MidRainyNoon, 
+                carla.WeatherParameters.HardRainNoon, carla.WeatherParameters.ClearSunset, 
+                carla.WeatherParameters.CloudySunset, carla.WeatherParameters.WetSunset, 
+                carla.WeatherParameters.WetCloudySunset, carla.WeatherParameters.SoftRainSunset, 
+                carla.WeatherParameters.MidRainSunset, carla.WeatherParameters.HardRainSunset]
        
     def set_vehicles_list(self, vehicles_list):
         self.vehicles_list = vehicles_list
@@ -69,18 +77,7 @@ class LaneChangeRecorder:
         
         if self.tick_count == 100:
             # set random weather
-            weather = carla.WeatherParameters(
-                cloudiness=random.uniform(0.0, 100.0), 
-                precipitation=random.uniform(0.0, 100.0), 
-                precipitation_deposits=random.uniform(0.0, 100.0), 
-                wind_intensity=random.uniform(0.0, 100.0), 
-                sun_azimuth_angle=random.uniform(0.0, 180.0), 
-                sun_altitude_angle=random.uniform(-90.0, 90.0), 
-                fog_density=random.uniform(0.0, 100.0), 
-                fog_distance=random.uniform(20.0, 100.0), 
-                wetness=random.uniform(0.0, 100.0), 
-                )
-            self.carla_world.set_weather(weather)
+            self.carla_world.set_weather(random.choice(self.weather_presets))
 
             # choose random vehicle and prepare for recording
             print("Picking vehicle and attaching sensors...")

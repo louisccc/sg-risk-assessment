@@ -134,24 +134,24 @@ class DynGraphTrainer(BaseTrainer):
             self.model.eval()
             output = self.model.forward(sequence.x, sequence.edge_index, sequence.batch)
             
-            print(output, label)
+            # print(output, label)
             acc_test = accuracy(output.view(-1, 2), torch.LongTensor([label]).to(self.config.device))
             acc_predict.append(acc_test.item())
 
             outputs.append(output.cpu())
             labels.append(label)
 
-            print('Dynamic SceneGraph: {:04d}'.format(i), 'acc_test: {:.4f}'.format(acc_test.item()))
+            # print('Dynamic SceneGraph: {:04d}'.format(i), 'acc_test: {:.4f}'.format(acc_test.item()))
 
         return outputs, labels, acc_predict
 
     def evaluate(self):
         
         outputs, labels, acc_predict = self.inference(self.training_sequences, self.training_labels)
-        print('Dynamic SceneGraph precision', sum(acc_predict) / len(acc_predict))
+        print('Dynamic SceneGraph training precision', sum(acc_predict) / len(acc_predict))
 
         outputs, labels, acc_predict = self.inference(self.testing_sequences, self.testing_labels)
-        print('Dynamic SceneGraph precision', sum(acc_predict) / len(acc_predict))
+        print('Dynamic SceneGraph testing precision', sum(acc_predict) / len(acc_predict))
         
         outputs = torch.cat(outputs).reshape(-1,2).detach()
        

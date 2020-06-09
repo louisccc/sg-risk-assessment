@@ -111,6 +111,7 @@ class NodeClassificationExtractor:
                 
                 sparse_mx = nx.convert_matrix.to_scipy_sparse_matrix(scenegraph.g).tocoo().astype(np.float32)
                 scenegraph.edge_mat = torch.from_numpy(np.vstack((sparse_mx.row, sparse_mx.col)).astype(np.int64))
+                # add edge features (scenegraph.edge_features)
 
                 graphs.append(scenegraph)
 

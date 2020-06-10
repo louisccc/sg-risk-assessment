@@ -5,6 +5,7 @@ import pandas as pd
 import math
 
 from .scene_graph import SceneGraph
+from .relation_extractor import Relations
 from glob import glob
 from collections import defaultdict
 from sklearn.model_selection import train_test_split
@@ -14,6 +15,7 @@ from pygcn.utils import sparse_mx_to_torch_sparse_tensor, normalize, accuracy
 import scipy.sparse as sp
 
 import torch, json, pdb
+import torch.nn.functional as F
 import pickle as pkl
 from pathlib import Path 
 
@@ -99,7 +101,7 @@ class NodeClassificationExtractor:
 
         for scenegraphs in self.scenegraphs_sequence:
             for timeframe, scenegraph in scenegraphs.items():
-                labels, embeddings = self.create_node_embeddings(scenegraph, feature_list)
+                labels, embeddings, node_ordered = self.create_node_embeddings(scenegraph, feature_list)
                 adjs = self.get_adj_matrix(scenegraph)
                 
                 embeddings = torch.FloatTensor(np.array(normalize(sp.csr_matrix(embeddings.values)).todense()))
@@ -110,6 +112,7 @@ class NodeClassificationExtractor:
                 scenegraph.adj_matrix = adjs
                 
                 sparse_mx = nx.convert_matrix.to_scipy_sparse_matrix(scenegraph.g).tocoo().astype(np.float32)
+                import pdb; pdb.set_trace()
                 scenegraph.edge_mat = torch.from_numpy(np.vstack((sparse_mx.row, sparse_mx.col)).astype(np.int64))
                 # add edge features (scenegraph.edge_features)
 
@@ -173,6 +176,7 @@ class NodeClassificationExtractor:
     def create_node_embeddings(self, scenegraph, feature_list):
         rows = []
         labels=[]
+        node_ordered = dict()
         ego_attrs = None
         
         #extract ego attrs for creating relative features
@@ -201,7 +205,8 @@ class NodeClassificationExtractor:
             row['type_'+str(node.type)] = 1 #assign 1hot class label
             return row
         
-        for node in scenegraph.g.nodes:
+        for idx, node in enumerate(scenegraph.g.nodes):
+            node_ordered[node] = idx
             d = defaultdict()
             row = get_embedding(node, d)
             labels.append(node.type)
@@ -211,7 +216,7 @@ class NodeClassificationExtractor:
         embedding = embedding.fillna(value=0) #fill in NaN with zeros
         
 
-        return np.array(labels), embedding
+        return np.array(labels), embedding, node_ordered
 
     #get adjacency matrix for entity nodes only from  scenegraph in scipy.sparse CSR matrix format
     def get_adj_matrix(self, scenegraph):
@@ -262,7 +267,7 @@ class SceneGraphExtractor(NodeClassificationExtractor):
             for timeframe, scenegraph in scenegraphs.items():
                 graphs.append(scenegraph)
                 graph_labels.append(risk_label)
-                _, node_features = self.create_node_embeddings(scenegraph, self.feature_list)
+                _, node_features, node_ordered = self.create_node_embeddings(scenegraph, self.feature_list)
                 scenegraph.node_features = torch.FloatTensor(node_features.values)
                 
                 sparse_mx = nx.convert_matrix.to_scipy_sparse_matrix(scenegraph.g).tocoo().astype(np.float32)
@@ -310,11 +315,17 @@ class SceneGraphSequenceGenerator(SceneGraphExtractor):
                 if idx % modulo == 0 and acc_number < number_of_frames:
                     sequence.append(scenegraph)
                     
-                    _, node_features = self.create_node_embeddings(scenegraph, self.feature_list)
+                    _, node_features, node_ordered = self.create_node_embeddings(scenegraph, self.feature_list)
                     scenegraph.node_features = torch.FloatTensor(node_features.values)
-                    
-                    sparse_mx = nx.convert_matrix.to_scipy_sparse_matrix(scenegraph.g).tocoo().astype(np.float32)
-                    scenegraph.edge_mat = torch.from_numpy(np.vstack((sparse_mx.row, sparse_mx.col)).astype(np.int64))
+
+                    edge_idx = []
+                    edge_attr = []
+                    for src, dst, edge in scenegraph.g.edges(data=True):
+                        edge_idx.append((node_ordered[src], node_ordered[dst]))
+                        edge_attr.append(edge['object'].value)
+
+                    scenegraph.edge_mat = torch.transpose(torch.LongTensor(edge_idx), 0, 1)
+                    scenegraph.edge_attr = torch.LongTensor(edge_attr)
                     acc_number+=1
             sequences.append(sequence)
             sequence_labels.append(risk_label)

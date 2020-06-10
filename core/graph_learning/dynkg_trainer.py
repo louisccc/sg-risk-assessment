@@ -81,7 +81,7 @@ class DynKGTrainer(BaseTrainer):
 
     def build_model(self):
         if self.config.model == "gine":
-            self.model = GINE(None, len(self.feature_list), 2, self.config.num_layers, self.config.hidden_dim, self.config.pooling_type, self.config.readout_type, self.config.temporal_type).to(self.config.device)
+            self.model = MRGCN(None, len(self.feature_list), 2, self.config.num_layers, self.config.hidden_dim, self.config.pooling_type, self.config.readout_type, self.config.temporal_type).to(self.config.device)
 
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.config.learning_rate, weight_decay=self.config.weight_decay)
         self.loss_func = nn.CrossEntropyLoss(weight=self.class_weights.float().to(self.config.device))
@@ -100,7 +100,7 @@ class DynKGTrainer(BaseTrainer):
 
                 self.model.train()
                 self.optimizer.zero_grad()
-                               
+                
                 output = self.model.forward(sequence.x, sequence.edge_index, sequence.edge_attr, sequence.batch)
 
                 loss_train = self.loss_func(output.view(-1, 2), torch.LongTensor([label]).to(self.config.device))

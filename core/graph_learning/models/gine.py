@@ -3,14 +3,14 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torchnlp.nn import Attention
 from torch.nn import Sequential, Linear, ReLU, LSTM
-from torch_geometric.nn import GINEConv, SAGPooling, TopKPooling, ASAPooling
+from torch_geometric.nn import RGCNConv, SAGPooling, TopKPooling, ASAPooling
 from torch_geometric.nn import global_add_pool, global_mean_pool, global_max_pool, global_sort_pool
 
 
-class GINE(nn.Module):
+class MRGCN(nn.Module):
     
     def __init__(self, args, num_features, num_classes, num_layers, hidden_dim, pooling_type=None, readout_type=None, temporal_type=None):
-        super(GINE, self).__init__()
+        super(MRGCN, self).__init__()
 
         self.num_features = num_features
         self.num_classes  = num_classes
@@ -24,13 +24,10 @@ class GINE(nn.Module):
         self.readout_type = readout_type
         self.temporal_type = temporal_type
 
-        for layer in range(self.num_layers-1):
-            if layer == 0:
-                seq = Sequential(Linear(num_features, self.hidden_dim), ReLU(), Linear(self.hidden_dim, self.hidden_dim))
-            else:
-                seq = Sequential(Linear(self.hidden_dim, self.hidden_dim), ReLU(), Linear(self.hidden_dim, self.hidden_dim))
-            self.gin_convs.append(GINEConv(seq))
-            self.batch_norms.append(torch.nn.BatchNorm1d(self.hidden_dim))
+        self.dropout = 0.75
+        self.conv1 = RGCNConv(num_features, self.hidden_dim, 5, num_bases=30)
+        self.conv2 = RGCNConv(self.hidden_dim, self.hidden_dim, 5, num_bases=30)
+
 
         if self.pooling_type == "sagpool":
             self.pool1 = SAGPooling(self.hidden_dim, ratio=0.8)
@@ -52,11 +49,11 @@ class GINE(nn.Module):
 
     def forward(self, x, edge_index, edge_attr, batch=None):
         attn_weights = dict()
-        for layer in range(self.num_layers-1):
-            import pdb; pdb.set_trace()
-            x = F.relu(self.gin_convs[layer](x, edge_index, edge_attr))
-            x = self.batch_norms[layer](x)
 
+        x = F.relu(self.conv1(x, edge_index, edge_attr))
+        x = F.dropout(x, self.dropout, training=self.training)
+        x = self.conv2(x, edge_index, edge_attr)
+        
         if self.pooling_type == "sagpool":
             x, edge_index, _, batch, attn_weights['pool_perm'], attn_weights['pool_score'] = self.pool1(x, edge_index, edge_attr=edge_attr, batch=batch)
         elif self.pooling_type == "topk":

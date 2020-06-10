@@ -1,4 +1,0 @@
-*.egg
-pygcn.egg*
-*.pyc
-build/*

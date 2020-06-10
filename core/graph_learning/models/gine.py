@@ -26,10 +26,10 @@ class GINE(nn.Module):
 
         for layer in range(self.num_layers-1):
             if layer == 0:
-                nn = Sequential(Linear(num_features, self.hidden_dim), ReLU(), Linear(self.hidden_dim, self.hidden_dim))
+                seq = Sequential(Linear(num_features, self.hidden_dim), ReLU(), Linear(self.hidden_dim, self.hidden_dim))
             else:
-                nn = Sequential(Linear(self.hidden_dim, self.hidden_dim), ReLU(), Linear(self.hidden_dim, self.hidden_dim))
-            self.gin_convs.append(GINEConv(nn))
+                seq = Sequential(Linear(self.hidden_dim, self.hidden_dim), ReLU(), Linear(self.hidden_dim, self.hidden_dim))
+            self.gin_convs.append(GINEConv(seq))
             self.batch_norms.append(torch.nn.BatchNorm1d(self.hidden_dim))
 
         if self.pooling_type == "sagpool":
@@ -47,11 +47,13 @@ class GINE(nn.Module):
         self.fc1 = Linear(self.hidden_dim, self.hidden_dim)
         self.fc2 = Linear(self.hidden_dim, self.num_classes)
 
+        self.embed = torch.nn.Embedding(5, num_features)
+
 
     def forward(self, x, edge_index, edge_attr, batch=None):
         attn_weights = dict()
-
         for layer in range(self.num_layers-1):
+            import pdb; pdb.set_trace()
             x = F.relu(self.gin_convs[layer](x, edge_index, edge_attr))
             x = self.batch_norms[layer](x)
 

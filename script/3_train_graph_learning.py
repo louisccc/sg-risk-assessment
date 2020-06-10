@@ -3,6 +3,7 @@ sys.path.append(os.path.dirname(sys.path[0]))
 from core.graph_learning.node_trainer import GCNTrainer
 from core.graph_learning.graph_trainer import GraphTrainer
 from core.graph_learning.dyngraph_trainer import DynGraphTrainer
+from core.graph_learning.dynkg_trainer import DynKGTrainer
 from core.graph_learning import utils
 import pandas as pd
 import torch
@@ -27,6 +28,11 @@ def get_trainer(config):
     elif config.task =="dyngraph_classification":
         # classify a sequence of graphs using the risk label.
         trainer = DynGraphTrainer(other_argvs)
+
+    elif config.task =="dynkg_classification":
+        # classify a sequence of graphs using the risk label.
+        trainer = DynKGTrainer(other_argvs)
+
     return trainer
 
 if __name__ == "__main__":

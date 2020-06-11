@@ -100,7 +100,7 @@ class DynKGTrainer(BaseTrainer):
 
                 self.model.train()
                 self.optimizer.zero_grad()
-                
+
                 output = self.model.forward(sequence.x, sequence.edge_index, sequence.edge_attr, sequence.batch)
 
                 loss_train = self.loss_func(output.view(-1, 2), torch.LongTensor([label]).to(self.config.device))
@@ -130,7 +130,7 @@ class DynKGTrainer(BaseTrainer):
             sequence = next(iter(self.train_loader)).to(self.config.device)
 
             self.model.eval()
-            output = self.model.forward(sequence.x, sequence.edge_index, sequence.batch)
+            output = self.model.forward(sequence.x, sequence.edge_index, sequence.edge_attr, sequence.batch)
             
             # print(output, label)
             acc_test = accuracy(output.view(-1, 2), torch.LongTensor([label]).to(self.config.device))

@@ -15,7 +15,7 @@ from core.graph_learning.utils import accuracy
 from argparse import ArgumentParser
 from pathlib import Path
 from tqdm import tqdm
-from core.graph_learning.models.gine import *
+from core.graph_learning.models.mrgcn import *
 from torch_geometric.data import Data, DataLoader
 from sklearn.utils.class_weight import compute_class_weight
 
@@ -35,7 +35,7 @@ class Config:
         self.parser.add_argument('--batch_size', type=int, default=32, help='Number of graphs in a batch.')
         self.parser.add_argument('--device', type=str, default="cpu", help='The device to run on models (cuda or cpu) cpu in default.')
         self.parser.add_argument('--test_step', type=int, default=10, help='Number of epochs before testing the model.')
-        self.parser.add_argument('--model', type=str, default="gine", help="Model to be used intrinsically.")
+        self.parser.add_argument('--model', type=str, default="mrgcn", help="Model to be used intrinsically.")
         self.parser.add_argument('--num_layers', type=int, default=5, help="Number of layers in the neural network.")
         self.parser.add_argument('--hidden_dim', type=int, default=32, help="Hidden dimension in GIN.")
         self.parser.add_argument('--pooling_type', type=str, default="sagpool", help="Graph pooling type.")
@@ -80,7 +80,7 @@ class DynKGTrainer(BaseTrainer):
 
 
     def build_model(self):
-        if self.config.model == "gine":
+        if self.config.model == "mrgcn":
             self.model = MRGCN(None, len(self.feature_list), 2, self.config.num_layers, self.config.hidden_dim, self.config.pooling_type, self.config.readout_type, self.config.temporal_type).to(self.config.device)
 
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.config.learning_rate, weight_decay=self.config.weight_decay)

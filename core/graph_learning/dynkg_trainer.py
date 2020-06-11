@@ -84,7 +84,10 @@ class DynKGTrainer(BaseTrainer):
             self.model = MRGCN(None, len(self.feature_list), 2, self.config.num_layers, self.config.hidden_dim, self.config.pooling_type, self.config.readout_type, self.config.temporal_type).to(self.config.device)
 
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.config.learning_rate, weight_decay=self.config.weight_decay)
-        self.loss_func = nn.CrossEntropyLoss(weight=self.class_weights.float().to(self.config.device))
+        if self.class_weights.shape[0] < 2:
+            self.loss_func = nn.CrossEntropyLoss()
+        else:    
+           self.loss_func = nn.CrossEntropyLoss(weight=self.class_weights.float().to(self.config.device))
 
     def train(self):
 

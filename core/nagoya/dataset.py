@@ -34,10 +34,11 @@ class DataSet:
                    scaling='no scaling', scale_x=0.1, scale_y=0.1):
 
         foldernames = [f for f in sorted(os.listdir(data_dir),key=int) if f.isnumeric() and not f.startswith('.')]
-        print(foldernames)
-        #need to sort, global variable foldernames when read one hot match
-
+        
         self.read_image_data(str(data_dir/foldernames[0]), scaling=scaling, scale_x=scale_x, scale_y=scale_y)
+
+        if len(self.image_seq) == 0:
+            raise Exception("No image in %s" % (data_dir/foldernames[0]))
         
         if option == 'fixed frame amount':
             self.video = np.zeros([len(foldernames), number_of_frames, self.image_seq[000].shape[0],

@@ -10,7 +10,6 @@ from Mask_RCNN.mask_rcnn import model as modellib
 from Mask_RCNN.mask_rcnn import visualize
 from Mask_RCNN.mask_rcnn import coco
 
-from pathlib import Path
 
 class DetectObjects:
 
@@ -21,8 +20,8 @@ class DetectObjects:
         self.pretrained_model_path = pretrained_model_path.resolve()
 
     def save_masked_images(self):
-        # Import COCO config
         
+        # Import COCO config
         ROOT_DIR = self.pretrained_model_path
         sys.path.append(str(ROOT_DIR))  # To find local version of the librar
         MODEL_DIR = ROOT_DIR / "logs"
@@ -46,7 +45,6 @@ class DetectObjects:
         model.load_weights(COCO_MODEL_PATH, by_name=True)
 
         # COCO Class names
-
         class_names = ['BG..', 'person', 'bicycle', 'car', 'motorcycle', 'airplane',
                        'bus', 'train', 'truck', 'boat', 'traffic light',
                        'fire hydrant', 'stop sign', 'parking meter', 'bench', 'bird',
@@ -69,31 +67,35 @@ class DetectObjects:
         for foldername in foldernames:
             CURRENT_IMAGE_DIR = IMAGE_DIR / foldername / 'raw_images'
             CURRENT_OUTPUT_DIR = OUTPUT_DIR / foldername
-            exists = os.path.isdir(CURRENT_OUTPUT_DIR)
 
-            if exists:
+            if CURRENT_OUTPUT_DIR.exists():
                 continue
 	
             print('Processing Folder %s' % str(CURRENT_IMAGE_DIR))
-            
             CURRENT_OUTPUT_DIR.mkdir(exist_ok=True)
 
-            filenames = sorted(os.listdir(CURRENT_IMAGE_DIR))
+            image_file_names = sorted(os.listdir(CURRENT_IMAGE_DIR))
             
-            for filename in filenames:
-               
-                CURRENT_IMAGE_PATH= str(CURRENT_IMAGE_DIR / filename)
-                OUTPUT_IMAGE_PATH = str(CURRENT_OUTPUT_DIR / filename)
+            for image_file_name in image_file_names:
+                if image_file_name.startswith('.'):
+                    continue
 
-                if not filename.startswith('.'):
+                CURRENT_IMAGE_PATH= CURRENT_IMAGE_DIR / image_file_name
+                OUTPUT_IMAGE_PATH = CURRENT_OUTPUT_DIR / image_file_name
+                
+                if CURRENT_IMAGE_PATH.suffix.lower() == ".jpg":
+                    img = skimage.io.imread(CURRENT_IMAGE_PATH) 
+                elif CURRENT_IMAGE_PATH.suffix.lower() == ".png":
                     img_rgba = skimage.io.imread(CURRENT_IMAGE_PATH)
                     img = skimage.color.rgba2rgb(img_rgba)
                     img=img*255
-                    results = model.detect([img], verbose=1)
-                    r = results[0]
-                    r['masks'], r['rois'], r['class_ids'], r['scores'] = self.filter_masks(r['masks'], r['rois'], r['class_ids'], r['scores'])
-                    visualize.display_instances(img, r['rois'], r['masks'], r['class_ids'], class_names, r['scores'], save_option=1, save_path=str(CURRENT_OUTPUT_DIR / filename))
-                    plt.close('all')
+                results = model.detect([img], verbose=1)
+                import pdb; pdb.set_trace()
+                r = results[0]
+                # r['masks'], r['rois'], r['class_ids'], r['scores'] = self.filter_masks(r['masks'], r['rois'], r['class_ids'], r['scores'])
+                # doesn't require filering in carla scenario as the placement of camera is perfect. 
+                visualize.display_instances(img, r['rois'], r['masks'], r['class_ids'], class_names, r['scores'], save_option=1, save_path=OUTPUT_IMAGE_PATH)
+                plt.close('all')
 
     @staticmethod
     def filter_masks(masks, rois, class_ids, scores):

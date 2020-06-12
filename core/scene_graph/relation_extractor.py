@@ -63,6 +63,10 @@ class Relations(Enum):
     partOf = 2
     instanceOf = 3
     hasAttribute = 4
+    frontLeft = 5
+    frontRight = 6
+    rearLeft = 7
+    rearRight = 8
 
 #This class extracts relations for every pair of entities in a scene
 class RelationExtractor:
@@ -108,6 +112,9 @@ class RelationExtractor:
         relation_list = []
         if(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH):
             relation_list.append([actor1, Relations.near, actor2])
+
+        relation_list.append(self.extract_directional_relation(actor1, actor2))
+        relation_list.append(self.extract_directional_relation(actor2, actor1))
         return relation_list
             
     def extract_relations_car_lane(self, actor1, actor2):
@@ -119,28 +126,38 @@ class RelationExtractor:
         
     def extract_relations_car_light(self, actor1, actor2):
         relation_list = []
+        relation_list.append(self.extract_directional_relation(actor1, actor2))
+        relation_list.append(self.extract_directional_relation(actor2, actor1))
         return relation_list
         
     def extract_relations_car_sign(self, actor1, actor2):
         relation_list = []
+        relation_list.append(self.extract_directional_relation(actor1, actor2))
+        relation_list.append(self.extract_directional_relation(actor2, actor1))
         return relation_list
         
     def extract_relations_car_ped(self, actor1, actor2):
         relation_list = []
         if(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH):
             relation_list.append([actor1, Relations.near, actor2])
+        relation_list.append(self.extract_directional_relation(actor1, actor2))
+        relation_list.append(self.extract_directional_relation(actor2, actor1))
         return relation_list
         
     def extract_relations_car_bicycle(self, actor1, actor2):
         relation_list = []
         if(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH):
             relation_list.append([actor1, Relations.near, actor2])
+        relation_list.append(self.extract_directional_relation(actor1, actor2))
+        relation_list.append(self.extract_directional_relation(actor2, actor1))
         return relation_list
         
     def extract_relations_car_moto(self, actor1, actor2):
         relation_list = []
         if(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH):
             relation_list.append([actor1, Relations.near, actor2])
+        relation_list.append(self.extract_directional_relation(actor1, actor2))
+        relation_list.append(self.extract_directional_relation(actor2, actor1))
         return relation_list
         
         
@@ -148,18 +165,24 @@ class RelationExtractor:
         relation_list = []
         if(self.euclidean_distance(actor1, actor2) < MOTO_PROXIMITY_THRESH):
             relation_list.append([actor1, Relations.near, actor2])
+        relation_list.append(self.extract_directional_relation(actor1, actor2))
+        relation_list.append(self.extract_directional_relation(actor2, actor1))
         return relation_list
         
     def extract_relations_moto_bicycle(self, actor1, actor2):
         relation_list = []
         if(self.euclidean_distance(actor1, actor2) < MOTO_PROXIMITY_THRESH):
             relation_list.append([actor1, Relations.near, actor2])
+        relation_list.append(self.extract_directional_relation(actor1, actor2))
+        relation_list.append(self.extract_directional_relation(actor2, actor1))
         return relation_list
         
     def extract_relations_moto_ped(self, actor1, actor2):
         relation_list = []
         if(self.euclidean_distance(actor1, actor2) < MOTO_PROXIMITY_THRESH):
             relation_list.append([actor1, Relations.near, actor2])
+        relation_list.append(self.extract_directional_relation(actor1, actor2))
+        relation_list.append(self.extract_directional_relation(actor2, actor1))
         return relation_list
         
     def extract_relations_moto_lane(self, actor1, actor2):
@@ -170,10 +193,14 @@ class RelationExtractor:
         
     def extract_relations_moto_light(self, actor1, actor2):
         relation_list = []
+        relation_list.append(self.extract_directional_relation(actor1, actor2))
+        relation_list.append(self.extract_directional_relation(actor2, actor1))
         return relation_list
         
     def extract_relations_moto_sign(self, actor1, actor2):
         relation_list = []
+        relation_list.append(self.extract_directional_relation(actor1, actor2))
+        relation_list.append(self.extract_directional_relation(actor2, actor1))
         return relation_list
         
 
@@ -181,12 +208,16 @@ class RelationExtractor:
         relation_list = []
         if(self.euclidean_distance(actor1, actor2) < BICYCLE_PROXIMITY_THRESH):
             relation_list.append([actor1, Relations.near, actor2])
+        relation_list.append(self.extract_directional_relation(actor1, actor2))
+        relation_list.append(self.extract_directional_relation(actor2, actor1))
         return relation_list
         
     def extract_relations_bicycle_ped(self, actor1, actor2):
         relation_list = []
         if(self.euclidean_distance(actor1, actor2) < BICYCLE_PROXIMITY_THRESH):
             relation_list.append([actor1, Relations.near, actor2])
+        relation_list.append(self.extract_directional_relation(actor1, actor2))
+        relation_list.append(self.extract_directional_relation(actor2, actor1))
         return relation_list
         
     def extract_relations_bicycle_lane(self, actor1, actor2):
@@ -197,10 +228,14 @@ class RelationExtractor:
         
     def extract_relations_bicycle_light(self, actor1, actor2):
         relation_list = []
+        relation_list.append(self.extract_directional_relation(actor1, actor2))
+        relation_list.append(self.extract_directional_relation(actor2, actor1))
         return relation_list
         
     def extract_relations_bicycle_sign(self, actor1, actor2):
         relation_list = []
+        relation_list.append(self.extract_directional_relation(actor1, actor2))
+        relation_list.append(self.extract_directional_relation(actor2, actor1))
         return relation_list
         
         
@@ -208,6 +243,8 @@ class RelationExtractor:
         relation_list = []
         if(self.euclidean_distance(actor1, actor2) < PED_PROXIMITY_THRESH):
             relation_list.append([actor1, Relations.near, actor2])
+        relation_list.append(self.extract_directional_relation(actor1, actor2))
+        relation_list.append(self.extract_directional_relation(actor2, actor1))
         return relation_list
            
     def extract_relations_ped_lane(self, actor1, actor2):
@@ -221,10 +258,14 @@ class RelationExtractor:
         #proximity relation could indicate ped waiting for crosswalk at a light
         if(self.euclidean_distance(actor1, actor2) < PED_PROXIMITY_THRESH):
             relation_list.append([actor1, Relations.near, actor2])
+        relation_list.append(self.extract_directional_relation(actor1, actor2))
+        relation_list.append(self.extract_directional_relation(actor2, actor1))
         return relation_list
         
     def extract_relations_ped_sign(self, actor1, actor2):
         relation_list = []
+        relation_list.append(self.extract_directional_relation(actor1, actor2))
+        relation_list.append(self.extract_directional_relation(actor2, actor1))
         return relation_list
         
 
@@ -242,14 +283,20 @@ class RelationExtractor:
 
     def extract_relations_light_light(self, actor1, actor2):
         relation_list = []
+        relation_list.append(self.extract_directional_relation(actor1, actor2))
+        relation_list.append(self.extract_directional_relation(actor2, actor1))
         return relation_list
         
     def extract_relations_light_sign(self, actor1, actor2):
         relation_list = []
+        relation_list.append(self.extract_directional_relation(actor1, actor2))
+        relation_list.append(self.extract_directional_relation(actor2, actor1))
         return relation_list
 
     def extract_relations_sign_sign(self, actor1, actor2):
         relation_list = []
+        relation_list.append(self.extract_directional_relation(actor1, actor2))
+        relation_list.append(self.extract_directional_relation(actor2, actor1))
         return relation_list
     
     
@@ -267,3 +314,22 @@ class RelationExtractor:
             return True
         else:
             return False
+    
+    def extract_directional_relation(self, actor1, actor2):
+        x1 = actor1.attr['location'][0]
+        x2 = actor2.attr['location'][0]
+        y1 = actor1.attr['location'][1]
+        y2 = actor2.attr['location'][1]
+        
+        x_diff = x2 - x1
+        y_diff = y2 - y1
+        if (x_diff < 0):
+            if (y_diff < 0):
+                return [actor1, Relations.rearLeft, actor2]
+            else:
+                return [actor1, Relations.rearRight, actor2]
+        else:
+            if (y_diff < 0):
+                return [actor1, Relations.frontLeft, actor2]
+            else:
+                return [actor1, Relations.frontRight, actor2]

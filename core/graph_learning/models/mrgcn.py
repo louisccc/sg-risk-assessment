@@ -9,7 +9,7 @@ from torch_geometric.nn import global_add_pool, global_mean_pool, global_max_poo
 
 class MRGCN(nn.Module):
     
-    def __init__(self, args, num_features, num_classes, num_layers, hidden_dim, pooling_type=None, readout_type=None, temporal_type=None):
+    def __init__(self, args, num_features, num_relations, num_classes, num_layers, hidden_dim, pooling_type=None, readout_type=None, temporal_type=None):
         super(MRGCN, self).__init__()
 
         self.num_features = num_features
@@ -25,8 +25,8 @@ class MRGCN(nn.Module):
         self.temporal_type = temporal_type
 
         self.dropout = 0.75
-        self.conv1 = RGCNConv(num_features, self.hidden_dim, 5, num_bases=30)
-        self.conv2 = RGCNConv(self.hidden_dim, self.hidden_dim, 5, num_bases=30)
+        self.conv1 = RGCNConv(num_features, self.hidden_dim, 9, num_bases=30)
+        self.conv2 = RGCNConv(self.hidden_dim, self.hidden_dim, 9, num_bases=30)
 
 
         if self.pooling_type == "sagpool":
@@ -92,5 +92,4 @@ class MRGCN(nn.Module):
         x = F.relu(self.fc1(x))
         x = F.dropout(x, p=0.5, training=self.training)
         x = self.fc2(x)
-
         return F.log_softmax(x, dim=-1)

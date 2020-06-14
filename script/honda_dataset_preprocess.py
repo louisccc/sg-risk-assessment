@@ -9,23 +9,27 @@ from os import path
 
 import h5py
 import numpy as np
-import tensorflow as tf
 from datetime import datetime
 from tqdm import tqdm
 
 from pathlib import Path
+import numpy as np
+import sys
+import pickle as pkl
+import cv2
+import pprint
 
 
 class DataIndex:
-    def __init__(self, root, annotation_dir, cache_dir):
+    def __init__(self, root, annotation_dir, cache_dir, index_path):
         """
         arguments
 
         root:            string, path to the dataset
         annotation_dir: string, path to dir with eaf files
         """
-        if path.exists('saved_index.pkl'):
-            cache_data = pkl.load(open("saved_index.pkl", 'rb'))
+        if index_path.exists():
+            cache_data = pkl.load(open(str(index_path), 'rb'))
 
             self.root = cache_data['root']
             self.annotation_dir = cache_data['annotation_dir']
@@ -140,16 +144,18 @@ class GeneralCfg:
     def __init__(self):
         #self.id = "GeneralSensors"
         # ############## Global Parameters ##############
-        self.root = Path(r"Z:\louisccc\av\honda_data\release_2019_01_20")
+        self.root = Path(r"/home/aung/NAS/louisccc/av/honda_data/release_2019_01_20")
         self.session_template = "{0}/{1}_{2}_{3}_ITS1/{4}/"
         self.annotation_dir = self.root / "EAF"
         self.sampling_frequency = 3
         self.video_framerate = 30
 
-        self.extracted_features_dir = Path(r"Z:\louisccc\av\honda_data\cache\HRI_final_release")
-        self.cache_dir = Path(r"Z:\louisccc\av\honda_data\cache\HRI_final_release")
+        self.extracted_features_dir = Path(r"/home/aung/NAS/louisccc/av/honda_data/cache/HRI_final_release")
+        self.cache_dir = Path(r"/home/aung/NAS/louisccc/av/honda_data/cache/HRI_final_release")
         self.cache_format = "npy"
         self.cache_precision = "fp16"
+
+        self.index_path = Path(r"/home/aung/NAS/louisccc/av/honda_data/EAF_parsing/saved_index.pkl")
 
         # set final split here
         self.train_session_set = [
@@ -216,40 +222,16 @@ class GeneralCfg:
         self.jobs = 2                                                          # number of readers during LSTM training
     #======================================================================
 
-
-
-
-
-print("Configuration...")
-cfg = GeneralCfg()
-index = DataIndex(cfg.root, cfg.annotation_dir, cfg.cache_dir)
-print("Total number of data records: {}".format(index.events_pd.shape[0]))
-if not path.exists("saved_index.pkl"):
-    print("Dumping index on disk...")
-    pkl.dump(index, open("saved_index.pkl", 'wb'))
-print(index)
-
-cache_data = pkl.load(open("saved_index.pkl", 'rb'))
-# layer_ix is the 4-layer representation proposed in the paper
-# Goal: 0, Stimulus: 6; Cause: 1; Attention: 3, 5; the rest are used for additional note: 2, 4
-cache_data['layer_ix'].items() 
-
-
-# event_type_ix is all the categories defined in the 4-layer representation
-# Event_type_ix 0~12 belongs to those events defined in "Goal-oriented" layer. Note that we exclude 9 from the experiments conducted in CVPR'18.
-# Event type_ix 16 (congestion), 17 (sign), 18 (red light), 19 (crossing vehicle), 20 (parked vehicle), 22 (crossing pedestrian) 
-# are those objects annotated in "Cause" layer 
-cache_data['event_type_ix'].items()
-
-
-dest = '/home/nronghe/'
-import numpy as np
-import sys
-import pickle as pkl
-
-import os
-import cv2
-import subprocess
+def print_metadata(cache_data):
+    # layer_ix is the 4-layer representation proposed in the paper
+    # Goal: 0, Stimulus: 6; Cause: 1; Attention: 3, 5; the rest are used for additional note: 2, 4
+    pprint.pprint(cache_data['layer_ix'])
+    
+    # event_type_ix is all the categories defined in the 4-layer representation
+    # Event_type_ix 0~12 belongs to those events defined in "Goal-oriented" layer. Note that we exclude 9 from the experiments conducted in CVPR'18.
+    # Event type_ix 16 (congestion), 17 (sign), 18 (red light), 19 (crossing vehicle), 20 (parked vehicle), 22 (crossing pedestrian) 
+    # are those objects annotated in "Cause" layer 
+    pprint.pprint(cache_data['event_type_ix'])
 
 def get_frame_types(video_fn):
     command = 'ffprobe -v error -show_entries frame=pict_type -of default=noprint_wrappers=1'.split()
@@ -268,7 +250,7 @@ def save_i_keyframes(video_fn):
         for frame_no in i_frames:
             cap.set(cv2.CAP_PROP_POS_FRAMES, frame_no)
             ret, frame = cap.read()
-            outname = "/home/nronghe/images/"+basename+'_i_frame_'+str(frame_no)+'.jpg'
+            outname = dest / "images" /  (basename+'_i_frame_'+str(frame_no)+'.jpg')
             frame = cv2.resize(frame,(1024,1024))
             cv2.imwrite(outname, frame)
             print ('Saved: '+outname)
@@ -276,71 +258,49 @@ def save_i_keyframes(video_fn):
     else:
         print ('No I-frames in '+video_fn)
 
-
-
-
 def get_length(filename):
     def get_sec(time_str):
         h, m, s = time_str.split(b':')
         return int(h) * 3600 + int(m) * 60 + float(s)
 
     result = subprocess.Popen(["ffprobe", filename],
-                              stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     time_string = [x for x in result.stdout.readlines() if b"Duration" in x][0]
     return get_sec(time_string.split(b",")[0].split(b": ")[-1])
 
 def map_to_video_file(session_id):
     session_template = cfg.session_template  # "{0}/{1}_{2}_{3}_ITS_data_collection/{4}_ITS/"
     preview_template = session_template.format(cfg.root,
-                                               session_id[:4],
-                                               session_id[4:6],
-                                               session_id[6:8],
-                                               session_id) + "camera/center/*.mp4"
+                                            session_id[:4],
+                                            session_id[4:6],
+                                            session_id[6:8],
+                                            session_id) + "camera/center/*.mp4"
     video_full_path = glob.glob(preview_template)[0]
-    save_i_keyframes(video_full_path)
+    
     return video_full_path
 
 
-fps = cfg.sampling_frequency
-
-cache_data = pkl.load(open("saved_index.pkl", 'rb'))
-
-# The following is used for parsing labels from "Cause" layer
-layer='Cause'
-
-interesting_keys = [k for k, v in cache_data['layer_ix'].items() if layer in v]
-
-events = cache_data['events_pd'].loc[cache_data['events_pd']["layer"].isin(interesting_keys)]
-
-for session_id in cfg.validation_session_set[10:15]:#cfg.train_session_set:
-    print("session_id: %s\n" % (session_id))
+if __name__ == "__main__":
     
-    total_length = int(cfg.sampling_frequency * get_length(map_to_video_file(session_id)))
+    print("Configuration...")
+    cfg = GeneralCfg()
+    index = DataIndex(cfg.root, cfg.annotation_dir, cfg.cache_dir, cfg.index_path)
+    print("Total number of data records: {}".format(index.events_pd.shape[0]))
 
-    target_dict = np.zeros(total_length, np.int32)
+    cache_data = pkl.load(open(str(cfg.index_path), 'rb'))
+    # print_metadata(cache_data)
 
-    if len(events[events['session_id'] == session_id]) != 0:
-        for row in events[events['session_id'] == session_id].iterrows():
-            start, end = int(row[1]["start"] / 1000 * fps), int(row[1]["end"] / 1000 * fps)
-            event_type = row[1]["event_type"]
-            if event_type > 15 and event_type < 23:
-                if event_type == 21:
-                    continue
-                elif event_type == 22:
-                    target_dict[start: end] = event_type - 15 - 1
-                else:
-                    target_dict[start: end] = event_type - 15
+    dest = Path('/home/aung/NAS/louisccc/av/honda_data/lane-change').resolve()
 
-        np.save(dest + session_id + '.npy', target_dict)
-    else:
-        np.save(dest + session_id + '.npy', target_dict)
-        
-        
-# 0: backgroud       
-# 1'前方車流 congestion',
-# 2'路標 Sign',
-# 3:'紅燈 red light',
-# 4: '車輛橫穿 crossing vehicle',
-# 5: '路旁停的車 Parked vehicle',
-# 6: '行人穿越 crossing pedestrian'      
+    event_types = [3, 5]
+
+    events = cache_data['events_pd'].loc[cache_data['events_pd']["event_type"].isin(event_types)]
+
+    for session_id in (cfg.train_session_set + cfg.validation_session_set):
+        print("session_id: %s\n" % (session_id))
+        video_full_path = map_to_video_file(session_id)
+        save_i_keyframes(video_full_path)
+        import pdb; pdb.set_trace()
+       
+            
 

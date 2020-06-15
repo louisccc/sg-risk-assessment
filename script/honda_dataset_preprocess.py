@@ -233,42 +233,7 @@ def print_metadata(cache_data):
     # are those objects annotated in "Cause" layer 
     pprint.pprint(cache_data['event_type_ix'])
 
-def get_frame_types(video_fn):
-    command = 'ffprobe -v error -show_entries frame=pict_type -of default=noprint_wrappers=1'.split()
-    out = subprocess.check_output(command + [video_fn]).decode()
-    frame_types = out.replace('pict_type=','').split()
-    return zip(range(len(frame_types)), frame_types)
-
-def save_i_keyframes(video_fn):
-    if not os.path.exists("output_images"):
-        os.mkdir("output_images")
-    frame_types = get_frame_types(video_fn)
-    i_frames = [x[0] for x in frame_types if x[1]=='I']
-    if i_frames:
-        basename = os.path.splitext(os.path.basename(video_fn))[0]
-        cap = cv2.VideoCapture(video_fn)
-        for frame_no in i_frames:
-            cap.set(cv2.CAP_PROP_POS_FRAMES, frame_no)
-            ret, frame = cap.read()
-            outname = dest / "images" /  (basename+'_i_frame_'+str(frame_no)+'.jpg')
-            frame = cv2.resize(frame,(1024,1024))
-            cv2.imwrite(outname, frame)
-            print ('Saved: '+outname)
-        cap.release()
-    else:
-        print ('No I-frames in '+video_fn)
-
-def get_length(filename):
-    def get_sec(time_str):
-        h, m, s = time_str.split(b':')
-        return int(h) * 3600 + int(m) * 60 + float(s)
-
-    result = subprocess.Popen(["ffprobe", filename],
-                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    time_string = [x for x in result.stdout.readlines() if b"Duration" in x][0]
-    return get_sec(time_string.split(b",")[0].split(b": ")[-1])
-
-def map_to_video_file(session_id):
+def get_video_path(session_id):
     session_template = cfg.session_template  # "{0}/{1}_{2}_{3}_ITS_data_collection/{4}_ITS/"
     preview_template = session_template.format(cfg.root,
                                             session_id[:4],
@@ -290,17 +255,28 @@ if __name__ == "__main__":
     cache_data = pkl.load(open(str(cfg.index_path), 'rb'))
     # print_metadata(cache_data)
 
-    dest = Path('/home/aung/NAS/louisccc/av/honda_data/lane-change').resolve()
+    dest = Path('/home/aung/NAS/louisccc/av/honda_data/lane-change-clips').resolve()
 
     event_types = [3, 5]
 
     events = cache_data['events_pd'].loc[cache_data['events_pd']["event_type"].isin(event_types)]
 
-    for session_id in (cfg.train_session_set + cfg.validation_session_set):
-        print("session_id: %s\n" % (session_id))
-        video_full_path = map_to_video_file(session_id)
-        save_i_keyframes(video_full_path)
-        import pdb; pdb.set_trace()
-       
-            
+    fps = cfg.video_framerate
+    frame_padding = 30
+    for idx, row in events.iterrows():
+        start, end = int(row["start"] / 1000 * fps), int(row["end"] / 1000 * fps)
+        session_id = row['session_id']
 
+        out_path =  dest / (str(idx)+"_"+ session_id)
+        out_path.mkdir(exist_ok=True)
+
+        video_path = get_video_path(session_id)
+
+        cap = cv2.VideoCapture(video_path)
+        for frame_no in range(start - frame_padding, end + frame_padding, cfg.sampling_frequency):
+            cap.set(cv2.CAP_PROP_POS_FRAMES, frame_no)
+            ret, frame = cap.read()
+            outname = out_path /  (str(frame_no)+'.jpg')
+            frame = cv2.resize(frame,(1024,1024))
+            cv2.imwrite(str(outname), frame)
+        cap.release()

@@ -277,6 +277,6 @@ if __name__ == "__main__":
             cap.set(cv2.CAP_PROP_POS_FRAMES, frame_no)
             ret, frame = cap.read()
             outname = out_path /  (str(frame_no)+'.jpg')
-            frame = cv2.resize(frame,(1024,1024))
+            # frame = cv2.resize(frame,(1024,1024))
             cv2.imwrite(str(outname), frame)
         cap.release()

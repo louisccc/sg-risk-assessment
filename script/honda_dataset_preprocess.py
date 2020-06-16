@@ -60,14 +60,15 @@ class HondaDataSetHandler:
             video_path = self.get_video_path(session_id)
 
             cap = cv2.VideoCapture(video_path)
+            max_frame_no = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
             
             for frame_no in range(start - frame_padding, end + frame_padding, sampling_freq):
-                cap.set(cv2.CAP_PROP_POS_FRAMES, frame_no)
-                ret, frame = cap.read()
-                outname = out_path /  (str(frame_no)+'.jpg')
-                # frame = cv2.resize(frame,(1024,1024))
-                cv2.imwrite(str(outname), frame)
-            
+                if frame_no > 0  and frame_no < max_frame_no:
+                    cap.set(cv2.CAP_PROP_POS_FRAMES, frame_no)
+                    ret, frame = cap.read()
+                    outname = out_path /  (str(frame_no)+'.jpg')
+                    # frame = cv2.resize(frame,(1024,1024))
+                    cv2.imwrite(str(outname), frame)
             cap.release()
 
 

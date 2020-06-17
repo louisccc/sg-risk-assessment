@@ -11,6 +11,7 @@ import random
 
 from core.graph_learning.bases import BaseTrainer
 from core.scene_graph.graph_process import SceneGraphSequenceGenerator
+from core.scene_graph.relation_extractor import Relations
 from core.graph_learning.utils import accuracy
 from argparse import ArgumentParser
 from pathlib import Path
@@ -81,7 +82,7 @@ class DynKGTrainer(BaseTrainer):
 
     def build_model(self):
         if self.config.model == "mrgcn":
-            self.model = MRGCN(None, len(self.feature_list), 2, self.config.num_layers, self.config.hidden_dim, self.config.pooling_type, self.config.readout_type, self.config.temporal_type).to(self.config.device)
+            self.model = MRGCN(None, len(self.feature_list), max([r.value for r in Relations])+1, 2, self.config.num_layers, self.config.hidden_dim, self.config.pooling_type, self.config.readout_type, self.config.temporal_type).to(self.config.device)
 
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.config.learning_rate, weight_decay=self.config.weight_decay)
         if self.class_weights.shape[0] < 2:
@@ -107,12 +108,10 @@ class DynKGTrainer(BaseTrainer):
                 output = self.model.forward(sequence.x, sequence.edge_index, sequence.edge_attr, sequence.batch)
 
                 loss_train = self.loss_func(output.view(-1, 2), torch.LongTensor([label]).to(self.config.device))
-
                 loss_train.backward()
 
                 self.optimizer.step()
-
-                acc_loss_train += loss_train.detach().cpu().numpy()
+                acc_loss_train += loss_train.detach().cpu().item()
 
             print('')
             print('Epoch: {:04d},'.format(epoch_idx), 'loss_train: {:.4f}'.format(acc_loss_train))

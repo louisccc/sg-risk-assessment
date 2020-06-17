@@ -13,8 +13,9 @@ class Config:
         self.parser.add_argument('--input_path', type=str, default="../input/synthesis_data", help="Path to input.")
         self.parser.add_argument('--src_path', type=str, default="../input/synthesis_data", help="Path to source.")
         self.parser.add_argument('--dest_path', type=str, default="../input/synthesis_data", help="Path to destination.")
-        self.parser.add_argument('--risk_label', type=lambda x: (str(x).lower() == 'true'), default=False, help='Recursive loading gifs')
-        self.parser.add_argument('--data_path', type=lambda x: (str(x).lower() == 'true'), default=False, help='Recursive loading gifs')
+        self.parser.add_argument('--risk_label', type=lambda x: (str(x).lower() == 'true'), default=False, help='Write risk label as txt file')
+        self.parser.add_argument('--data_path', type=lambda x: (str(x).lower() == 'true'), default=False, help='Edit the path to gif and risk label')
+        self.parser.add_argument('--csv', type=lambda x: (str(x).lower() == 'true'), default=False, help='Create LCtable.csv')
 
         self.parser.add_argument('--task', type=str, default='createLCtable', help='Task to perform')
 
@@ -27,8 +28,24 @@ class Config:
         self.src_base_dir = Path(self.src_path).resolve()
         self.dest_base_dir = Path(self.dest_path).resolve()
 
-def write_data_path(file_path):
+def create_csv(file_path):
 	input_path = file_path / 'lane-change'
+	lctable = input_path / 'LCTable.csv'	
+
+	foldernames = [f for f in sorted(os.listdir(input_path)) if f.isnumeric()]
+	foldernames = sorted(foldernames,key=int)
+
+	csvfile = open(lctable, 'w', newline='')
+	filewriter = csv.writer(csvfile)
+
+	for foldername in tqdm(foldernames):
+		video_path = input_path / foldername
+		gif_path = video_path / "lane_change.gif"
+		#import pdb;pdb.set_trace()
+		filewriter.writerow([foldername,'',str(video_path),str(gif_path)])
+
+def write_data_path(file_path):
+	input_path = file_path / 'lane-change-804'
 	lctable = input_path / 'LCTable.csv'	
 
 	df = pd.read_csv(lctable, header=None, index_col=None)
@@ -40,7 +57,7 @@ def write_data_path(file_path):
 		video_path = input_path / foldername
 		gif_path = video_path / "lane_change.gif"
 
-		df.iloc[int(foldername),0] = int(foldername)
+		#df.iloc[int(foldername),0] = int(foldername)
 
 		#video path in column 3, gif path in column 4
 		df.iloc[int(foldername),3] = video_path
@@ -81,15 +98,24 @@ def merge_dataset(src_path, dest_path):
 		new_path = dest_path / new_foldername
 		old_path = src_path / src_foldername
 
-		shutil.copytree(old_path,new_path)
+		try:
+			shutil.copytree(old_path,new_path)
+		except shutil.Error as err:
+		    #import pdb;pdb.set_trace()
+		    errors = err.args[0]
+		    for error in errors:
+		        src, dst, msg = error
+		        print(src,dst)
+		        shutil.copy2(src, dst)
 
 	
 
 if __name__ == '__main__':
 	config = Config(sys.argv[1:])
-	
 
 	if config.task=='createLCtable':
+		if config.create_csv == True:
+			create_csv(config.input_base_dir)
 		#write video and gif path to table
 		if config.data_path == True:
 			write_data_path(config.input_base_dir)	

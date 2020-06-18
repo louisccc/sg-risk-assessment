@@ -59,9 +59,9 @@ def write_data_path(file_path):
 
 		#df.iloc[int(foldername),0] = int(foldername)
 
-		#video path in column 3, gif path in column 4
-		df.iloc[int(foldername),3] = video_path
-		df.iloc[int(foldername),4] = gif_path
+		#video path in column 2, gif path in column 3
+		df.iloc[int(foldername),2] = video_path
+		df.iloc[int(foldername),3] = gif_path
 		
 	df.to_csv(lctable,header=None,index=None)
 

@@ -16,9 +16,10 @@ class HondaDataSetHandler:
         self.video_framerate = 30
         self.index_path = Path(r"/home/aung/NAS/louisccc/av/honda_data/EAF_parsing/saved_index.pkl").resolve()
         self.cache_data = pkl.load(open(str(self.index_path), 'rb'))
-        self.dest = Path(r'/home/aung/NAS/louisccc/av/honda_data/lane-change-clips').resolve()
+        self.dest = Path(r'/home/aung/NAS/louisccc/av/honda_data/lane-change').resolve()
+        self.dest.mkdir(exist_ok=True)
 
-        print_metadata(cfg.cache_data)
+        # self.print_metadata(cfg.cache_data)
 
     def print_metadata(self):
         # layer_ix is the 4-layer representation proposed in the paper

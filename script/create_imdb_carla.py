@@ -33,19 +33,22 @@ def encode_filenames(data, filename_to_idx):
 
 
 def add_images(h5_file, args):
-    fns = []; ids = []; idx = []
+    fns = []; ids = []; idx = []; lcids = []
 
     img_dir = Path(args.image_dir).resolve()
     for i, filepath in enumerate(img_dir.glob('**/raw_images/*'+args.img_format)):
         fns.append(str(filepath))
-        img_id = filepath.parts[-3] + filepath.stem
-        ids.append(int(img_id))
+        lcids.append(int(filepath.parts[-3]))
+        ids.append(int(filepath.stem))
         idx.append(i)
 
     ids = np.array(ids, dtype=np.int32)
     idx = np.array(idx, dtype=np.int32)
+    lcids = np.array(lcids, dtype=np.int32)
+
     h5_file.create_dataset('image_ids', data=ids)
     h5_file.create_dataset('valid_idx', data=idx)
+    h5_file.create_dataset('lanechange_ids', data=lcids)
 
     num_images = len(fns)
 

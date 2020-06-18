@@ -99,7 +99,7 @@ def add_images(h5_file, args):
 
 
 def main(args):
-    h5_fn = 'imdb_' + str(args.image_size) + '.h5'
+    h5_fn = 'imdb_honda_' + str(args.image_size) + '.h5'
     # write the h5 file
     h5_file = os.path.join(args.imh5_dir, h5_fn)
     f = h5py.File(h5_file, 'w')

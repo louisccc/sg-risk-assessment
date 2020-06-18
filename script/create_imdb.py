@@ -1,10 +1,12 @@
 import argparse, os, json, string
-from Queue import Queue
+from queue import Queue
 from threading import Thread, Lock
 
 import h5py
 import numpy as np
-from scipy.misc import imread, imresize
+from cv2 import imread
+from PIL import Image
+from pathlib import Path
 
 def build_filename_dict(data):
     # First make sure all basenames are unique
@@ -30,19 +32,15 @@ def encode_filenames(data, filename_to_idx):
     return np.asarray(filename_idxs, dtype=np.int32)
 
 
-def add_images(im_data, h5_file, args):
+def add_images(h5_file, args):
     fns = []; ids = []; idx = []
-    corrupted_ims = ['1592.jpg', '1722.jpg', '4616.jpg', '4617.jpg']
-    for i, img in enumerate(im_data):
-        basename =  str(img['image_id']) + '.jpg'
-        if basename in corrupted_ims:
-            continue
-            
-        filename = os.path.join(args.image_dir, basename)
-        if os.path.exists(filename):
-            fns.append(filename)
-            ids.append(img['image_id'])
-            idx.append(i)
+
+    img_dir = Path(args.image_dir).resolve()
+    for i, filepath in enumerate(img_dir.glob('**/*'+args.img_format)):
+        fns.append(str(filepath))
+        img_id = "".join(filepath.parts[-2].split('_')) + filepath.stem
+        ids.append(int(img_id))
+        idx.append(i)
 
     ids = np.array(ids, dtype=np.int32)
     idx = np.array(idx, dtype=np.int32)
@@ -69,17 +67,12 @@ def add_images(im_data, h5_file, args):
 
             if i % 10000 == 0:
                 print('processing %i images...' % i)
+
             img = imread(filename)
-            # handle grayscale
-            if img.ndim == 2:
-                img = img[:, :, None][:, :, [0, 0, 0]]
-            H0, W0 = img.shape[0], img.shape[1]
-            img = imresize(img, float(args.image_size) / max(H0, W0))
-            H, W = img.shape[0], img.shape[1]
-            # swap rgb to bgr. This can't be the best way right? #fail
-            r = img[:,:,0].copy()
-            img[:,:,0] = img[:,:,2]
-            img[:,:,2] = r
+            H0, W0, _ = img.shape
+
+            img = np.array(Image.fromarray(img).resize((args.image_size, args.image_size)))
+            H, W, _ = img.shape
 
             lock.acquire()
             original_heights[i] = H0
@@ -106,21 +99,20 @@ def add_images(im_data, h5_file, args):
 
 
 def main(args):
-    im_metadata = json.load(open(args.metadata_input))
     h5_fn = 'imdb_' + str(args.image_size) + '.h5'
     # write the h5 file
     h5_file = os.path.join(args.imh5_dir, h5_fn)
     f = h5py.File(h5_file, 'w')
     # load images
-    im_fns = add_images(im_metadata, f, args)
+    im_fns = add_images(f, args)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--image_dir', default='VG/images')
+    parser.add_argument('--image_dir', default='/home/aung/NAS/louisccc/av/honda_data/lane-change/')
     parser.add_argument('--image_size', default=1024, type=int)
     parser.add_argument('--imh5_dir', default='.')
     parser.add_argument('--num_workers', default=20, type=int)
-    parser.add_argument('--metadata_input', default='VG/image_data.json', type=str)
+    parser.add_argument('--img_format', default='.jpg', type=str)
 
     args = parser.parse_args()
     main(args)

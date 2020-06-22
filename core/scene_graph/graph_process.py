@@ -148,27 +148,16 @@ class NodeClassificationExtractor:
                 scenegraphs = scenegraphs[0]
             all_attrs = get_all_attrs(scenegraphs, all_attrs)
                     
-        final_attr_list = all_attrs.copy()
-        for attr in all_attrs:
-            if attr in ["location", "velocity", "ang_velocity", "rotation"]:
-                final_attr_list.discard(attr)
-                final_attr_list.update(["rel_"+attr+"_x", "rel_"+attr+"_y", "rel_"+attr+"_z"]) #add 3 columns for relative vector values
+        final_attr_list = set()
+        #add 3 columns for relative vector values
+        final_attr_list.add("rel_location_x")
+        final_attr_list.add("rel_location_y")
+        final_attr_list.add("rel_location_z")
         final_attr_list.add("distance_abs") #adding absolute distance to ego
         
         for i in range(num_classes):
             final_attr_list.add("type_"+str(i)) #create 1hot class labels
-        for i in range(len(LANE_TYPES)):
-            final_attr_list.add("lane_type_"+str(i))
-        for i in range(len(LANE_MARKING_COLORS)):
-            final_attr_list.add("left_lane_color_"+str(i))
-            final_attr_list.add("right_lane_color_"+str(i))
-        for i in range(len(LANE_MARKING_TYPES)):
-            final_attr_list.add("left_lane_marking_type_"+str(i))
-            final_attr_list.add("right_lane_marking_type_"+str(i))
-            
-        final_attr_list.discard("name") #remove node name as it is not needed sice we have class labels
-        final_attr_list.discard("road_id") #remove road_id from feature list
-        final_attr_list.discard("lane_id")
+
         
         return sorted(final_attr_list)
 
@@ -186,21 +175,12 @@ class NodeClassificationExtractor:
             raise NameError("Ego not found in scenegraph")
             
         def get_embedding(node, row):
-            for attr in node.attr:
-                if attr in ["location", "velocity", "ang_velocity", 'rotation']: #subtract each vector from corresponding vector of ego to find delta
-                    row["rel_"+attr+"_x"] = node.attr[attr][0] - ego_attrs[attr][0]
-                    row["rel_"+attr+"_y"] = node.attr[attr][1] - ego_attrs[attr][1]
-                    row["rel_"+attr+"_z"] = node.attr[attr][2] - ego_attrs[attr][2]
+            #subtract each vector from corresponding vector of ego to find delta
+            row["rel_location_x"] = node.attr[attr][0] - ego_attrs[attr][0]
+            row["rel_location_y"] = node.attr[attr][1] - ego_attrs[attr][1]
+            row["rel_location_z"] = node.attr[attr][2] - ego_attrs[attr][2]
                     if attr == 'location':
                         row["distance_abs"] = math.sqrt(row["rel_"+attr+"_x"]**2 + row["rel_"+attr+"_y"]**2 + row["rel_"+attr+"_z"]**2)
-                elif attr == "is_junction": #binarizing junction label
-                    row[attr] = 1 if node.attr[attr]==True else 0
-                elif attr in ['brake_light_on', 'left_blinker_on', 'right_blinker_on']:
-                    row[attr] = 1 if node.attr[attr] > 0 else 0 #binarize light signals
-                elif attr in ['lane_type', 'left_lane_marking_type', 'right_lane_marking_type', 'left_lane_color', 'right_lane_color']:
-                    row[attr+"_"+str(node.attr[attr])] = 1 #assign 1hot labels for lanes
-                elif attr in feature_list: #only add attributes specified by feature_list
-                    row[attr] = node.attr[attr]
             row['type_'+str(node.type)] = 1 #assign 1hot class label
             return row
         
@@ -214,7 +194,6 @@ class NodeClassificationExtractor:
         embedding = pd.DataFrame(data=rows, columns=feature_list)
         embedding = embedding.fillna(value=0) #fill in NaN with zeros
         
-
         return np.array(labels), embedding, node_ordered
 
     #get adjacency matrix for entity nodes only from  scenegraph in scipy.sparse CSR matrix format
@@ -313,7 +292,6 @@ class SceneGraphSequenceGenerator(SceneGraphExtractor):
             for idx, (timeframe, scenegraph) in enumerate(scenegraphs.items()):
                 if idx % modulo == 0 and acc_number < number_of_frames:
                     sequence.append(scenegraph)
-                    
                     _, node_features, node_ordered = self.create_node_embeddings(scenegraph, self.feature_list)
                     scenegraph.node_features = torch.FloatTensor(node_features.values)
 

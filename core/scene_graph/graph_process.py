@@ -179,8 +179,8 @@ class NodeClassificationExtractor:
             row["rel_location_x"] = node.attr[attr][0] - ego_attrs[attr][0]
             row["rel_location_y"] = node.attr[attr][1] - ego_attrs[attr][1]
             row["rel_location_z"] = node.attr[attr][2] - ego_attrs[attr][2]
-                    if attr == 'location':
-                        row["distance_abs"] = math.sqrt(row["rel_"+attr+"_x"]**2 + row["rel_"+attr+"_y"]**2 + row["rel_"+attr+"_z"]**2)
+            if attr == 'location':
+                row["distance_abs"] = math.sqrt(row["rel_"+attr+"_x"]**2 + row["rel_"+attr+"_y"]**2 + row["rel_"+attr+"_z"]**2)
             row['type_'+str(node.type)] = 1 #assign 1hot class label
             return row
         

@@ -46,12 +46,12 @@ PED_PROXIMITY_THRESH = 50
 #defines all types of actors which can exist
 #order of enum values is important as this determines which function is called. DO NOT CHANGE ENUM ORDER
 class ActorType(Enum):
-    CAR = 0
-    MOTO = 1
-    BICYCLE = 2
-    PED = 3 
-    LANE = 4
-    LIGHT = 5
+    CAR = 0 #26, 142, 137:truck
+    MOTO = 1 #80
+    BICYCLE = 2 #11
+    PED = 3 #90, 91, 98: "player", 78:man, 79:men, 149:woman, 56: guy, 53: girl
+    LANE = 4 #124:street, 114:sidewalk
+    LIGHT = 5 # 99: "pole", 76: light
     SIGN = 6
     ROAD = 7
     

@@ -100,7 +100,7 @@ class DynKGTrainer:
             for i in range(len(self.training_sequences)): # iterate through scenegraphs
                 data, label = self.training_sequences[i], self.training_labels[i]
 
-                data_list = [Data(x=g.node_features, edge_index=g.edge_mat, edge_attr=g.edge_attr) for g in data]
+                data_list = [Data(x=g.node_features, edge_index=g.edge_index, edge_attr=g.edge_attr) for g in data]
                 
                 self.train_loader = DataLoader(data_list, batch_size=len(data_list))
                 sequence = next(iter(self.train_loader)).to(self.config.device)
@@ -130,7 +130,7 @@ class DynKGTrainer:
         for i in range(len(testing_sequences)): # iterate through scenegraphs
             data, label = testing_sequences[i], testing_labels[i]
             
-            data_list = [Data(x=g.node_features, edge_index=g.edge_mat, edge_attr=g.edge_attr) for g in data]
+            data_list = [Data(x=g.node_features, edge_index=g.edge_index, edge_attr=g.edge_attr) for g in data]
             self.test_loader = DataLoader(data_list, batch_size=len(data_list))
             sequence = next(iter(self.train_loader)).to(self.config.device)
 

@@ -39,7 +39,7 @@ class SceneGraphSequenceGenerator:
         for i in range(self.num_classes):
             self.feature_list.add("type_"+str(i))
 
-                
+
     def load(self, path):
         scenegraphs = {}
 
@@ -53,8 +53,9 @@ class SceneGraphSequenceGenerator:
                     scenegraphs[frame] = scenegraph
 
             except Exception as e:
+                print("We have problem parsing the dict.json in %s"%txt_path)
                 print(e)
-                print(txt_path)
+                
 
         label_f = open(str(path/"label.txt"), 'r')
         risk_label = int(label_f.read())
@@ -71,11 +72,40 @@ class SceneGraphSequenceGenerator:
 
     def read_cache(self):   
         with open(self.cache_filename,'rb') as f: 
-            self.processed_graph_sequences, self.feature_list = pkl.load(f)
+            self.scenegraphs_sequence , self.feature_list = pkl.load(f)
             
     def process_graph_sequences(self, number_of_frames):
         sequence_labels = []
         sequences = [] 
+
+        self.subsampled_sequences = self.subsample(number_of_frames=20)
+        self.scenegraphs_sequence = self.subsampled_sequences
+
+        '''
+            The self.scenegraphs_sequence should be having same length after the subsampling. 
+            This function will get the graph-related features (node embeddings, edge types, adjacency matrix) from scenegraphs.
+            in tensor formats.
+        '''
+
+        for scenegraphs, _ in self.scenegraphs_sequence:
+            for scenegraph in scenegraphs:
+                node_name2idx = {node:idx for idx, node in enumerate(scenegraph.g.nodes)}
+
+                scenegraph.node_features                    = self.get_node_embeddings(scenegraph)
+                scenegraph.edge_index, scenegraph.edge_attr = self.get_edge_embeddings(scenegraph, node_name2idx)
+
+    def subsample(self, number_of_frames=20): 
+        '''
+            This functions will subsample the original scenegraph sequence dataset (self.scenegraphs_sequence). 
+            Before running this function, it includes a variant length of graph sequences. 
+            We expect the length of graph sequences will be homogenenous after running this function.
+
+            The default value of number_of_frames will be 20; Could be a tunnable hyperparameters.
+        '''
+        
+        sequences = [] 
+        sequence_labels = []
+
         for scenegraphs, risk_label in self.scenegraphs_sequence:
             sequence = []
             acc_number = 0
@@ -83,46 +113,39 @@ class SceneGraphSequenceGenerator:
             for idx, (timeframe, scenegraph) in enumerate(scenegraphs.items()):
                 if idx % modulo == 0 and acc_number < number_of_frames:
                     sequence.append(scenegraph)
-                    _, node_features, node_ordered = self.create_node_embeddings(scenegraph, self.feature_list)
-                    scenegraph.node_features = torch.FloatTensor(node_features.values)
-
-                    edge_idx = []
-                    edge_attr = []
-                    for src, dst, edge in scenegraph.g.edges(data=True):
-                        edge_idx.append((node_ordered[src], node_ordered[dst]))
-                        edge_attr.append(edge['object'].value)
-
-                    scenegraph.edge_mat = torch.transpose(torch.LongTensor(edge_idx), 0, 1)
-                    scenegraph.edge_attr = torch.LongTensor(edge_attr)
                     acc_number+=1
+            
             sequences.append(sequence)
             sequence_labels.append(risk_label)
-        return list(zip(sequences, sequence_labels))
 
+        subsampled_list = list(zip(sequences, sequence_labels))
+        return subsampled_list
+        
     def to_dataset(self, nocache=False, number_of_frames=20, train_to_test_ratio=0.3):
         if not self.cache_exists() or nocache:
-            self.processed_graph_sequences = self.process_graph_sequences(number_of_frames)
+            self.process_graph_sequences(number_of_frames)
+
             with open('dyngraph_embeddings.pkl', 'wb') as f:
-                pkl.dump((self.processed_graph_sequences, self.feature_list), f)
+                 
+                pkl.dump((self.scenegraphs_sequence, self.feature_list), f)
         else:
             self.read_cache()
             
-        train, test = train_test_split(self.processed_graph_sequences, test_size=train_to_test_ratio, shuffle=True)
+        train, test = train_test_split(self.scenegraphs_sequence , test_size=train_to_test_ratio, shuffle=True)
         unzip_training_data = list(zip(*train)) 
         unzip_testing_data  = list(zip(*test))
         return_values = np.array(unzip_training_data[0]), np.array(unzip_training_data[1]), np.array(unzip_testing_data[0]), np.array(unzip_testing_data[1]), self.feature_list
         return return_values
         
-    def create_node_embeddings(self, scenegraph, feature_list):
+    def get_node_embeddings(self, scenegraph):
         rows = []
         labels=[]
-        node_ordered = dict()
         ego_attrs = None
         
         #extract ego attrs for creating relative features
         for node, data in scenegraph.g.nodes.items():
             if "ego:" in str(node):
-                ego_attrs = data['attr']   
+                ego_attrs = data['attr']
         if ego_attrs == None:
             raise NameError("Ego not found in scenegraph")
             
@@ -137,18 +160,25 @@ class SceneGraphSequenceGenerator:
             return row
         
         for idx, node in enumerate(scenegraph.g.nodes):
-            node_ordered[node] = idx
             d = defaultdict()
             row = get_embedding(node, d)
             labels.append(node.type)
             rows.append(row)
             
-        embedding = pd.DataFrame(data=rows, columns=feature_list)
+        embedding = pd.DataFrame(data=rows, columns=self.feature_list)
         embedding = embedding.fillna(value=0) #fill in NaN with zeros
+        embedding = torch.FloatTensor(embedding.values)
         
-        return np.array(labels), embedding, node_ordered
+        return embedding
 
-    #get adjacency matrix for entity nodes only from  scenegraph in scipy.sparse CSR matrix format
-    def get_adj_matrix(self, scenegraph):
-        adj = nx.convert_matrix.to_scipy_sparse_matrix(scenegraph.g)
-        return adj
+    def get_edge_embeddings(self, scenegraph, node_name2idx):
+        edge_index = []
+        edge_attr = []
+        for src, dst, edge in scenegraph.g.edges(data=True):
+            edge_index.append((node_name2idx[src], node_name2idx[dst]))
+            edge_attr.append(edge['object'].value)
+
+        edge_index = torch.transpose(torch.LongTensor(edge_index), 0, 1)
+        edge_attr  = torch.LongTensor(edge_attr)
+        
+        return edge_index, edge_attr

@@ -78,13 +78,16 @@ class NodeClassificationExtractor:
 
         for txt_path in glob("%s/**/*.txt" % str(path/"scene_raw"), recursive=True):
             scene_dict_f = open(txt_path, 'r')
+            try:
+                framedict = json.loads(scene_dict_f.read())
+
+                for frame, frame_dict in framedict.items():
+                    scenegraph = SceneGraph(frame_dict)
+                    scenegraphs[frame] = scenegraph
             
-            framedict = json.loads(scene_dict_f.read())
-
-            for frame, frame_dict in framedict.items():
-                scenegraph = SceneGraph(frame_dict)
-                scenegraphs[frame] = scenegraph
-
+            except Exception as e:
+                print(e)
+                print(txt_path)
         self.scenegraphs_sequence.append(scenegraphs)
 
     def cache_exists(self):
@@ -176,11 +179,11 @@ class NodeClassificationExtractor:
             
         def get_embedding(node, row):
             #subtract each vector from corresponding vector of ego to find delta
-            row["rel_location_x"] = node.attr[attr][0] - ego_attrs[attr][0]
-            row["rel_location_y"] = node.attr[attr][1] - ego_attrs[attr][1]
-            row["rel_location_z"] = node.attr[attr][2] - ego_attrs[attr][2]
-            if attr == 'location':
-                row["distance_abs"] = math.sqrt(row["rel_"+attr+"_x"]**2 + row["rel_"+attr+"_y"]**2 + row["rel_"+attr+"_z"]**2)
+            if "location" in node.attr:
+                row["rel_location_x"] = node.attr["location"][0] - ego_attrs["location"][0]
+                row["rel_location_y"] = node.attr["location"][1] - ego_attrs["location"][1]
+                row["rel_location_z"] = node.attr["location"][2] - ego_attrs["location"][2]
+                row["distance_abs"] = math.sqrt(row["rel_location_x"]**2 + row["rel_location_y"]**2 + row["rel_location_z"]**2)
             row['type_'+str(node.type)] = 1 #assign 1hot class label
             return row
         
@@ -212,12 +215,16 @@ class SceneGraphExtractor(NodeClassificationExtractor):
 
         for txt_path in glob("%s/**/*.txt" % str(path/"scene_raw"), recursive=True):
             scene_dict_f = open(txt_path, 'r')
-            
-            framedict = json.loads(scene_dict_f.read())
+            try:
+                framedict = json.loads(scene_dict_f.read())
 
-            for frame, frame_dict in framedict.items():
-                scenegraph = SceneGraph(frame_dict)
-                scenegraphs[frame] = scenegraph
+                for frame, frame_dict in framedict.items():
+                    scenegraph = SceneGraph(frame_dict)
+                    scenegraphs[frame] = scenegraph
+
+            except Exception as e:
+                print(e)
+                print(txt_path)
 
         label_f = open(str(path/"label.txt"), 'r')
         risk_label = int(label_f.read())

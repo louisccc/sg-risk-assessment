@@ -16,7 +16,7 @@ from core.graph_learning.utils import accuracy
 from argparse import ArgumentParser
 from pathlib import Path
 from tqdm import tqdm
-from core.graph_learning.models.mrgcn import *
+from core.graph_learning.mrgcn import *
 from torch_geometric.data import Data, DataLoader
 from sklearn.utils.class_weight import compute_class_weight
 

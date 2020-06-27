@@ -1,33 +1,3 @@
-#REFERENCE:
-#dict for lanes
-# single_lane_dict = {
-    # 'lane_id': lane.lane_id
-    # 'location': int(l_3d.x), int(l_3d.y), int(l_3d.z)
-    # 'rotation': int(r_3d.yaw), int(r_3d.roll), int(r_3d.pitch)
-    # 'lane_type': waypoint.lane_type, 
-    # 'lane_width': waypoint.lane_width, 
-    # 'right_lane_color': waypoint.right_lane_marking.color, 
-    # 'left_lane_color': waypoint.left_lane_marking.color,
-    # 'right_lane_marking_type': waypoint.right_lane_marking.type, 
-    # 'left_lane_marking_type': waypoint.left_lane_marking.type,
-    # 'lane_change': waypoint.lane_change
-    # 'left_lane_id': lane.get_left_lane.lane_id
-    # 'right_lane_id': lane.get_right_lane.lane_id
-    # 'is_junction': lane.is_junction
-# }
-
-
-#dict for all other entities
-# return_dict['velocity_abs'] = int(velocity(v_3d))
-# return_dict['velocity'] = int(v_3d.x), int(v_3d.y), int(v_3d.z)
-# return_dict['location'] = int(l_3d.x), int(l_3d.y), int(l_3d.z)
-# return_dict['rotation'] =  int(r_3d.yaw), int(r_3d.roll), int(r_3d.pitch)
-# return_dict['ang_velocity'] = int(a_3d.x), int(a_3d.y), int(a_3d.z)
-# return_dict['name'] = get_actor_display_name(actor)
-# return_dict['lane_id'] = waypoint.lane_id     #only for moving actors
-# return_dict['road_id'] = waypoint.road_id     #only for moving actors
-
-
 from enum import Enum
 from collections import defaultdict
 import pdb

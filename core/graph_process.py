@@ -66,7 +66,7 @@ class SceneGraphSequenceGenerator:
             risk_label = 0
 
         self.scenegraphs_sequence.append((scenegraphs, risk_label))
-
+        
     def cache_exists(self):
         return Path(self.cache_filename).exists()
 
@@ -181,4 +181,4 @@ class SceneGraphSequenceGenerator:
         edge_index = torch.transpose(torch.LongTensor(edge_index), 0, 1)
         edge_attr  = torch.LongTensor(edge_attr)
         
-        return edge_index, edge_attr
+        return edge_index, edge_attr        

@@ -14,7 +14,7 @@ from sklearn.metrics import accuracy_score, f1_score, confusion_matrix, precisio
 from sklearn import preprocessing
 from matplotlib import pyplot as plt
 
-from core.graph_process import SceneGraphSequenceGenerator
+from core.scene_graph import SceneGraphSequenceGenerator
 from core.relation_extractor import Relations
 from argparse import ArgumentParser
 from pathlib import Path

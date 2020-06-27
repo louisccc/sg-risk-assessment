@@ -1,8 +1,7 @@
 import sys, os, torch
 sys.path.append(os.path.dirname(sys.path[0]))
 
-from core.graph_learning.dynkg_trainer import DynKGTrainer
-from core.graph_learning import utils
+from core.dynkg_trainer import *
 
 import pandas as pd
 import numpy as np
@@ -31,7 +30,7 @@ def train_dynamic_kg(args, iterations=2):
     outputs_pd.to_csv(store_path / "dynkg_training_outputs.tsv", sep="\t", header=False, index=False)
     
     # Store the metric results. 
-    metrics = utils.get_scoring_metrics(outputs, labels, "dynkg_classification")
+    metrics = get_scoring_metrics(outputs, labels, "dynkg_classification")
     metrics_pd = pd.DataFrame(metrics, index=[0])
     metrics_pd.to_csv(store_path / "dynkg_classification_metrics.csv", header=True)
 

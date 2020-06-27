@@ -1,7 +1,7 @@
 import sys
 sys.path.append('../core')
 
-import graph_learning.utils as utils
+from core.dynkg_trainer import get_scoring_metrics
 from nagoya.dataset import *
 from keras.models import load_model     
 from argparse import ArgumentParser
@@ -10,7 +10,7 @@ class Config:
 
     def __init__(self, args):
         self.parser = ArgumentParser(description='The parameters for creating gifs of input videos.')
-        self.parser.add_argument('--input_path', type=str, default="../input/synthesis_data", help="Path to data directory.")
+        self.parser.add_argument('--input_path', type=str, default="../input/synthesis_data", fhelp="Path to data directory.")
 
         args_parsed = self.parser.parse_args(args)
         
@@ -18,7 +18,6 @@ class Config:
             self.__dict__[arg_name] = getattr(args_parsed, arg_name)
 
         self.input_base_dir = Path(self.input_path).resolve()
-
 
 
 if __name__ == '__main__':
@@ -43,7 +42,7 @@ if __name__ == '__main__':
 
 	true_label = np.argmax(dataset.risk_one_hot,axis=-1)
 	output = model.predict_proba(dataset.video)
-	metrics = utils.get_scoring_metrics(output,true_label,"risk_classification") 
+	metrics = get_scoring_metrics(output,true_label,"risk_classification") 
 	print(metrics)
 	print(' safe | dangerous \n', model.predict_proba(dataset.video))
 	import pdb;pdb.set_trace()

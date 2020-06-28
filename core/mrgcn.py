@@ -9,25 +9,26 @@ from torch_geometric.nn import global_add_pool, global_mean_pool, global_max_poo
 
 class MRGCN(nn.Module):
     
-    def __init__(self, args, num_features, num_relations, num_classes, num_layers, hidden_dim, pooling_type=None, readout_type=None, temporal_type=None):
+    def __init__(self, config):
         super(MRGCN, self).__init__()
 
-        self.num_features = num_features
-        self.num_classes  = num_classes
-        self.num_layers = num_layers
-        self.hidden_dim = hidden_dim
+        self.num_features = config.num_features
+        self.num_relations = config.num_relations
+        self.num_classes  = config.nclass
+        self.num_layers = config.num_layers
+        self.hidden_dim = config.hidden_dim
 
         self.gin_convs = torch.nn.ModuleList()
         self.batch_norms = torch.nn.ModuleList()
 
-        self.pooling_type = pooling_type
-        self.readout_type = readout_type
-        self.temporal_type = temporal_type
+        self.pooling_type = config.pooling_type
+        self.readout_type = config.readout_type
+        self.temporal_type = config.temporal_type
 
-        self.dropout = 0.75
-        self.conv1 = RGCNConv(num_features, self.hidden_dim, 9, num_bases=30)
-        self.conv2 = RGCNConv(self.hidden_dim, self.hidden_dim, 9, num_bases=30)
+        self.dropout = config.dropout
 
+        self.conv1 = RGCNConv(self.num_features, self.hidden_dim, self.num_relations, num_bases=30)
+        self.conv2 = RGCNConv(self.hidden_dim,   self.hidden_dim, self.num_relations, num_bases=30)
 
         if self.pooling_type == "sagpool":
             self.pool1 = SAGPooling(self.hidden_dim, ratio=0.8)
@@ -44,7 +45,7 @@ class MRGCN(nn.Module):
         self.fc1 = Linear(self.hidden_dim, self.hidden_dim)
         self.fc2 = Linear(self.hidden_dim, self.num_classes)
 
-        self.embed = torch.nn.Embedding(5, num_features)
+        self.embed = torch.nn.Embedding(5, self.num_features)
 
 
     def forward(self, x, edge_index, edge_attr, batch=None):

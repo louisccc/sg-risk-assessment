@@ -15,7 +15,7 @@ from pygcn.utils import sparse_mx_to_torch_sparse_tensor, normalize, accuracy
 import scipy.sparse as sp
 import torch.nn.functional as F
 from pathlib import Path 
-
+from tqdm import tqdm 
 from .relation_extractor import Relations, ActorType, RelationExtractor
 
 #class representing a node in the scene graph. this is mainly used for holding the data for each node.
@@ -144,40 +144,37 @@ class SceneGraphSequenceGenerator:
         for i in range(self.num_classes):
             self.feature_list.add("type_"+str(i))
 
-
-    def load(self, path):
+    def load(self, input_path):
         scenegraphs = {}
 
-        for txt_path in glob("%s/**/*.txt" % str(path/"scene_raw"), recursive=True):
-            scene_dict_f = open(txt_path, 'r')
-            try:
-                framedict = json.loads(scene_dict_f.read())
+        for path in tqdm([x for x in input_path.iterdir() if x.is_dir()]):
 
-                for frame, frame_dict in framedict.items():
-                    scenegraph = SceneGraph(frame_dict)
-                    scenegraphs[frame] = scenegraph
+            for txt_path in glob("%s/**/*.txt" % str(path/"scene_raw"), recursive=True):
+                scene_dict_f = open(txt_path, 'r')
+                try:
+                    framedict = json.loads(scene_dict_f.read())
 
-            except Exception as e:
-                print("We have problem parsing the dict.json in %s"%txt_path)
-                print(e)
+                    for frame, frame_dict in framedict.items():
+                        scenegraph = SceneGraph(frame_dict)
+                        scenegraphs[frame] = scenegraph
+
+                except Exception as e:
+                    print("We have problem parsing the dict.json in %s"%txt_path)
+                    print(e)
                 
 
-        label_f = open(str(path/"label.txt"), 'r')
-        risk_label = int(label_f.read())
+            label_f = open(str(path/"label.txt"), 'r')
+            risk_label = int(label_f.read())
 
-        if risk_label >= 0:
-            risk_label = 1
-        else:
-            risk_label = 0
+            if risk_label >= 0:
+                risk_label = 1
+            else:
+                risk_label = 0
 
-        self.scenegraphs_sequence.append((scenegraphs, risk_label))
+            self.scenegraphs_sequence.append((scenegraphs, risk_label))
 
     def cache_exists(self):
         return Path(self.cache_filename).exists()
-
-    def read_cache(self):   
-        with open(self.cache_filename,'rb') as f: 
-            self.scenegraphs_sequence , self.feature_list = pkl.load(f)
             
     def process_graph_sequences(self, number_of_frames):
         self.subsampled_sequences = self.subsample(number_of_frames=20)

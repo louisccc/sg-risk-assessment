@@ -33,7 +33,7 @@ class Config:
         self.parser.add_argument('--weight_decay', type=float, default=5e-4, help='Weight decay (L2 loss on parameters).')
         self.parser.add_argument('--hidden', type=int, default=200, help='Number of hidden units.')
         self.parser.add_argument('--dropout', type=float, default=0.5, help='Dropout rate (1 - keep probability).')
-        self.parser.add_argument('--nclass', type=int, default=8, help="The number of classes for node.")
+        self.parser.add_argument('--nclass', type=int, default=2, help="The number of classes for dynamic graph classification.")
         self.parser.add_argument('--batch_size', type=int, default=32, help='Number of graphs in a batch.')
         self.parser.add_argument('--device', type=str, default="cpu", help='The device to run on models (cuda or cpu) cpu in default.')
         self.parser.add_argument('--test_step', type=int, default=10, help='Number of epochs before testing the model.')
@@ -60,21 +60,22 @@ class DynKGTrainer:
         np.random.seed(self.config.seed)
         torch.manual_seed(self.config.seed)
 
-        # load scene graph txts into memory 
+        # load carla cheating scene graph txts into memory 
         sge = SceneGraphSequenceGenerator()
         if not sge.cache_exists():
-            for sub_dir in tqdm([x for x in self.config.input_base_dir.iterdir() if x.is_dir()]):
-                data_source = sub_dir
-                sge.load(data_source)
-            
+            sge.load(self.config.input_base_dir)
         self.training_sequences, self.training_labels, self.testing_sequences, self.testing_labels, self.feature_list = sge.to_dataset()
+
         self.class_weights = torch.from_numpy(compute_class_weight('balanced', np.unique(self.training_labels), self.training_labels))
         print("Number of Sequences Included: ", len(self.training_sequences))
         print("Num Labels in Each Class: " + str(np.unique(self.training_labels, return_counts=True)[1]) + ", Class Weights: " + str(self.class_weights))
 
 
     def build_model(self):
-        self.model = MRGCN(None, len(self.feature_list), max([r.value for r in Relations])+1, 2, self.config.num_layers, self.config.hidden_dim, self.config.pooling_type, self.config.readout_type, self.config.temporal_type).to(self.config.device)
+        self.config.num_features = len(self.feature_list)
+        self.config.num_relations = max([r.value for r in Relations])+1
+        self.model = MRGCN(self.config).to(self.config.device)
+
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.config.learning_rate, weight_decay=self.config.weight_decay)
         if self.class_weights.shape[0] < 2:
             self.loss_func = nn.CrossEntropyLoss()

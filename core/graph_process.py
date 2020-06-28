@@ -9,14 +9,12 @@ from .relation_extractor import Relations
 from glob import glob
 from collections import defaultdict
 from sklearn.model_selection import train_test_split
-from sklearn.utils import shuffle
 
 from pygcn.utils import sparse_mx_to_torch_sparse_tensor, normalize, accuracy
 import scipy.sparse as sp
 
-import torch, json, pdb
+import torch, json
 import torch.nn.functional as F
-import pickle as pkl
 from pathlib import Path 
 
 

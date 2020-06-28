@@ -2,8 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torchnlp.nn import Attention
-from torch.nn import Sequential, Linear, ReLU, LSTM
-from torch_geometric.nn import RGCNConv, SAGPooling, TopKPooling, ASAPooling
+from torch.nn import Linear, LSTM
+from torch_geometric.nn import RGCNConv, SAGPooling, TopKPooling
 from torch_geometric.nn import global_add_pool, global_mean_pool, global_max_pool, global_sort_pool
 
 

@@ -1,4 +1,4 @@
-import os, sys, pdb
+import os, sys
 sys.path.append(os.path.dirname(sys.path[0]))
 
 import torch
@@ -8,7 +8,6 @@ import numpy as np
 import scipy.sparse as sp
 import pandas as pd
 import random
-import networkx as nx
 from collections import defaultdict
 from sklearn.metrics import accuracy_score, f1_score, confusion_matrix, precision_score, recall_score, roc_auc_score, roc_curve
 from sklearn import preprocessing

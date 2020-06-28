@@ -62,9 +62,7 @@ class DynKGTrainer:
         np.random.seed(self.config.seed)
         torch.manual_seed(self.config.seed)
         self.class_weights = None
-        self.preprocess_scenegraph_data() # reduced scenegraph extraction
 
-    def preprocess_scenegraph_data(self):
         # load scene graph txts into memory 
         sge = SceneGraphSequenceGenerator()
         if not sge.cache_exists() or self.config.nocache:
@@ -83,9 +81,7 @@ class DynKGTrainer:
 
 
     def build_model(self):
-        if self.config.model == "mrgcn":
-            self.model = MRGCN(None, len(self.feature_list), max([r.value for r in Relations])+1, 2, self.config.num_layers, self.config.hidden_dim, self.config.pooling_type, self.config.readout_type, self.config.temporal_type).to(self.config.device)
-
+        self.model = MRGCN(None, len(self.feature_list), max([r.value for r in Relations])+1, 2, self.config.num_layers, self.config.hidden_dim, self.config.pooling_type, self.config.readout_type, self.config.temporal_type).to(self.config.device)
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.config.learning_rate, weight_decay=self.config.weight_decay)
         if self.class_weights.shape[0] < 2:
             self.loss_func = nn.CrossEntropyLoss()

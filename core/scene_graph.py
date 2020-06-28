@@ -180,9 +180,6 @@ class SceneGraphSequenceGenerator:
             self.scenegraphs_sequence , self.feature_list = pkl.load(f)
             
     def process_graph_sequences(self, number_of_frames):
-        sequence_labels = []
-        sequences = [] 
-
         self.subsampled_sequences = self.subsample(number_of_frames=20)
         self.scenegraphs_sequence = self.subsampled_sequences
 
@@ -226,15 +223,16 @@ class SceneGraphSequenceGenerator:
         subsampled_list = list(zip(sequences, sequence_labels))
         return subsampled_list
         
-    def to_dataset(self, nocache=False, number_of_frames=20, train_to_test_ratio=0.3):
-        if not self.cache_exists() or nocache:
+    def to_dataset(self, number_of_frames=20, train_to_test_ratio=0.3):
+        if not self.cache_exists():
             self.process_graph_sequences(number_of_frames)
 
             with open('dyngraph_embeddings.pkl', 'wb') as f:
-                 
                 pkl.dump((self.scenegraphs_sequence, self.feature_list), f)
+                
         else:
-            self.read_cache()
+            with open(self.cache_filename,'rb') as f: 
+                self.scenegraphs_sequence , self.feature_list = pkl.load(f)
             
         train, test = train_test_split(self.scenegraphs_sequence , test_size=train_to_test_ratio, shuffle=True)
         unzip_training_data = list(zip(*train)) 

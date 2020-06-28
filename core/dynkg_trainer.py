@@ -34,7 +34,6 @@ class Config:
         self.parser.add_argument('--hidden', type=int, default=200, help='Number of hidden units.')
         self.parser.add_argument('--dropout', type=float, default=0.5, help='Dropout rate (1 - keep probability).')
         self.parser.add_argument('--nclass', type=int, default=8, help="The number of classes for node.")
-        self.parser.add_argument('--recursive', type=lambda x: (str(x).lower() == 'true'), default=True, help='Recursive loading scenegraphs')
         self.parser.add_argument('--batch_size', type=int, default=32, help='Number of graphs in a batch.')
         self.parser.add_argument('--device', type=str, default="cpu", help='The device to run on models (cuda or cpu) cpu in default.')
         self.parser.add_argument('--test_step', type=int, default=10, help='Number of epochs before testing the model.')
@@ -44,7 +43,6 @@ class Config:
         self.parser.add_argument('--pooling_type', type=str, default="sagpool", help="Graph pooling type.")
         self.parser.add_argument('--readout_type', type=str, default="mean", help="Readout type.")
         self.parser.add_argument('--temporal_type', type=str, default="lstm_sum", help="Temporal type.")
-        self.parser.add_argument('--nocache', action='store_true', default=False, dest="nocache", help="Don't use cached version of dataset.")
 
         args_parsed = self.parser.parse_args(args)
         
@@ -61,20 +59,15 @@ class DynKGTrainer:
 
         np.random.seed(self.config.seed)
         torch.manual_seed(self.config.seed)
-        self.class_weights = None
 
         # load scene graph txts into memory 
         sge = SceneGraphSequenceGenerator()
-        if not sge.cache_exists() or self.config.nocache:
-            if self.config.recursive:
-                for sub_dir in tqdm([x for x in self.config.input_base_dir.iterdir() if x.is_dir()]):
-                    data_source = sub_dir
-                    sge.load(data_source)
-            else:
-                data_source = self.config.input_base_dir
+        if not sge.cache_exists():
+            for sub_dir in tqdm([x for x in self.config.input_base_dir.iterdir() if x.is_dir()]):
+                data_source = sub_dir
                 sge.load(data_source)
-
-        self.training_sequences, self.training_labels, self.testing_sequences, self.testing_labels, self.feature_list = sge.to_dataset(nocache=self.config.nocache)
+            
+        self.training_sequences, self.training_labels, self.testing_sequences, self.testing_labels, self.feature_list = sge.to_dataset()
         self.class_weights = torch.from_numpy(compute_class_weight('balanced', np.unique(self.training_labels), self.training_labels))
         print("Number of Sequences Included: ", len(self.training_sequences))
         print("Num Labels in Each Class: " + str(np.unique(self.training_labels, return_counts=True)[1]) + ", Class Weights: " + str(self.class_weights))

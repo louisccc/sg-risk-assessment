@@ -114,12 +114,12 @@ class DynKGTrainer:
             # if epoch_idx % self.config.test_step == 0:
             #     self.evaluate()
 
-    def inference(self, testing_sequences, testing_labels):
+    def inference(self, testing_data, testing_labels):
         acc_predict = []
         labels = []
         outputs = []
         for i in range(len(testing_data)): # iterate through scenegraphs
-            data, label = self.testing_data[i]['sequence'], self.testing_labels[i]
+            data, label = testing_data[i]['sequence'], testing_labels[i]
             
             data_list = [Data(x=g['node_features'], edge_index=g['edge_index'], edge_attr=g['edge_attr']) for g in data]
 
@@ -142,10 +142,10 @@ class DynKGTrainer:
 
     def evaluate(self):
         
-        outputs, labels, acc_predict = self.inference(self.training_sequences, self.training_labels)
+        outputs, labels, acc_predict = self.inference(self.training_data, self.training_labels)
         print('Dynamic SceneGraph training precision', sum(acc_predict) / len(acc_predict))
 
-        outputs, labels, acc_predict = self.inference(self.testing_sequences, self.testing_labels)
+        outputs, labels, acc_predict = self.inference(self.testing_data, self.testing_labels)
         print('Dynamic SceneGraph testing precision', sum(acc_predict) / len(acc_predict))
         
         outputs = torch.cat(outputs).reshape(-1,2).detach()

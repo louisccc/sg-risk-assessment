@@ -181,11 +181,18 @@ class SceneGraphSequenceGenerator:
                 self.scenegraphs_sequence.append(scenegraphs_dict)
             else:
                 raise Exception("no label.txt in %s" % path) 
+        
+        with open('dyngraph_embeddings.pkl', 'wb') as f:
+            pkl.dump((self.scenegraphs_sequence, self.feature_list), f)
             
     def cache_exists(self):
         return Path(self.cache_filename).exists()
+
+    def load_from_cache(self):
+        with open(self.cache_filename,'rb') as f: 
+            self.scenegraphs_sequence , self.feature_list = pkl.load(f)
             
-    def process_graph_sequences(self, scenegraphs, number_of_frames):
+    def process_graph_sequences(self, scenegraphs, number_of_frames=20):
         '''
             The self.scenegraphs_sequence should be having same length after the subsampling. 
             This function will get the graph-related features (node embeddings, edge types, adjacency matrix) from scenegraphs.
@@ -224,18 +231,6 @@ class SceneGraphSequenceGenerator:
                 acc_number+=1
     
         return sequence
-        
-    def to_dataset(self, number_of_frames=20, train_to_test_ratio=0.3):
-        if not self.cache_exists():
-            with open('dyngraph_embeddings.pkl', 'wb') as f:
-                pkl.dump((self.scenegraphs_sequence, self.feature_list), f)
-                
-        else:
-            with open(self.cache_filename,'rb') as f: 
-                self.scenegraphs_sequence , self.feature_list = pkl.load(f)
-
-        train, test = train_test_split(self.scenegraphs_sequence , test_size=train_to_test_ratio, shuffle=True)
-        return train, test, self.feature_list
         
     def get_node_embeddings(self, scenegraph):
         rows = []
@@ -283,8 +278,13 @@ class SceneGraphSequenceGenerator:
         
         return edge_index, edge_attr
 
-def build_scenegraph_dataset(input_path):
+def build_scenegraph_dataset(input_path, number_of_frames=20, train_to_test_ratio=0.3):
     sge = SceneGraphSequenceGenerator()
     if not sge.cache_exists():
         sge.load(input_path)
-    return sge.to_dataset()
+    else:
+        sge.load_from_cache()
+       
+    train, test = train_test_split(sge.scenegraphs_sequence , test_size=train_to_test_ratio, shuffle=True)
+    return train, test, sge.feature_list
+

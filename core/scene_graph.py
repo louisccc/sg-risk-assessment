@@ -150,28 +150,33 @@ class SceneGraphSequenceGenerator:
         for path in tqdm([x for x in input_path.iterdir() if x.is_dir()]):
 
             for txt_path in glob("%s/**/*.txt" % str(path/"scene_raw"), recursive=True):
-                scene_dict_f = open(txt_path, 'r')
-                try:
-                    framedict = json.loads(scene_dict_f.read())
-
-                    for frame, frame_dict in framedict.items():
-                        scenegraph = SceneGraph(frame_dict)
-                        scenegraphs[frame] = scenegraph
-
-                except Exception as e:
-                    print("We have problem parsing the dict.json in %s"%txt_path)
-                    print(e)
                 
+                with open(txt_path, 'r') as scene_dict_f:
+                    try:
+                        framedict = json.loads(scene_dict_f.read())
 
-            label_f = open(str(path/"label.txt"), 'r')
-            risk_label = int(label_f.read())
+                        for frame, frame_dict in framedict.items():
+                            scenegraph = SceneGraph(frame_dict)
+                            scenegraphs[frame] = scenegraph
 
-            if risk_label >= 0:
-                risk_label = 1
+                    except Exception as e:
+                        print("We have problem parsing the dict.json in %s"%txt_path)
+                        print(e)
+                
+            label_path = (path/"label.txt").resolve()
+
+            if label_path.exists():
+                with open(str(path/"label.txt"), 'r') as label_f:
+                    risk_label = int(label_f.read())
+
+                if risk_label >= 0:
+                    risk_label = 1
+                else:
+                    risk_label = 0
+
+                self.scenegraphs_sequence.append((scenegraphs, risk_label))
             else:
-                risk_label = 0
-
-            self.scenegraphs_sequence.append((scenegraphs, risk_label))
+                raise Exception("no label.txt in %s" % path) 
 
     def cache_exists(self):
         return Path(self.cache_filename).exists()

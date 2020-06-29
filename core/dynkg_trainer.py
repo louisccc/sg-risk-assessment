@@ -13,7 +13,7 @@ from sklearn.metrics import accuracy_score, f1_score, confusion_matrix, precisio
 from sklearn import preprocessing
 from matplotlib import pyplot as plt
 
-from core.scene_graph import SceneGraphSequenceGenerator
+from core.scene_graph import SceneGraphSequenceGenerator, build_scenegraph_dataset
 from core.relation_extractor import Relations
 from argparse import ArgumentParser
 from pathlib import Path
@@ -61,13 +61,15 @@ class DynKGTrainer:
         torch.manual_seed(self.config.seed)
 
         # load carla cheating scene graph txts into memory 
-        sge = SceneGraphSequenceGenerator()
-        if not sge.cache_exists():
-            sge.load(self.config.input_base_dir)
-        self.training_sequences, self.training_labels, self.testing_sequences, self.testing_labels, self.feature_list = sge.to_dataset()
+        # [ 
+        #   {'node_embeddings', 'edge_indexes' 'edge_attrs', 'label'}  
+        # ]
 
+        self.training_data, self.testing_data, self.feature_list = build_scenegraph_dataset(self.config.input_base_dir)
+        self.training_labels = [data['label'] for data in self.training_data]
+        self.testing_labels = [data['label'] for data in self.testing_data]
         self.class_weights = torch.from_numpy(compute_class_weight('balanced', np.unique(self.training_labels), self.training_labels))
-        print("Number of Sequences Included: ", len(self.training_sequences))
+        print("Number of Sequences Included: ", len(self.training_data))
         print("Num Labels in Each Class: " + str(np.unique(self.training_labels, return_counts=True)[1]) + ", Class Weights: " + str(self.class_weights))
 
 
@@ -86,10 +88,10 @@ class DynKGTrainer:
 
         for epoch_idx in tqdm(range(self.config.epochs)): # iterate through epoch
             acc_loss_train = 0
-            for i in range(len(self.training_sequences)): # iterate through scenegraphs
-                data, label = self.training_sequences[i], self.training_labels[i]
+            for i in range(len(self.training_data)): # iterate through scenegraphs
+                data, label = self.training_data[i]['sequence'], self.training_labels[i]
 
-                data_list = [Data(x=g.node_features, edge_index=g.edge_index, edge_attr=g.edge_attr) for g in data]
+                data_list = [Data(x=g['node_features'], edge_index=g['edge_index'], edge_attr=g['edge_attr']) for g in data]
                 
                 self.train_loader = DataLoader(data_list, batch_size=len(data_list))
                 sequence = next(iter(self.train_loader)).to(self.config.device)
@@ -116,10 +118,11 @@ class DynKGTrainer:
         acc_predict = []
         labels = []
         outputs = []
-        for i in range(len(testing_sequences)): # iterate through scenegraphs
-            data, label = testing_sequences[i], testing_labels[i]
+        for i in range(len(testing_data)): # iterate through scenegraphs
+            data, label = self.testing_data[i]['sequence'], self.testing_labels[i]
             
-            data_list = [Data(x=g.node_features, edge_index=g.edge_index, edge_attr=g.edge_attr) for g in data]
+            data_list = [Data(x=g['node_features'], edge_index=g['edge_index'], edge_attr=g['edge_attr']) for g in data]
+
             self.test_loader = DataLoader(data_list, batch_size=len(data_list))
             sequence = next(iter(self.train_loader)).to(self.config.device)
 

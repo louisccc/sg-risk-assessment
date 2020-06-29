@@ -145,12 +145,11 @@ class SceneGraphSequenceGenerator:
             self.feature_list.add("type_"+str(i))
 
     def load(self, input_path):
-        scenegraphs = {}
 
         for path in tqdm([x for x in input_path.iterdir() if x.is_dir()]):
-
+            scenegraphs = {}
             for txt_path in glob("%s/**/*.txt" % str(path/"scene_raw"), recursive=True):
-                
+
                 with open(txt_path, 'r') as scene_dict_f:
                     try:
                         framedict = json.loads(scene_dict_f.read())
@@ -174,31 +173,40 @@ class SceneGraphSequenceGenerator:
                 else:
                     risk_label = 0
 
-                self.scenegraphs_sequence.append((scenegraphs, risk_label))
+                # scenegraph_dict contains node embeddings edge indexes and edge attrs.
+                scenegraphs_dict = {}
+                scenegraphs_dict['sequence'] = self.process_graph_sequences(scenegraphs, 20)
+                scenegraphs_dict['label'] = risk_label
+
+                self.scenegraphs_sequence.append(scenegraphs_dict)
             else:
                 raise Exception("no label.txt in %s" % path) 
-
+            
     def cache_exists(self):
         return Path(self.cache_filename).exists()
             
-    def process_graph_sequences(self, number_of_frames):
-        self.subsampled_sequences = self.subsample(number_of_frames=20)
-        self.scenegraphs_sequence = self.subsampled_sequences
-
+    def process_graph_sequences(self, scenegraphs, number_of_frames):
         '''
             The self.scenegraphs_sequence should be having same length after the subsampling. 
             This function will get the graph-related features (node embeddings, edge types, adjacency matrix) from scenegraphs.
             in tensor formats.
         '''
+        
+        sequence = []
+        subsampled_scenegraphs = self.subsample(scenegraphs, number_of_frames=20)
+        for scenegraph in subsampled_scenegraphs:
+            scenegraph_dict = {}
+            
+            node_name2idx = {node:idx for idx, node in enumerate(scenegraph.g.nodes)}
 
-        for scenegraphs, _ in self.scenegraphs_sequence:
-            for scenegraph in scenegraphs:
-                node_name2idx = {node:idx for idx, node in enumerate(scenegraph.g.nodes)}
+            scenegraph_dict['node_features']                    = self.get_node_embeddings(scenegraph)
+            scenegraph_dict['edge_index'], scenegraph_dict['edge_attr'] = self.get_edge_embeddings(scenegraph, node_name2idx)
 
-                scenegraph.node_features                    = self.get_node_embeddings(scenegraph)
-                scenegraph.edge_index, scenegraph.edge_attr = self.get_edge_embeddings(scenegraph, node_name2idx)
+            sequence.append(scenegraph_dict)
 
-    def subsample(self, number_of_frames=20): 
+        return sequence
+
+    def subsample(self, scenegraphs, number_of_frames=20): 
         '''
             This functions will subsample the original scenegraph sequence dataset (self.scenegraphs_sequence). 
             Before running this function, it includes a variant length of graph sequences. 
@@ -206,41 +214,28 @@ class SceneGraphSequenceGenerator:
 
             The default value of number_of_frames will be 20; Could be a tunnable hyperparameters.
         '''
-        
-        sequences = [] 
-        sequence_labels = []
-
-        for scenegraphs, risk_label in self.scenegraphs_sequence:
-            sequence = []
-            acc_number = 0
-            modulo = int(len(scenegraphs) / number_of_frames)
-            for idx, (timeframe, scenegraph) in enumerate(scenegraphs.items()):
-                if idx % modulo == 0 and acc_number < number_of_frames:
-                    sequence.append(scenegraph)
-                    acc_number+=1
-            
-            sequences.append(sequence)
-            sequence_labels.append(risk_label)
-
-        subsampled_list = list(zip(sequences, sequence_labels))
-        return subsampled_list
+    
+        sequence = []
+        acc_number = 0
+        modulo = int(len(scenegraphs) / number_of_frames)
+        for idx, (timeframe, scenegraph) in enumerate(scenegraphs.items()):
+            if idx % modulo == 0 and acc_number < number_of_frames:
+                sequence.append(scenegraph)
+                acc_number+=1
+    
+        return sequence
         
     def to_dataset(self, number_of_frames=20, train_to_test_ratio=0.3):
         if not self.cache_exists():
-            self.process_graph_sequences(number_of_frames)
-
             with open('dyngraph_embeddings.pkl', 'wb') as f:
                 pkl.dump((self.scenegraphs_sequence, self.feature_list), f)
                 
         else:
             with open(self.cache_filename,'rb') as f: 
                 self.scenegraphs_sequence , self.feature_list = pkl.load(f)
-            
+
         train, test = train_test_split(self.scenegraphs_sequence , test_size=train_to_test_ratio, shuffle=True)
-        unzip_training_data = list(zip(*train)) 
-        unzip_testing_data  = list(zip(*test))
-        return_values = np.array(unzip_training_data[0]), np.array(unzip_training_data[1]), np.array(unzip_testing_data[0]), np.array(unzip_testing_data[1]), self.feature_list
-        return return_values
+        return train, test, self.feature_list
         
     def get_node_embeddings(self, scenegraph):
         rows = []
@@ -287,3 +282,9 @@ class SceneGraphSequenceGenerator:
         edge_attr  = torch.LongTensor(edge_attr)
         
         return edge_index, edge_attr
+
+def build_scenegraph_dataset(input_path):
+    sge = SceneGraphSequenceGenerator()
+    if not sge.cache_exists():
+        sge.load(input_path)
+    return sge.to_dataset()

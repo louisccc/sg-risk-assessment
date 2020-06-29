@@ -127,7 +127,12 @@ class SceneGraph:
 
 class SceneGraphSequenceGenerator:
     def __init__(self):
+        # [ 
+        #   {'node_embeddings':..., 'edge_indexes':..., 'edge_attrs':..., 'label':...}  
+        # ]
         self.scenegraphs_sequence = []
+
+        # cache_filename determine the name of caching file name storing self.scenegraphs_sequence and 
         self.cache_filename = 'dyngraph_embeddings.pkl'
         
         # config used for parsing CARLA:
@@ -144,9 +149,17 @@ class SceneGraphSequenceGenerator:
         for i in range(self.num_classes):
             self.feature_list.add("type_"+str(i))
 
-    def load(self, input_path):
+    def cache_exists(self):
+        return Path(self.cache_filename).exists()
 
-        for path in tqdm([x for x in input_path.iterdir() if x.is_dir()]):
+    def load_from_cache(self):
+        with open(self.cache_filename,'rb') as f: 
+            self.scenegraphs_sequence , self.feature_list = pkl.load(f)
+
+    def load(self, input_path):
+        all_video_clip_dirs = [x for x in input_path.iterdir() if x.is_dir()]
+
+        for path in tqdm(all_video_clip_dirs):
             scenegraphs = {}
             for txt_path in glob("%s/**/*.txt" % str(path/"scene_raw"), recursive=True):
 
@@ -185,46 +198,39 @@ class SceneGraphSequenceGenerator:
         with open('dyngraph_embeddings.pkl', 'wb') as f:
             pkl.dump((self.scenegraphs_sequence, self.feature_list), f)
             
-    def cache_exists(self):
-        return Path(self.cache_filename).exists()
-
-    def load_from_cache(self):
-        with open(self.cache_filename,'rb') as f: 
-            self.scenegraphs_sequence , self.feature_list = pkl.load(f)
-            
     def process_graph_sequences(self, scenegraphs, number_of_frames=20):
         '''
             The self.scenegraphs_sequence should be having same length after the subsampling. 
             This function will get the graph-related features (node embeddings, edge types, adjacency matrix) from scenegraphs.
             in tensor formats.
         '''
-        
         sequence = []
         subsampled_scenegraphs = self.subsample(scenegraphs, number_of_frames=20)
+
         for scenegraph in subsampled_scenegraphs:
-            scenegraph_dict = {}
+            sg_dict = {}
             
             node_name2idx = {node:idx for idx, node in enumerate(scenegraph.g.nodes)}
 
-            scenegraph_dict['node_features']                    = self.get_node_embeddings(scenegraph)
-            scenegraph_dict['edge_index'], scenegraph_dict['edge_attr'] = self.get_edge_embeddings(scenegraph, node_name2idx)
+            sg_dict['node_features']                    = self.get_node_embeddings(scenegraph)
+            sg_dict['edge_index'], sg_dict['edge_attr'] = self.get_edge_embeddings(scenegraph, node_name2idx)
 
-            sequence.append(scenegraph_dict)
+            sequence.append(sg_dict)
 
         return sequence
 
     def subsample(self, scenegraphs, number_of_frames=20): 
         '''
-            This functions will subsample the original scenegraph sequence dataset (self.scenegraphs_sequence). 
+            This function will subsample the original scenegraph sequence dataset (self.scenegraphs_sequence). 
             Before running this function, it includes a variant length of graph sequences. 
             We expect the length of graph sequences will be homogenenous after running this function.
 
             The default value of number_of_frames will be 20; Could be a tunnable hyperparameters.
         '''
-    
         sequence = []
         acc_number = 0
         modulo = int(len(scenegraphs) / number_of_frames)
+
         for idx, (timeframe, scenegraph) in enumerate(scenegraphs.items()):
             if idx % modulo == 0 and acc_number < number_of_frames:
                 sequence.append(scenegraph)
@@ -287,4 +293,3 @@ def build_scenegraph_dataset(input_path, number_of_frames=20, train_to_test_rati
        
     train, test = train_test_split(sge.scenegraphs_sequence , test_size=train_to_test_ratio, shuffle=True)
     return train, test, sge.feature_list
-

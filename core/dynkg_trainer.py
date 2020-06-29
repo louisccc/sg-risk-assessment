@@ -61,10 +61,6 @@ class DynKGTrainer:
         torch.manual_seed(self.config.seed)
 
         # load carla cheating scene graph txts into memory 
-        # [ 
-        #   {'node_embeddings', 'edge_indexes' 'edge_attrs', 'label'}  
-        # ]
-
         self.training_data, self.testing_data, self.feature_list = build_scenegraph_dataset(self.config.input_base_dir)
         self.training_labels = [data['label'] for data in self.training_data]
         self.testing_labels = [data['label'] for data in self.testing_data]

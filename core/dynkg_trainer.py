@@ -107,8 +107,8 @@ class DynKGTrainer:
             print('Epoch: {:04d},'.format(epoch_idx), 'loss_train: {:.4f}'.format(acc_loss_train))
             print('')
 
-            # if epoch_idx % self.config.test_step == 0:
-            #     self.evaluate()
+            if epoch_idx % self.config.test_step == 0:
+                self.evaluate()
 
     def inference(self, testing_data, testing_labels):
         acc_predict = []
@@ -127,9 +127,9 @@ class DynKGTrainer:
             
             # print(output, label)
             acc_test = accuracy(output.view(-1, 2), torch.LongTensor([label]).to(self.config.device))
-            acc_predict.append(acc_test.item())
+            acc_predict.append(acc_test.detach().cpu().item())
 
-            outputs.append(output.cpu())
+            outputs.append(output.detach().cpu())
             labels.append(label)
 
             # print('Dynamic SceneGraph: {:04d}'.format(i), 'acc_test: {:.4f}'.format(acc_test.item()))

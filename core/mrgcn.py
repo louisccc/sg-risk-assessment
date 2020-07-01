@@ -15,7 +15,7 @@ class MRGCN(nn.Module):
         self.num_features = config.num_features
         self.num_relations = config.num_relations
         self.num_classes  = config.nclass
-        self.num_layers = config.num_layers
+        #self.num_layers = config.num_layers #TODO: remove if unnecessary
         self.hidden_dim = config.hidden_dim
 
         self.gin_convs = torch.nn.ModuleList()

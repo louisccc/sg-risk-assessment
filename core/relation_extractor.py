@@ -283,6 +283,8 @@ class RelationExtractor:
         else:
             return False
     
+    #gives directional relations between actors based on their 2D absolute positions.
+    #TODO: fix these relations, since the locations are based on the world coordinate system and are not relative to ego.
     def extract_directional_relation(self, actor1, actor2):
         x1 = actor1.attr['location'][0]
         x2 = actor2.attr['location'][0]

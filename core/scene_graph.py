@@ -183,7 +183,6 @@ class SceneGraphSequenceGenerator:
                 with open(txt_path, 'r') as scene_dict_f:
                     try:
                         framedict = json.loads(scene_dict_f.read())
-
                         for frame, frame_dict in framedict.items():
                             scenegraph = SceneGraph(frame_dict)
                             scenegraphs[frame] = scenegraph

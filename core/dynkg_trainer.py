@@ -4,10 +4,11 @@ sys.path.append(os.path.dirname(sys.path[0]))
 import torch
 import torch.nn.functional as F
 import torch.optim as optim
+from torch.utils.tensorboard import SummaryWriter
 import numpy as np
 import scipy.sparse as sp
 import pandas as pd
-import random
+import random, pprint
 from collections import defaultdict
 from sklearn.metrics import accuracy_score, f1_score, confusion_matrix, precision_score, recall_score, roc_auc_score, roc_curve
 from sklearn import preprocessing
@@ -19,8 +20,10 @@ from argparse import ArgumentParser
 from pathlib import Path
 from tqdm import tqdm
 from core.mrgcn import *
-from torch_geometric.data import Data, DataLoader
+from torch_geometric.data import Data, DataLoader, DataListLoader
 from sklearn.utils.class_weight import compute_class_weight
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
 
 class Config:
     '''Argument Parser for script to train scenegraphs.'''
@@ -68,6 +71,7 @@ class DynKGTrainer:
         print("Number of Sequences Included: ", len(self.training_data))
         print("Num Labels in Each Class: " + str(np.unique(self.training_labels, return_counts=True)[1]) + ", Class Weights: " + str(self.class_weights))
 
+        self.summary_writer = SummaryWriter()
 
     def build_model(self):
         self.config.num_features = len(self.feature_list)
@@ -84,20 +88,29 @@ class DynKGTrainer:
 
         for epoch_idx in tqdm(range(self.config.epochs)): # iterate through epoch
             acc_loss_train = 0
-            for i in range(len(self.training_data)): # iterate through scenegraphs
-                data, label = self.training_data[i]['sequence'], self.training_labels[i]
+            
+            self.sequence_loader = DataListLoader(self.training_data, batch_size=self.config.batch_size)
 
-                data_list = [Data(x=g['node_features'], edge_index=g['edge_index'], edge_attr=g['edge_attr']) for g in data]
-                
-                self.train_loader = DataLoader(data_list, batch_size=len(data_list))
-                sequence = next(iter(self.train_loader)).to(self.config.device)
-
+            for data_list in self.sequence_loader: # iterate through scenegraphs
                 self.model.train()
                 self.optimizer.zero_grad()
+                
+                labels = torch.empty(0).long().to(self.config.device)
+                outputs = torch.empty(0,2).to(self.config.device)
+                for sequence in data_list: # iterate through sequences
+                    data, label = sequence['sequence'], sequence['label']
 
-                output = self.model.forward(sequence.x, sequence.edge_index, sequence.edge_attr, sequence.batch)
+                    data_list = [Data(x=g['node_features'], edge_index=g['edge_index'], edge_attr=g['edge_attr']) for g in data]
+                
+                    # data is a sequence that consists of serveral graphs 
+                    self.train_loader = DataLoader(data_list, batch_size=len(data_list))
+                    sequence = next(iter(self.train_loader)).to(self.config.device)
 
-                loss_train = self.loss_func(output.view(-1, 2), torch.LongTensor([label]).to(self.config.device))
+                    output = self.model.forward(sequence.x, sequence.edge_index, sequence.edge_attr, sequence.batch)
+                    outputs = torch.cat([outputs, output.view(-1, 2)], dim=0)
+                    labels  = torch.cat([labels, torch.LongTensor([label]).to(self.config.device)], dim=0)
+                
+                loss_train = self.loss_func(outputs, labels)
                 loss_train.backward()
 
                 self.optimizer.step()
@@ -107,13 +120,30 @@ class DynKGTrainer:
             print('Epoch: {:04d},'.format(epoch_idx), 'loss_train: {:.4f}'.format(acc_loss_train))
             print('')
 
+            
             if epoch_idx % self.config.test_step == 0:
-                self.evaluate()
+                _, _, metrics = self.evaluate()
+                # import pdb; pdb.set_trace()
+                self.summary_writer.add_scalar('Acc_Loss/train', metrics['train']['loss'], epoch_idx)
+                self.summary_writer.add_scalar('Accuracy/train', metrics['train']['acc'], epoch_idx)
+                self.summary_writer.add_scalar('F1/train', metrics['train']['f1'], epoch_idx)
+                # self.summary_writer.add_scalar('Confusion/train', metrics['train']['confusion'], epoch_idx)
+                self.summary_writer.add_scalar('Precision/train', metrics['train']['precision'], epoch_idx)
+                self.summary_writer.add_scalar('Recall/train', metrics['train']['recall'], epoch_idx)
+                self.summary_writer.add_scalar('Auc/train', metrics['train']['auc'], epoch_idx)
+
+                self.summary_writer.add_scalar('Acc_Loss/test', metrics['test']['loss'], epoch_idx)
+                self.summary_writer.add_scalar('Accuracy/test', metrics['test']['acc'], epoch_idx)
+                self.summary_writer.add_scalar('F1/test', metrics['test']['f1'], epoch_idx)
+                # self.summary_writer.add_scalar('Confusion/test', metrics['test']['confusion'], epoch_idx)
+                self.summary_writer.add_scalar('Precision/test', metrics['test']['precision'], epoch_idx)
+                self.summary_writer.add_scalar('Recall/test', metrics['test']['recall'], epoch_idx)
+                self.summary_writer.add_scalar('Auc/test', metrics['test']['auc'], epoch_idx)
 
     def inference(self, testing_data, testing_labels):
-        acc_predict = []
         labels = []
         outputs = []
+        acc_loss_test = 0
         for i in range(len(testing_data)): # iterate through scenegraphs
             data, label = testing_data[i]['sequence'], testing_labels[i]
             
@@ -125,29 +155,45 @@ class DynKGTrainer:
             self.model.eval()
             output = self.model.forward(sequence.x, sequence.edge_index, sequence.edge_attr, sequence.batch)
             
-            # print(output, label)
-            acc_test = accuracy(output.view(-1, 2), torch.LongTensor([label]).to(self.config.device))
-            acc_predict.append(acc_test.detach().cpu().item())
+            loss_test = self.loss_func(output.view(-1, 2), torch.LongTensor([label]).to(self.config.device))
+            acc_loss_test += loss_test.detach().cpu().item()
 
-            outputs.append(output.detach().cpu())
+            outputs.append(output.detach().cpu().numpy().tolist())
             labels.append(label)
 
             # print('Dynamic SceneGraph: {:04d}'.format(i), 'acc_test: {:.4f}'.format(acc_test.item()))
 
-        return outputs, labels, acc_predict
+        return outputs, labels, acc_loss_test
 
     def evaluate(self):
-        
-        outputs, labels, acc_predict = self.inference(self.training_data, self.training_labels)
-        print('Dynamic SceneGraph training precision', sum(acc_predict) / len(acc_predict))
+        metrics = {}
 
-        outputs, labels, acc_predict = self.inference(self.testing_data, self.testing_labels)
-        print('Dynamic SceneGraph testing precision', sum(acc_predict) / len(acc_predict))
-        
-        outputs = torch.cat(outputs).reshape(-1,2).detach()
-       
-        return outputs, np.array(labels).flatten()
+        outputs_train, labels_train, acc_loss_train = self.inference(self.training_data, self.training_labels)
+        metrics['train'] = get_metrics(outputs_train, labels_train)
+        metrics['train']['loss'] = acc_loss_train
 
+        outputs_test, labels_test, acc_loss_test = self.inference(self.testing_data, self.testing_labels)
+        metrics['test'] = get_metrics(outputs_test, labels_test)
+        metrics['test']['loss'] = acc_loss_test
+        
+        pprint.pprint(metrics)
+        return outputs_test, labels_test, metrics
+
+def get_metrics(outputs, labels):
+    labels_tensor = torch.LongTensor(labels)
+    outputs_tensor = torch.FloatTensor(outputs)
+    preds = outputs_tensor.max(1)[1].type_as(labels_tensor)
+
+    metrics = {}
+    metrics['acc'] = accuracy_score(labels_tensor, preds)
+    metrics['f1'] = f1_score(labels_tensor, preds, average="micro")
+    metrics['confusion'] = str(confusion_matrix(labels_tensor, preds))
+    metrics['precision'] = precision_score(labels_tensor, preds, average="micro")
+    metrics['recall'] = recall_score(labels_tensor, preds, average="micro")
+    metrics['auc'] = get_auc(outputs_tensor, labels_tensor, 'dynkg')
+    metrics['label_distribution'] = str(np.unique(labels_tensor, return_counts=True)[1])
+    
+    return metrics 
 
 #returns onehot version of labels. can specify n_classes to force onehot size.
 def encode_onehot(labels, n_classes=None):
@@ -190,29 +236,6 @@ def accuracy(output, labels):
     correct = preds.eq(labels).double()
     correct = correct.sum()
     return correct / len(labels)
-    
-
-def get_scoring_metrics(output, labels, task):
-    preds, labels = get_predictions(output, labels)
-    metrics = defaultdict()
-    output = torch.FloatTensor(output)
-    #import pdb;pdb.set_trace()
-    metrics['acc'] = accuracy_score(labels, preds)
-    metrics['f1'] = f1_score(labels, preds, average="micro")
-    metrics['confusion'] = str(confusion_matrix(labels, preds))
-    metrics['precision'] = precision_score(labels, preds, average="micro")
-    metrics['recall'] = recall_score(labels, preds, average="micro")
-    metrics['auc'] = get_auc(output, labels, task)
-    metrics['label_distribution'] = str(np.unique(labels, return_counts=True)[1])
-    get_roc_curve(output, labels, task, render=False)
-    return metrics
-    
-def get_predictions(outputs, labels):
-    labels = torch.LongTensor(labels)
-    outputs = torch.FloatTensor(outputs)
-    preds = outputs.max(1)[1].type_as(labels)
-    return preds, labels
-
 
 def get_auc(outputs, labels, task):
     try:

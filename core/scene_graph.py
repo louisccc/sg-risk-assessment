@@ -111,9 +111,10 @@ class SceneGraph:
                     if node1.type != ActorType.ROAD.value and node2.type != ActorType.ROAD.value:  # dont build relations w/ road
                         self.add_relations(self.relation_extractor.extract_relations(node1, node2))
 
-    def visualize(self):
+    def visualize(self, filename=None):
         pos = nx.spring_layout(self.g, k=1.5*1/np.sqrt(len(self.g.nodes())))
         color_map = []
+        edge_color_map = []
         for node in self.g.nodes():
             if node.type == ActorType.ROAD.value:
                 color_map.append(1)
@@ -121,8 +122,24 @@ class SceneGraph:
                 color_map.append(3)
             else:
                 color_map.append(2)
-        nx.draw(self.g, node_color=color_map, labels=nx.get_node_attributes(self.g, 'label'), pos=pos, font_size=8, with_labels=True)
-        plt.show()
+
+        for edge in self.g.edges(data=True):
+            edge_type = edge[2]['object']
+            edge_color_map.append(edge_type.value)
+
+        edge_label_dicts = {}
+        for edge in self.g.edges(data=True):
+            edge_label_dicts[(edge[0], edge[1])] = edge[2]['object'].name
+
+        nx.draw(self.g, node_color=color_map, labels=nx.get_node_attributes(self.g, 'label'), 
+                edges=self.g.edges(), edge_color=edge_color_map,
+                pos=pos, font_size=8, with_labels=True)
+
+        nx.draw_networkx_edge_labels(self.g, pos,edge_labels=edge_label_dicts,font_color='red')
+
+        # plt.show()
+        plt.savefig(filename)
+        plt.clf()
 
 
 class SceneGraphSequenceGenerator:
@@ -188,7 +205,7 @@ class SceneGraphSequenceGenerator:
 
                 # scenegraph_dict contains node embeddings edge indexes and edge attrs.
                 scenegraphs_dict = {}
-                scenegraphs_dict['sequence'] = self.process_graph_sequences(scenegraphs, 20)
+                scenegraphs_dict['sequence'] = self.process_graph_sequences(scenegraphs, 20, folder_name=path.name)
                 scenegraphs_dict['label'] = risk_label
 
                 self.scenegraphs_sequence.append(scenegraphs_dict)
@@ -198,7 +215,7 @@ class SceneGraphSequenceGenerator:
         with open('dyngraph_embeddings.pkl', 'wb') as f:
             pkl.dump((self.scenegraphs_sequence, self.feature_list), f)
             
-    def process_graph_sequences(self, scenegraphs, number_of_frames=20):
+    def process_graph_sequences(self, scenegraphs, number_of_frames=20, folder_name=None):
         '''
             The self.scenegraphs_sequence should be having same length after the subsampling. 
             This function will get the graph-related features (node embeddings, edge types, adjacency matrix) from scenegraphs.
@@ -207,13 +224,15 @@ class SceneGraphSequenceGenerator:
         sequence = []
         subsampled_scenegraphs = self.subsample(scenegraphs, number_of_frames=20)
 
-        for scenegraph in subsampled_scenegraphs:
+        for idx, scenegraph in enumerate(subsampled_scenegraphs):
             sg_dict = {}
             
             node_name2idx = {node:idx for idx, node in enumerate(scenegraph.g.nodes)}
 
             sg_dict['node_features']                    = self.get_node_embeddings(scenegraph)
             sg_dict['edge_index'], sg_dict['edge_attr'] = self.get_edge_embeddings(scenegraph, node_name2idx)
+            
+            scenegraph.visualize(filename="%s_%d"%(folder_name, idx))
 
             sequence.append(sg_dict)
 

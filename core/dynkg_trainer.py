@@ -34,8 +34,7 @@ class Config:
         self.parser.add_argument('--seed', type=int, default=random.randint(0,2**32), help='Random seed.')
         self.parser.add_argument('--epochs', type=int, default=200, help='Number of epochs to train.')
         self.parser.add_argument('--weight_decay', type=float, default=5e-4, help='Weight decay (L2 loss on parameters).')
-        self.parser.add_argument('--hidden', type=int, default=200, help='Number of hidden units.')
-        self.parser.add_argument('--dropout', type=float, default=0.5, help='Dropout rate (1 - keep probability).')
+        self.parser.add_argument('--dropout', type=float, default=0.25, help='Dropout rate (1 - keep probability).')
         self.parser.add_argument('--nclass', type=int, default=2, help="The number of classes for dynamic graph classification.")
         self.parser.add_argument('--batch_size', type=int, default=32, help='Number of graphs in a batch.')
         self.parser.add_argument('--device', type=str, default="cpu", help='The device to run on models (cuda or cpu) cpu in default.')
@@ -85,8 +84,8 @@ class DynKGTrainer:
            self.loss_func = nn.CrossEntropyLoss(weight=self.class_weights.float().to(self.config.device))
 
     def train(self):
-
-        for epoch_idx in tqdm(range(self.config.epochs)): # iterate through epoch
+        
+        for epoch_idx in tqdm(range(self.config.epochs)): # iterate through epoch   
             acc_loss_train = 0
             
             self.sequence_loader = DataListLoader(self.training_data, batch_size=self.config.batch_size)
@@ -100,10 +99,10 @@ class DynKGTrainer:
                 for sequence in data_list: # iterate through sequences
                     data, label = sequence['sequence'], sequence['label']
 
-                    data_list = [Data(x=g['node_features'], edge_index=g['edge_index'], edge_attr=g['edge_attr']) for g in data]
+                    graph_list = [Data(x=g['node_features'], edge_index=g['edge_index'], edge_attr=g['edge_attr']) for g in data]
                 
                     # data is a sequence that consists of serveral graphs 
-                    self.train_loader = DataLoader(data_list, batch_size=len(data_list))
+                    self.train_loader = DataLoader(graph_list, batch_size=len(graph_list))
                     sequence = next(iter(self.train_loader)).to(self.config.device)
 
                     output = self.model.forward(sequence.x, sequence.edge_index, sequence.edge_attr, sequence.batch)
@@ -112,9 +111,8 @@ class DynKGTrainer:
                 
                 loss_train = self.loss_func(outputs, labels)
                 loss_train.backward()
-
+                acc_loss_train += loss_train.detach().cpu().item() * len(data_list)
                 self.optimizer.step()
-                acc_loss_train += loss_train.detach().cpu().item()
 
             print('')
             print('Epoch: {:04d},'.format(epoch_idx), 'loss_train: {:.4f}'.format(acc_loss_train))
@@ -125,7 +123,7 @@ class DynKGTrainer:
                 _, _, metrics = self.evaluate()
                 # import pdb; pdb.set_trace()
                 self.summary_writer.add_scalar('Acc_Loss/train', metrics['train']['loss'], epoch_idx)
-                self.summary_writer.add_scalar('Accuracy/train', metrics['train']['acc'], epoch_idx)
+                self.summary_writer.add_scalar('Acc_Loss/train_acc', metrics['train']['acc'], epoch_idx)
                 self.summary_writer.add_scalar('F1/train', metrics['train']['f1'], epoch_idx)
                 # self.summary_writer.add_scalar('Confusion/train', metrics['train']['confusion'], epoch_idx)
                 self.summary_writer.add_scalar('Precision/train', metrics['train']['precision'], epoch_idx)
@@ -133,7 +131,7 @@ class DynKGTrainer:
                 self.summary_writer.add_scalar('Auc/train', metrics['train']['auc'], epoch_idx)
 
                 self.summary_writer.add_scalar('Acc_Loss/test', metrics['test']['loss'], epoch_idx)
-                self.summary_writer.add_scalar('Accuracy/test', metrics['test']['acc'], epoch_idx)
+                self.summary_writer.add_scalar('Acc_Loss/test_acc', metrics['test']['acc'], epoch_idx)
                 self.summary_writer.add_scalar('F1/test', metrics['test']['f1'], epoch_idx)
                 # self.summary_writer.add_scalar('Confusion/test', metrics['test']['confusion'], epoch_idx)
                 self.summary_writer.add_scalar('Precision/test', metrics['test']['precision'], epoch_idx)
@@ -176,7 +174,7 @@ class DynKGTrainer:
         metrics['test'] = get_metrics(outputs_test, labels_test)
         metrics['test']['loss'] = acc_loss_test
         
-        pprint.pprint(metrics)
+        pprint.pprint(metrics['train'])
         return outputs_test, labels_test, metrics
 
 def get_metrics(outputs, labels):

@@ -179,7 +179,7 @@ class SceneGraphSequenceGenerator:
         for path in tqdm(all_video_clip_dirs):
             scenegraphs = {} 
             scenegraph_txts = sorted(list(glob("%s/**/*.txt" % str(path/"scene_raw"), recursive=True)))
-            for txt_path in glob("%s/**/*.txt" % str(path/"scene_raw"), recursive=True):
+            for txt_path in scenegraph_txts:
                 with open(txt_path, 'r') as scene_dict_f:
                     try:
                         framedict = json.loads(scene_dict_f.read())
@@ -188,7 +188,6 @@ class SceneGraphSequenceGenerator:
                             scenegraphs[frame] = scenegraph
                             # import pdb; pdb.set_trace()
                             # scenegraph.visualize(filename="./visualize/%s_%s"%(path.name, frame))
-                            
                             
                     except Exception as e:
                         print("We have problem parsing the dict.json in %s"%txt_path)

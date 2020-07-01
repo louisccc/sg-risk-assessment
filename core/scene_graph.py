@@ -112,7 +112,6 @@ class SceneGraph:
                         self.add_relations(self.relation_extractor.extract_relations(node1, node2))
 
     def visualize(self, filename=None):
-        pos = nx.spring_layout(self.g, k=1.5*1/np.sqrt(len(self.g.nodes())))
         color_map = []
         edge_color_map = []
         for node in self.g.nodes():
@@ -131,6 +130,7 @@ class SceneGraph:
         for edge in self.g.edges(data=True):
             edge_label_dicts[(edge[0], edge[1])] = edge[2]['object'].name
 
+        pos = nx.nx_agraph.graphviz_layout(self.g, prog='neato')
         nx.draw(self.g, node_color=color_map, labels=nx.get_node_attributes(self.g, 'label'), 
                 edges=self.g.edges(), edge_color=edge_color_map,
                 pos=pos, font_size=8, with_labels=True)
@@ -177,9 +177,9 @@ class SceneGraphSequenceGenerator:
         all_video_clip_dirs = [x for x in input_path.iterdir() if x.is_dir()]
 
         for path in tqdm(all_video_clip_dirs):
-            scenegraphs = {}
+            scenegraphs = {} 
+            scenegraph_txts = sorted(list(glob("%s/**/*.txt" % str(path/"scene_raw"), recursive=True)))
             for txt_path in glob("%s/**/*.txt" % str(path/"scene_raw"), recursive=True):
-
                 with open(txt_path, 'r') as scene_dict_f:
                     try:
                         framedict = json.loads(scene_dict_f.read())
@@ -187,7 +187,10 @@ class SceneGraphSequenceGenerator:
                         for frame, frame_dict in framedict.items():
                             scenegraph = SceneGraph(frame_dict)
                             scenegraphs[frame] = scenegraph
-
+                            # import pdb; pdb.set_trace()
+                            # scenegraph.visualize(filename="./visualize/%s_%s"%(path.name, frame))
+                            
+                            
                     except Exception as e:
                         print("We have problem parsing the dict.json in %s"%txt_path)
                         print(e)
@@ -232,7 +235,7 @@ class SceneGraphSequenceGenerator:
             sg_dict['node_features']                    = self.get_node_embeddings(scenegraph)
             sg_dict['edge_index'], sg_dict['edge_attr'] = self.get_edge_embeddings(scenegraph, node_name2idx)
             
-            scenegraph.visualize(filename="%s_%d"%(folder_name, idx))
+            # scenegraph.visualize(filename="./visualize/%s_%d"%(folder_name, idx))
 
             sequence.append(sg_dict)
 

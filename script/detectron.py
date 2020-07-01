@@ -8,6 +8,7 @@ import numpy as np
 import cv2
 import random
 import networkx as nx
+import itertools
 
 # import some common detectron2 utilities
 from detectron2 import model_zoo
@@ -15,9 +16,9 @@ from detectron2.engine import DefaultPredictor
 from detectron2.config import get_cfg
 from detectron2.utils.visualizer import Visualizer
 from detectron2.data import MetadataCatalog
-
+# panoptic seg
 sys.path.append(os.path.dirname(sys.path[0]))
-from core.relation_extractor import ActorType, RelationExtractor
+from core.relation_extractor import ActorType
 
 coco_class_names = ['person', 'bicycle', 'car', 'motorcycle', 'airplane',
 'bus', 'train', 'truck', 'boat', 'traffic light',
@@ -36,16 +37,305 @@ coco_class_names = ['person', 'bicycle', 'car', 'motorcycle', 'airplane',
 'teddy bear', 'hair drier', 'toothbrush']
 
 
+from enum import Enum
 
 class ObjectNode:
     def __init__(self, name, attr, label):
         self.name = name  # Car-1, Car-2.
         self.attr = attr  # bounding box info
-        self.label = name # ActorType
+        self.label = label # ActorType
 
     def __repr__(self):
         return "%s" % self.name
+
+ACTOR_NAMES=['car','moto','bicycle','ped','lane','light','sign', 'road']
+    
+class Relations(Enum):
+    isIn = 0
+    near = 1
+    partOf = 2
+    instanceOf = 3
+    hasAttribute = 4
+    frontLeft = 5
+    frontRight = 6
+    rearLeft = 7
+    rearRight = 8
+
+# {
+#    'binary mask':
+#    'list of lane marking': [
+        # [#1 lane_marking, binary mask]
+        # car
+        # [#2 lane_marking, binary mask]
+#       ]
+# }
+#This class extracts relations for every pair of entities in a scene
+class RelationExtractor:
+
+    def get_actor_type(self, actor):
+        if "lane_type" in actor.attr.keys():
+            return ActorType.LANE
+        if actor.attr["name"] == "Traffic Light":
+            return ActorType.LIGHT
+        if actor.attr["name"].split(" ")[0] == "Pedestrian":
+            return ActorType.PED
+        if actor.attr["name"].split(" ")[0] in CAR_NAMES:
+            return ActorType.CAR
+        if actor.attr["name"].split(" ")[0] in MOTO_NAMES:
+            return ActorType.MOTO
+        if actor.attr["name"].split(" ")[0] in BICYCLE_NAMES:
+            return ActorType.BICYCLE
+        if "Sign" in actor.attr["name"]:
+            return ActorType.SIGN
+            
+        print(actor.attr)
+        import pdb; pdb.set_trace()
+        raise NameError("Actor name not found for actor with name: " + actor.attr["name"])
+            
+    #takes in two entities and extracts all relations between those two entities. extracted relations are bidirectional    
+    def extract_relations(self, actor1, actor2):
+        #import pdb; pdb.set_trace()
+        import pdb; pdb.set_trace()
+        type1 = actor1.label
+        type2 = actor2.label
         
+        low_type = min(type1.value, type2.value) #the lower of the two enums.
+        high_type = max(type1.value, type2.value)
+    
+        function_call = "self.extract_relations_"+ACTOR_NAMES[low_type]+"_"+ACTOR_NAMES[high_type]+"(actor1, actor2)"
+        return eval(function_call)
+           
+
+#~~~~~~~~~specific relations for each pair of actors possible~~~~~~~~~~~~
+#actor 1 corresponds to the first actor in the function name and actor2 the second
+
+    def extract_relations_car_car(self, actor1, actor2):
+        relation_list = []
+        if(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH):
+            relation_list.append([actor1, Relations.near, actor2])
+
+        relation_list.append(self.extract_directional_relation(actor1, actor2))
+        relation_list.append(self.extract_directional_relation(actor2, actor1))
+        return relation_list
+            
+    def extract_relations_car_lane(self, actor1, actor2):
+        relation_list = []
+        # import pdb; pdb.set_trace()
+        if(self.in_lane(actor1,actor2)):
+            relation_list.append([actor1, Relations.isIn, actor2])
+        return relation_list 
+        
+    def extract_relations_car_light(self, actor1, actor2):
+        relation_list = []
+        relation_list.append(self.extract_directional_relation(actor1, actor2))
+        relation_list.append(self.extract_directional_relation(actor2, actor1))
+        return relation_list
+        
+    def extract_relations_car_sign(self, actor1, actor2):
+        relation_list = []
+        relation_list.append(self.extract_directional_relation(actor1, actor2))
+        relation_list.append(self.extract_directional_relation(actor2, actor1))
+        return relation_list
+        
+    def extract_relations_car_ped(self, actor1, actor2):
+        relation_list = []
+        if(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH):
+            relation_list.append([actor1, Relations.near, actor2])
+        relation_list.append(self.extract_directional_relation(actor1, actor2))
+        relation_list.append(self.extract_directional_relation(actor2, actor1))
+        return relation_list
+        
+    def extract_relations_car_bicycle(self, actor1, actor2):
+        relation_list = []
+        if(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH):
+            relation_list.append([actor1, Relations.near, actor2])
+        relation_list.append(self.extract_directional_relation(actor1, actor2))
+        relation_list.append(self.extract_directional_relation(actor2, actor1))
+        return relation_list
+        
+    def extract_relations_car_moto(self, actor1, actor2):
+        relation_list = []
+        if(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH):
+            relation_list.append([actor1, Relations.near, actor2])
+        relation_list.append(self.extract_directional_relation(actor1, actor2))
+        relation_list.append(self.extract_directional_relation(actor2, actor1))
+        return relation_list
+        
+        
+    def extract_relations_moto_moto(self, actor1, actor2):
+        relation_list = []
+        if(self.euclidean_distance(actor1, actor2) < MOTO_PROXIMITY_THRESH):
+            relation_list.append([actor1, Relations.near, actor2])
+        relation_list.append(self.extract_directional_relation(actor1, actor2))
+        relation_list.append(self.extract_directional_relation(actor2, actor1))
+        return relation_list
+        
+    def extract_relations_moto_bicycle(self, actor1, actor2):
+        relation_list = []
+        if(self.euclidean_distance(actor1, actor2) < MOTO_PROXIMITY_THRESH):
+            relation_list.append([actor1, Relations.near, actor2])
+        relation_list.append(self.extract_directional_relation(actor1, actor2))
+        relation_list.append(self.extract_directional_relation(actor2, actor1))
+        return relation_list
+        
+    def extract_relations_moto_ped(self, actor1, actor2):
+        relation_list = []
+        if(self.euclidean_distance(actor1, actor2) < MOTO_PROXIMITY_THRESH):
+            relation_list.append([actor1, Relations.near, actor2])
+        relation_list.append(self.extract_directional_relation(actor1, actor2))
+        relation_list.append(self.extract_directional_relation(actor2, actor1))
+        return relation_list
+        
+    def extract_relations_moto_lane(self, actor1, actor2):
+        relation_list = []
+        if(self.in_lane(actor1,actor2)):
+            relation_list.append([actor1, Relations.isIn, actor2])
+        return relation_list 
+        
+    def extract_relations_moto_light(self, actor1, actor2):
+        relation_list = []
+        relation_list.append(self.extract_directional_relation(actor1, actor2))
+        relation_list.append(self.extract_directional_relation(actor2, actor1))
+        return relation_list
+        
+    def extract_relations_moto_sign(self, actor1, actor2):
+        relation_list = []
+        relation_list.append(self.extract_directional_relation(actor1, actor2))
+        relation_list.append(self.extract_directional_relation(actor2, actor1))
+        return relation_list
+        
+
+    def extract_relations_bicycle_bicycle(self, actor1, actor2):
+        relation_list = []
+        if(self.euclidean_distance(actor1, actor2) < BICYCLE_PROXIMITY_THRESH):
+            relation_list.append([actor1, Relations.near, actor2])
+        relation_list.append(self.extract_directional_relation(actor1, actor2))
+        relation_list.append(self.extract_directional_relation(actor2, actor1))
+        return relation_list
+        
+    def extract_relations_bicycle_ped(self, actor1, actor2):
+        relation_list = []
+        if(self.euclidean_distance(actor1, actor2) < BICYCLE_PROXIMITY_THRESH):
+            relation_list.append([actor1, Relations.near, actor2])
+        relation_list.append(self.extract_directional_relation(actor1, actor2))
+        relation_list.append(self.extract_directional_relation(actor2, actor1))
+        return relation_list
+        
+    def extract_relations_bicycle_lane(self, actor1, actor2):
+        relation_list = []
+        if(self.in_lane(actor1,actor2)):
+            relation_list.append([actor1, Relations.isIn, actor2])
+        return relation_list 
+        
+    def extract_relations_bicycle_light(self, actor1, actor2):
+        relation_list = []
+        relation_list.append(self.extract_directional_relation(actor1, actor2))
+        relation_list.append(self.extract_directional_relation(actor2, actor1))
+        return relation_list
+        
+    def extract_relations_bicycle_sign(self, actor1, actor2):
+        relation_list = []
+        relation_list.append(self.extract_directional_relation(actor1, actor2))
+        relation_list.append(self.extract_directional_relation(actor2, actor1))
+        return relation_list
+        
+        
+    def extract_relations_ped_ped(self, actor1, actor2):
+        relation_list = []
+        if(self.euclidean_distance(actor1, actor2) < PED_PROXIMITY_THRESH):
+            relation_list.append([actor1, Relations.near, actor2])
+        relation_list.append(self.extract_directional_relation(actor1, actor2))
+        relation_list.append(self.extract_directional_relation(actor2, actor1))
+        return relation_list
+           
+    def extract_relations_ped_lane(self, actor1, actor2):
+        relation_list = []
+        if(self.in_lane(actor1,actor2)):
+            relation_list.append([actor1, Relations.isIn, actor2])
+        return relation_list 
+        
+    def extract_relations_ped_light(self, actor1, actor2):
+        relation_list = []
+        #proximity relation could indicate ped waiting for crosswalk at a light
+        if(self.euclidean_distance(actor1, actor2) < PED_PROXIMITY_THRESH):
+            relation_list.append([actor1, Relations.near, actor2])
+        relation_list.append(self.extract_directional_relation(actor1, actor2))
+        relation_list.append(self.extract_directional_relation(actor2, actor1))
+        return relation_list
+        
+    def extract_relations_ped_sign(self, actor1, actor2):
+        relation_list = []
+        relation_list.append(self.extract_directional_relation(actor1, actor2))
+        relation_list.append(self.extract_directional_relation(actor2, actor1))
+        return relation_list
+        
+
+    def extract_relations_lane_lane(self, actor1, actor2):
+        relation_list = []
+        return relation_list
+        
+    def extract_relations_lane_light(self, actor1, actor2):
+        relation_list = []
+        return relation_list
+        
+    def extract_relations_lane_sign(self, actor1, actor2):
+        relation_list = []
+        return relation_list
+
+    def extract_relations_light_light(self, actor1, actor2):
+        relation_list = []
+        relation_list.append(self.extract_directional_relation(actor1, actor2))
+        relation_list.append(self.extract_directional_relation(actor2, actor1))
+        return relation_list
+        
+    def extract_relations_light_sign(self, actor1, actor2):
+        relation_list = []
+        relation_list.append(self.extract_directional_relation(actor1, actor2))
+        relation_list.append(self.extract_directional_relation(actor2, actor1))
+        return relation_list
+
+    def extract_relations_sign_sign(self, actor1, actor2):
+        relation_list = []
+        relation_list.append(self.extract_directional_relation(actor1, actor2))
+        relation_list.append(self.extract_directional_relation(actor2, actor1))
+        return relation_list
+    
+    
+#~~~~~~~~~~~~~~~~~~UTILITY FUNCTIONS~~~~~~~~~~~~~~~~~~~~~~
+    #return euclidean distance between actors
+    def euclidean_distance(self, actor1, actor2):
+        #import pdb; pdb.set_trace()
+        l1 = actor1.attr['location']
+        l2 = actor2.attr['location']
+        return math.sqrt((l1[0] - l2[0])**2 + (l1[1]- l2[1])**2 + (l1[2] - l2[2])**2)
+        
+    #check if an actor is in a certain lane
+    def in_lane(self, actor1, actor2):
+        if('lane_id' in actor1.attr.keys() and actor1.attr['lane_id'] == actor2.attr['lane_id']):
+            return True
+        else:
+            return False
+    
+    def extract_directional_relation(self, actor1, actor2):
+        x1 = actor1.attr['location'][0]
+        x2 = actor2.attr['location'][0]
+        y1 = actor1.attr['location'][1]
+        y2 = actor2.attr['location'][1]
+        
+        x_diff = x2 - x1
+        y_diff = y2 - y1
+        if (x_diff < 0):
+            if (y_diff < 0):
+                return [actor1, Relations.rearLeft, actor2]
+            else:
+                return [actor1, Relations.rearRight, actor2]
+        else:
+            if (y_diff < 0):
+                return [actor1, Relations.frontLeft, actor2]
+            else:
+                return [actor1, Relations.frontRight, actor2]
+
+                
 class RealSceneGraph: 
     ''' 
         scene graph the real images 
@@ -57,14 +347,14 @@ class RealSceneGraph:
         self.relation_extractor = RelationExtractor()
         
         self.road_node = ObjectNode("Root Road", {}, ActorType.ROAD) # we need to define the type of node.
-        self.ego_node  = ObjectNode("Ego Car", {}, ActorType.CAR)
+        self.ego_node  = ObjectNode("Ego Car", {"x": 0.5, "y": 1}, ActorType.CAR)
         # we need to fake a preset position of ego car. 
 
-        self.add_node(self.road_node)   #adding the road as the root node
+        self.add_node(self.road_node)   # adding the road as the root node
         self.add_node(self.ego_node)
 
         # start detectron2. 
-        boxes, labels = get_bounding_boxes(image_path)
+        boxes, labels, image_size = get_bounding_boxes(image_path)
 
         for idx, (box, label) in enumerate(zip(boxes, labels)):
             box = box.cpu().numpy().tolist()
@@ -83,11 +373,23 @@ class RealSceneGraph:
             elif class_name in ['stop sign']:
                 actor_type = ActorType.SIGN
         
-            attr = {'x1': box[0], 'y1': box[1], 'x2': box[2], 'y2': box[3]}
-
+            attr = {'x1': box[0] / image_size[1], 'y1': box[1] / image_size[0], 'x2': box[2] / image_size[1], 'y2': box[3] / image_size[0]}
+            print(attr)
             self.add_node(ObjectNode("%s_%d"%(class_name, idx), attr, actor_type))
-            import pdb; pdb.set_trace()
+            # import pdb; pdb.set_trace()
+        
+        # lane/road detection
+
+        # bird eye view projection 
+
+        # get the relations between nodes
+        for node_a, node_b in itertools.combinations(self.g.nodes, 2):
+            if node_a.label == ActorType.ROAD or node_b.label == ActorType.ROAD:  
+                # dont build relations w/ road
+                continue
             
+            self.add_relations(self.relation_extractor.extract_relations(node_a, node_b))
+
         # self.extract_semantic_relations()
 
     #add single node to graph. node can be any hashable datatype including objects.
@@ -169,8 +471,13 @@ def get_bounding_boxes(img_path, out_img_path=None):
         out = v.draw_instance_predictions(outputs["instances"].to("cpu"))
         cv2.imwrite(out_img_path, out.get_image()[:, :, ::-1])
 
-    return outputs["instances"].pred_boxes, outputs["instances"].pred_classes
+    return outputs["instances"].pred_boxes, outputs["instances"].pred_classes, outputs["instances"].image_size
 
 if __name__ == "__main__":
     ##can't use the path on NAS. 
-    realSG = RealSceneGraph(r"../input/synthesis_data/lane-change/0/raw_images/00025857.png")
+    #　\\128.200.5.40\temp\louisccc\av\synthesis_data\lane-change-804\0\raw_images 00032989.jpg
+    realSG = RealSceneGraph(r"/home/aung/NAS/louisccc/av/synthesis_data/lane-change-804/0/raw_images/00032989.jpg")
+    print(realSG.g.nodes)
+    print(realSG.g.edges)
+
+    # get_bounding_boxes(r"/home/aung/NAS/louisccc/av/synthesis_data/lane-change-804/0/raw_images/00032989.jpg", "./00032989.jpg")

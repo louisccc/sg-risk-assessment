@@ -279,14 +279,34 @@ class SceneGraphSequenceGenerator:
                 ego_attrs = data['attr']
         if ego_attrs == None:
             raise NameError("Ego not found in scenegraph")
+
+        #rotating axes to align with ego. yaw axis is the primary rotation axis in vehicles
+        ego_yaw = ego_attrs['rotation'][0]
+        cos_term = math.cos(ego_yaw)
+        sin_term = math.sin(ego_yaw)
+
+        def rotate_coords(x, y): 
+            new_x = x * cos_term + y * sin_term
+            new_y = -x * sin_term + y*cos_term
+            return new_x, new_y
             
         def get_embedding(node, row):
             #subtract each vector from corresponding vector of ego to find delta
             if "location" in node.attr:
-                row["rel_location_x"] = (node.attr["location"][0] - ego_attrs["location"][0]) / 50
-                row["rel_location_y"] = (node.attr["location"][1] - ego_attrs["location"][1]) / 50
-                row["rel_location_z"] = (node.attr["location"][2] - ego_attrs["location"][2]) / 50
-                row["distance_abs"] = (math.sqrt(row["rel_location_x"]**2 + row["rel_location_y"]**2 + row["rel_location_z"]**2)) / 50
+                ego_x, ego_y = rotate_coords(ego_attrs["location"][0], ego_attrs["location"][1])
+                node_x, node_y = rotate_coords(node.attr["location"][0], node.attr["location"][1])
+                row["rel_location_x"] = node_x - ego_x
+                row["rel_location_y"] = node_y - ego_y
+                row["rel_location_z"] = node.attr["location"][2] - ego_attrs["location"][2] #no axis rotation needed for Z
+                row["distance_abs"] = math.sqrt(row["rel_location_x"]**2 + row["rel_location_y"]**2 + row["rel_location_z"]**2)
+            if "velocity" in node.attr:
+                egov_x, egov_y = rotate_coords(ego_attrs['velocity'][0], ego_attrs['velocity'][1])
+                nodev_x, nodev_y = rotate_coords(node.attr['velocity'][0], node.attr['velocity'][1])
+                row['rel_velocity_x'] = nodev_x - egov_x
+                row['rel_velocity_y'] = nodev_y - egov_y
+                row["velocity_abs"] = node.attr['velocity_abs']
+            if "rotation" in node.attr:
+                row['rel_rotation'] = node.attr['rotation'][0] - ego_yaw
             row['type_'+str(node.type)] = 1 #assign 1hot class label
             return row
         
@@ -313,6 +333,7 @@ class SceneGraphSequenceGenerator:
         edge_attr  = torch.LongTensor(edge_attr)
         
         return edge_index, edge_attr
+
 
 def build_scenegraph_dataset(input_path, number_of_frames=20, train_to_test_ratio=0.3):
     sge = SceneGraphSequenceGenerator()

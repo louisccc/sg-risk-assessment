@@ -39,6 +39,13 @@ coco_class_names = ['person', 'bicycle', 'car', 'motorcycle', 'airplane',
 
 from enum import Enum
 
+CARLA_IMAGE_H = 360
+CARLA_IMAGE_W = 640
+BIRDS_EYE_IMAGE_H = 175 #height of ROI. crops to lane area of carla images
+BIRDS_EYE_IMAGE_W = 640
+H_OFFSET = CARLA_IMAGE_H - BIRDS_EYE_IMAGE_H #offset from top of image to start of ROI
+
+
 class ObjectNode:
     def __init__(self, name, attr, label):
         self.name = name  # Car-1, Car-2.
@@ -381,6 +388,10 @@ class RealSceneGraph:
         # lane/road detection
 
         # bird eye view projection 
+        M = get_birds_eye_matrix()
+        warped_img = get_birds_eye_warp(image_path, M) #warped image is cropped to ROI (contains no sky pixels)
+        
+        
 
         # get the relations between nodes
         for node_a, node_b in itertools.combinations(self.g.nodes, 2):
@@ -472,6 +483,29 @@ def get_bounding_boxes(img_path, out_img_path=None):
         cv2.imwrite(out_img_path, out.get_image()[:, :, ::-1])
 
     return outputs["instances"].pred_boxes, outputs["instances"].pred_classes, outputs["instances"].image_size
+
+
+
+#ROI: Region of Interest
+#returns transformation matrix for warping image to birds eye projection
+#birds eye matrix fixed for all images using the assumption that camera perspective does not change over time.
+def get_birds_eye_matrix():
+    src = np.float32([[0, BIRDS_EYE_IMAGE_H], [BIRDS_EYE_IMAGE_W, BIRDS_EYE_IMAGE_H], [0, 0], [BIRDS_EYE_IMAGE_W, 0]]) #original dimensions (cropped to ROI)
+    dst = np.float32([[int(BIRDS_EYE_IMAGE_W*9/19), BIRDS_EYE_IMAGE_H], [int(BIRDS_EYE_IMAGE_W*10/19), BIRDS_EYE_IMAGE_H], [0, 0], [BIRDS_EYE_IMAGE_W, 0]]) #warped dimensions
+    M = cv2.getPerspectiveTransform(src, dst) # The transformation matrix
+    #Minv = cv2.getPerspectiveTransform(dst, src) # Inverse transformation (if needed)
+    return M
+    
+
+#returns image warped to birds eye projection using M
+#returned image is vertically cropped to the ROI (lane area)
+def get_birds_eye_warp(image_path, M):
+    img = cv2.imread(image_path)
+    img = img[H_OFFSET:(H_OFFSET+BIRDS_EYE_IMAGE_H), 0:BIRDS_EYE_IMAGE_W] # Apply np slicing for ROI crop
+    warped_img = cv2.warpPerspective(img, M, (BIRDS_EYE_IMAGE_W, BIRDS_EYE_IMAGE_H)) # Image warping
+    warped_img = cv2.cvtColor(warped_img, cv2.COLOR_BGR2RGB) #set to RGB
+    return warped_img
+
 
 if __name__ == "__main__":
     ##can't use the path on NAS. 

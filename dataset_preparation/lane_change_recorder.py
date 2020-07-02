@@ -124,7 +124,7 @@ class LaneChangeRecorder:
         if self.lane_changing:
             self.extractor.extract_frame(self.carla_world, self.map, frame_num)
             success = self.lane_change_controller.update()
-            if success == py_trees.common.Status.SUCCESS:
+            if success == py_trees.common.Status.SUCCESS or self.tick_count > 250:
                 #write to metadata file
                 with open((Path(self.new_path) / 'metadata.txt').resolve(),'w') as file:
                     weather=self.carla_world.get_weather()

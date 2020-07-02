@@ -177,6 +177,19 @@ class DynKGTrainer:
         pprint.pprint(metrics['train'])
         return outputs_test, labels_test, metrics
 
+    def save_model(self):
+        """Function to save the model."""
+        saved_path = Path("./model").resolve()
+        saved_path.mkdir(parents=True, exist_ok=True)
+        torch.save(self.model.state_dict(), str(saved_path / 'model.vec.pt'))
+
+    def load_model(self):
+        """Function to load the model."""
+        saved_path = Path("./model").resolve()
+        if saved_path.exists():
+            self.model.load_state_dict(torch.load(str(saved_path / 'model.vec.pt')))
+            self.model.eval()
+
 def get_metrics(outputs, labels):
     labels_tensor = torch.LongTensor(labels)
     outputs_tensor = torch.FloatTensor(outputs)

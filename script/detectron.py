@@ -401,6 +401,12 @@ class RealSceneGraph:
         # bird eye view projection 
         M = get_birds_eye_matrix()
         warped_img = get_birds_eye_warp(image_path, M) #warped image is cropped to ROI (contains no sky pixels)
+        #TODO: map bottom of bbox to pixel location in warped_img
+        #TODO: assign locations to vehicle nodes
+        #TODO: map lane lines to warped_img. assign locations to lanes
+        #TODO: map vehicles to lanes using locations. add relations to graph
+
+
 
         # get the relations between nodes
         for node_a, node_b in itertools.combinations(self.g.nodes, 2):

@@ -1,5 +1,7 @@
 import numpy as np
 import networkx as nx
+import matplotlib
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import pickle as pkl
 import pandas as pd
@@ -36,7 +38,6 @@ class SceneGraph:
     #graph can be initialized with a framedict to load all objects at once
     def __init__(self, framedict):
         self.g = nx.Graph() #initialize scenegraph as networkx graph
-        self.relation_extractor = RelationExtractor()
         self.road_node = Node("Root Road", {}, ActorType.ROAD)
         self.add_node(self.road_node)   #adding the road as the root node
         self.parse_json(framedict) # processing json framedict
@@ -60,23 +61,33 @@ class SceneGraph:
     #parses actor dict and adds nodes to graph. this can be used for all actor types.
     def add_actor_dict(self, actordict):
         for actor_id, attr in actordict.items():
-            n = Node(actor_id, attr, None)   #using the actor key as the node name and the dict as its attributes.
-            n.name = self.relation_extractor.get_actor_type(n).name.lower() + ":" + actor_id
-            n.type = self.relation_extractor.get_actor_type(n).value
-            self.add_node(n)
+            # import pdb; pdb.set_trace()
+            if self.egoNode.attr['road_id'] == attr['road_id'] \
+                or (abs(self.egoNode.attr['rotation'][0] - attr['rotation'][0]) <= 2
+                    and abs(self.egoNode.attr['rotation'][1] - attr['rotation'][1]) <= 2
+                    and abs(self.egoNode.attr['rotation'][2] - attr['rotation'][2]) <= 2) :
+                n = Node(actor_id, attr, None)   #using the actor key as the node name and the dict as its attributes.
+                n.name = self.relation_extractor.get_actor_type(n).name.lower() + ":" + actor_id
+                n.type = self.relation_extractor.get_actor_type(n).value
+                self.add_node(n)
             
     #adds lanes and their dicts. constructs relation between each lane and the root road node.
     def add_lane_dict(self, lanedict):
+        road_id = lanedict['road_id']
+        
+        lanedict['ego_lane']['road_id'] = road_id
         n = Node("lane:"+str(lanedict['ego_lane']['lane_id']), lanedict['ego_lane'], ActorType.LANE) #todo: change to true when lanedict entry is complete
         self.add_node(n)
         self.add_relation([n, Relations.partOf, self.road_node])
         
         for lane in lanedict['left_lanes']:
+            lane['road_id'] = road_id
             n = Node("lane:"+str(lane['lane_id']), lane, ActorType.LANE)
             self.add_node(n)
             self.add_relation([n, Relations.partOf, self.road_node])
 
         for lane in lanedict['right_lanes']:
+            lane['road_id'] = road_id
             n = Node("lane:"+str(lane['lane_id']), lane, ActorType.LANE)
             self.add_node(n)
             self.add_relation([n, Relations.partOf, self.road_node])
@@ -90,12 +101,12 @@ class SceneGraph:
 
     #add the contents of a whole framedict to the graph
     def parse_json(self, framedict):
+        self.egoNode = Node("ego:"+framedict['ego']['name'], framedict['ego'], ActorType.CAR)
+        self.add_node(self.egoNode)
+        self.relation_extractor = RelationExtractor(self.egoNode)
+        # self.add_attributes(egoNode, attrs)
         for key, attrs in framedict.items():   
-            if key == "ego":
-                egoNode = Node(key+":"+attrs['name'], attrs, ActorType.CAR)
-                self.add_node(egoNode)
-                # self.add_attributes(egoNode, attrs)
-            elif key == "lane":
+            if key == "lane":
                 self.add_lane_dict(attrs)
             elif key == "sign":
                 self.add_sign_dict(attrs)
@@ -186,8 +197,7 @@ class SceneGraphSequenceGenerator:
                         for frame, frame_dict in framedict.items():
                             scenegraph = SceneGraph(frame_dict)
                             scenegraphs[frame] = scenegraph
-                            # import pdb; pdb.set_trace()
-                            # scenegraph.visualize(filename="./visualize/%s_%s"%(path.name, frame))
+                            scenegraph.visualize(filename="./visualize/%s_%s"%(path.name, frame))
                             
                     except Exception as e:
                         print("We have problem parsing the dict.json in %s"%txt_path)
@@ -273,10 +283,10 @@ class SceneGraphSequenceGenerator:
         def get_embedding(node, row):
             #subtract each vector from corresponding vector of ego to find delta
             if "location" in node.attr:
-                row["rel_location_x"] = node.attr["location"][0] - ego_attrs["location"][0]
-                row["rel_location_y"] = node.attr["location"][1] - ego_attrs["location"][1]
-                row["rel_location_z"] = node.attr["location"][2] - ego_attrs["location"][2]
-                row["distance_abs"] = math.sqrt(row["rel_location_x"]**2 + row["rel_location_y"]**2 + row["rel_location_z"]**2)
+                row["rel_location_x"] = (node.attr["location"][0] - ego_attrs["location"][0]) / 50
+                row["rel_location_y"] = (node.attr["location"][1] - ego_attrs["location"][1]) / 50
+                row["rel_location_z"] = (node.attr["location"][2] - ego_attrs["location"][2]) / 50
+                row["distance_abs"] = (math.sqrt(row["rel_location_x"]**2 + row["rel_location_y"]**2 + row["rel_location_z"]**2)) / 50
             row['type_'+str(node.type)] = 1 #assign 1hot class label
             return row
         

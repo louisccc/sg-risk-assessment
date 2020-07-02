@@ -4,6 +4,7 @@ from pathlib import Path
 from core.scene_graph.scene_graph import SceneGraph, Node
 import json
 
+####DEPRECATED####
 
 #used to test that scene graph extraction is working
 if __name__ == '__main__':

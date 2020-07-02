@@ -6,7 +6,10 @@ MOTO_NAMES = ["Harley-Davidson", "Kawasaki", "Yamaha"]
 BICYCLE_NAMES = ["Gazelle", "Diamondback", "Bh"]
 CAR_NAMES = ["Ford", "Bmw", "Toyota", "Nissan", "Mini", "Tesla", "Seat", "Lincoln", "Audi", "Carlamotors", "Citroen", "Mercedes-Benz", "Chevrolet", "Volkswagen", "Jeep", "Nissan", "Dodge", "Mustang"]
 
-CAR_PROXIMITY_THRESH = 50 # max number of feet between a car and another entity to build proximity relation
+CAR_PROXIMITY_THRESH_SUPER_NEAR = 10 # max number of feet between a car and another entity to build proximity relation
+CAR_PROXIMITY_THRESH_VERY_NEAR = 25
+CAR_PROXIMITY_THRESH_NEAR = 50
+CAR_PROXIMITY_THRESH_VISIBLE = 100
 MOTO_PROXIMITY_THRESH = 50
 BICYCLE_PROXIMITY_THRESH = 50
 PED_PROXIMITY_THRESH = 50
@@ -27,14 +30,17 @@ ACTOR_NAMES=['car','moto','bicycle','ped','lane','light','sign', 'road']
     
 class Relations(Enum):
     isIn = 0
-    near = 1
-    partOf = 2
-    instanceOf = 3
-    hasAttribute = 4
-    frontLeft = 5
-    frontRight = 6
-    rearLeft = 7
-    rearRight = 8
+    super_near = 1
+    very_near = 2
+    near = 3
+    visible = 4
+    partOf = 5
+    instanceOf = 6
+    hasAttribute = 7
+    # frontLeft = 8
+    # frontRight = 9
+    # rearLeft = 10
+    # rearRight = 11
 
 #This class extracts relations for every pair of entities in a scene
 class RelationExtractor:
@@ -80,8 +86,14 @@ class RelationExtractor:
 
     def extract_relations_car_car(self, actor1, actor2):
         relation_list = []
-        if(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH):
+        if(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_SUPER_NEAR):
+            relation_list.append([actor1, Relations.super_near, actor2])
+        elif(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_VERY_NEAR):
+            relation_list.append([actor1, Relations.very_near, actor2])
+        elif(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_NEAR):
             relation_list.append([actor1, Relations.near, actor2])
+        elif(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_VISIBLE):
+            relation_list.append([actor1, Relations.visible, actor2])
             #relation_list.append(self.extract_directional_relation(actor1, actor2))
             #relation_list.append(self.extract_directional_relation(actor2, actor1))
         return relation_list
@@ -108,24 +120,42 @@ class RelationExtractor:
         
     def extract_relations_car_ped(self, actor1, actor2):
         relation_list = []
-        if(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH):
+        if(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_SUPER_NEAR):
+            relation_list.append([actor1, Relations.super_near, actor2])
+        elif(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_VERY_NEAR):
+            relation_list.append([actor1, Relations.very_near, actor2])
+        elif(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_NEAR):
             relation_list.append([actor1, Relations.near, actor2])
+        elif(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_VISIBLE):
+            relation_list.append([actor1, Relations.visible, actor2])
             #relation_list.append(self.extract_directional_relation(actor1, actor2))
             #relation_list.append(self.extract_directional_relation(actor2, actor1))
         return relation_list
         
     def extract_relations_car_bicycle(self, actor1, actor2):
         relation_list = []
-        if(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH):
+        if(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_SUPER_NEAR):
+            relation_list.append([actor1, Relations.super_near, actor2])
+        elif(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_VERY_NEAR):
+            relation_list.append([actor1, Relations.very_near, actor2])
+        elif(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_NEAR):
             relation_list.append([actor1, Relations.near, actor2])
+        elif(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_VISIBLE):
+            relation_list.append([actor1, Relations.visible, actor2])
             #relation_list.append(self.extract_directional_relation(actor1, actor2))
             #relation_list.append(self.extract_directional_relation(actor2, actor1))
         return relation_list
         
     def extract_relations_car_moto(self, actor1, actor2):
         relation_list = []
-        if(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH):
+        if(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_SUPER_NEAR):
+            relation_list.append([actor1, Relations.super_near, actor2])
+        elif(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_VERY_NEAR):
+            relation_list.append([actor1, Relations.very_near, actor2])
+        elif(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_NEAR):
             relation_list.append([actor1, Relations.near, actor2])
+        elif(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_VISIBLE):
+            relation_list.append([actor1, Relations.visible, actor2])
             #relation_list.append(self.extract_directional_relation(actor1, actor2))
             #relation_list.append(self.extract_directional_relation(actor2, actor1))
         return relation_list
@@ -282,17 +312,12 @@ class RelationExtractor:
     def in_lane(self, actor1, actor2):
         if 'lane_id' in actor1.attr.keys():
             # import pdb; pdb.set_trace()
-            try:
-                if ((abs(int(actor1.attr['lane_id'])) == abs(int(actor2.attr['lane_id']))) \
-                    and ((abs(self.ego_node.attr['rotation'][0] - actor1.attr['rotation'][0]) <= 2 \
-                            and abs(self.ego_node.attr['rotation'][1] - actor1.attr['rotation'][1]) <= 2 \
-                            and abs(self.ego_node.attr['rotation'][2] - actor1.attr['rotation'][2]) <= 2) \
-                        or actor1.attr['road_id'] == actor2.attr['road_id'])):
-                    return True
-            
-            except Exception as e:
-                print(actor1, actor2)
-                import pdb; pdb.set_trace()
+            if ((abs(int(actor1.attr['lane_id'])) == abs(int(actor2.attr['lane_id']))) \
+                and ((abs(self.ego_node.attr['rotation'][0] - actor1.attr['rotation'][0]) <= 2 \
+                        and abs(self.ego_node.attr['rotation'][1] - actor1.attr['rotation'][1]) <= 2 \
+                        and abs(self.ego_node.attr['rotation'][2] - actor1.attr['rotation'][2]) <= 2) \
+                    or actor1.attr['road_id'] == actor2.attr['road_id'])):
+                return True
         else:
             return False
     

@@ -19,6 +19,7 @@ from detectron2.data import MetadataCatalog
 # panoptic seg
 sys.path.append(os.path.dirname(sys.path[0]))
 from core.relation_extractor import ActorType
+from core.lane_extractor import LaneExtractor
 
 coco_class_names = ['person', 'bicycle', 'car', 'motorcycle', 'airplane',
 'bus', 'train', 'truck', 'boat', 'traffic light',
@@ -347,12 +348,13 @@ class RealSceneGraph:
     ''' 
         scene graph the real images 
     '''
-    
-    def __init__(self, image_path):
+    #image_path : path to the image for which the scene graph is generated
+    #lane extractor: used to load lane dicts from image directories. Pass None to disable the use of lane information
+    def __init__(self, image_path, lane_extractor=None):
         self.g = nx.Graph() #initialize scenegraph as networkx graph
 
         self.relation_extractor = RelationExtractor()
-        
+        self.lane_extractor = lane_extractor
         self.road_node = ObjectNode("Root Road", {}, ActorType.ROAD) # we need to define the type of node.
         self.ego_node  = ObjectNode("Ego Car", {"x": 0.5, "y": 1}, ActorType.CAR)
         # we need to fake a preset position of ego car. 
@@ -386,12 +388,19 @@ class RealSceneGraph:
             # import pdb; pdb.set_trace()
         
         # lane/road detection
-
+        if self.lane_extractor != None:
+            lanedict = self.lane_extractor.get_lanes_from_file(image_path)
+            if lanedict != None:
+                #TODO: use pairs of lane lines to add complete lanes instead of lines to the graph
+                for lane_line, mask in lanedict.items():
+                    lane_line_node = ObjectNode(name="Lane_Marking_" + lane_line, attr=mask, label=ActorType.LANE)
+                    self.add_node(lane_line_node)
+                    self.add_relation([lane_line_node, Relations.partOf, self.road_node])
+                
+        
         # bird eye view projection 
         M = get_birds_eye_matrix()
         warped_img = get_birds_eye_warp(image_path, M) #warped image is cropped to ROI (contains no sky pixels)
-        
-        
 
         # get the relations between nodes
         for node_a, node_b in itertools.combinations(self.g.nodes, 2):
@@ -429,7 +438,7 @@ class RealSceneGraph:
             
     #adds lanes and their dicts. constructs relation between each lane and the root road node.
     def add_lane_dict(self, lanedict):
-        n = Node("lane:"+str(lanedict['ego_lane']['lane_id']), lanedict['ego_lane'], ActorType.LANE) #todo: change to true when lanedict entry is complete
+        n = Node("lane:"+str(lanedict['ego_lane']['lane_id']), lanedict['ego_lane'], ActorType.LANE) 
         self.add_node(n)
         self.add_relation([n, Relations.partOf, self.road_node])
         
@@ -510,7 +519,8 @@ def get_birds_eye_warp(image_path, M):
 if __name__ == "__main__":
     ##can't use the path on NAS. 
     #　\\128.200.5.40\temp\louisccc\av\synthesis_data\lane-change-804\0\raw_images 00032989.jpg
-    realSG = RealSceneGraph(r"/home/aung/NAS/louisccc/av/synthesis_data/lane-change-804/0/raw_images/00032989.jpg")
+    le = None #LaneExtractor(r"/home/aung/NAS/louisccc/av/synthesis_data/lane-change-804/0/raw_images")
+    realSG = RealSceneGraph(r"/home/aung/NAS/louisccc/av/synthesis_data/lane-change-804/0/raw_images/00032989.jpg", le)
     print(realSG.g.nodes)
     print(realSG.g.edges)
 

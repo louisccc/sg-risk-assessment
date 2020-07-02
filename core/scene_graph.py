@@ -181,9 +181,9 @@ class SceneGraphSequenceGenerator:
                              "rel_velocity_x", 
                              "rel_velocity_y", 
                              "rel_velocity_z",
-                             "rel_rotation_x", 
-                             "rel_rotation_y", 
-                             "rel_rotation_z",
+                             "rel_yaw", 
+                             "rel_roll",
+                             "rel_pitch",
                             }
         # create 1hot class labels columns.
         for i in range(self.num_classes):

@@ -44,11 +44,13 @@ class MRGCN(nn.Module):
 
         self.fc1 = Linear(self.hidden_dim, self.hidden_dim)
         self.fc2 = Linear(self.hidden_dim, self.num_classes)
+        self.bn1 = torch.nn.BatchNorm1d(self.num_features)
 
 
     def forward(self, x, edge_index, edge_attr, batch=None):
         attn_weights = dict()
-
+        # import pdb; pdb.set_trace()
+        x = self.bn1(x)
         x = F.relu(self.conv1(x, edge_index, edge_attr))
         x = F.dropout(x, self.dropout, training=self.training)
         x = self.conv2(x, edge_index, edge_attr)

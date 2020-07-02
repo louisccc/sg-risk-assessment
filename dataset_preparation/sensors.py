@@ -74,7 +74,7 @@ class LaneInvasionDetector(object):
         self.storing_path = storing_path
         self.recording = False
 
-        ### self.invading_lanes = []
+        self.lane_invasion_events = {}
 
     def toggle_recording(self):
         self.recording = not self.recording
@@ -82,6 +82,14 @@ class LaneInvasionDetector(object):
     def destroy(self):
         if self.sensor:
             self.sensor.destroy()
+
+    def get_lane_invasion_event(self, frame):
+        self.lane_invasion_events.get(frame, False)
+
+        # frame = 10 invasion 
+        # frame = 12 => should return True
+        # frame = 16 no invasion
+        # frame = 20 => should return False
             
     @staticmethod
     def _on_invasion(weak_self, event):
@@ -92,7 +100,9 @@ class LaneInvasionDetector(object):
         text = ['%r' % str(x).split()[-1] for x in lane_types]
 
         if self.recording:
-            # update the internal dictionaries.
+            self.lane_invasion_events[event.frame] = True
+            print(event.__dict__)
+            print(event)
             pass
     
 # ==============================================================================

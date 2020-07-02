@@ -298,7 +298,7 @@ class SceneGraphSequenceGenerator:
             raise NameError("Ego not found in scenegraph")
 
         #rotating axes to align with ego. yaw axis is the primary rotation axis in vehicles
-        ego_yaw = ego_attrs['rotation'][0]
+        ego_yaw = math.radians(ego_attrs['rotation'][0])
         cos_term = math.cos(ego_yaw)
         sin_term = math.sin(ego_yaw)
 
@@ -325,9 +325,9 @@ class SceneGraphSequenceGenerator:
                 row["rel_velocity_z"] = node.attr["velocity"][2] - ego_attrs["velocity"][2] #no axis rotation needed for Z
                 row["velocity_abs"] = node.attr['velocity_abs']
             if "rotation" in node.attr:
-                row['rel_yaw'] = node.attr['rotation'][0] - ego_yaw
-                row["rel_roll"] = node.attr["rotation"][1] - ego_attrs["rotation"][1]
-                row["rel_pitch"] = node.attr["rotation"][2] - ego_attrs["rotation"][2]
+                row['rel_yaw'] = math.radians(node.attr['rotation'][0]) - ego_yaw #store rotation in radians
+                row["rel_roll"] =  math.radians(node.attr["rotation"][1] - ego_attrs["rotation"][1])
+                row["rel_pitch"] =  math.radians(node.attr["rotation"][2] - ego_attrs["rotation"][2])
             row['type_'+str(node.type)] = 1 #assign 1hot class label
             return row
         

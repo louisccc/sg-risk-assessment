@@ -168,10 +168,22 @@ class SceneGraphSequenceGenerator:
         self.num_classes = 8
         
         # gets a list of all feature labels (which will be used) for all scenegraphs
+        # self.feature_list = {"rel_location_x", 
+        #                      "rel_location_y", 
+        #                      "rel_location_z", #add 3 columns for relative vector values
+        #                      "distance_abs", # adding absolute distance to ego
+        #                     }
         self.feature_list = {"rel_location_x", 
                              "rel_location_y", 
                              "rel_location_z", #add 3 columns for relative vector values
                              "distance_abs", # adding absolute distance to ego
+                             "velocity_abs",
+                             "rel_velocity_x", 
+                             "rel_velocity_y", 
+                             "rel_velocity_z",
+                             "rel_rotation_x", 
+                             "rel_rotation_y", 
+                             "rel_rotation_z",
                             }
         # create 1hot class labels columns.
         for i in range(self.num_classes):
@@ -197,7 +209,7 @@ class SceneGraphSequenceGenerator:
                         for frame, frame_dict in framedict.items():
                             scenegraph = SceneGraph(frame_dict)
                             scenegraphs[frame] = scenegraph
-                            scenegraph.visualize(filename="./visualize/%s_%s"%(path.name, frame))
+                            # scenegraph.visualize(filename="./visualize/%s_%s"%(path.name, frame))
                             
                     except Exception as e:
                         print("We have problem parsing the dict.json in %s"%txt_path)
@@ -218,6 +230,7 @@ class SceneGraphSequenceGenerator:
                 scenegraphs_dict = {}
                 scenegraphs_dict['sequence'] = self.process_graph_sequences(scenegraphs, 20, folder_name=path.name)
                 scenegraphs_dict['label'] = risk_label
+                scenegraphs_dict['folder_name'] = path.name
 
                 self.scenegraphs_sequence.append(scenegraphs_dict)
             else:
@@ -233,17 +246,19 @@ class SceneGraphSequenceGenerator:
             in tensor formats.
         '''
         sequence = []
-        subsampled_scenegraphs = self.subsample(scenegraphs, number_of_frames=20)
+        subsampled_scenegraphs, frame_numbers = self.subsample(scenegraphs, number_of_frames=20)
 
-        for idx, scenegraph in enumerate(subsampled_scenegraphs):
+        for idx, (scenegraph, frame_number) in enumerate(zip(subsampled_scenegraphs, frame_numbers)):
             sg_dict = {}
             
             node_name2idx = {node:idx for idx, node in enumerate(scenegraph.g.nodes)}
 
             sg_dict['node_features']                    = self.get_node_embeddings(scenegraph)
             sg_dict['edge_index'], sg_dict['edge_attr'] = self.get_edge_embeddings(scenegraph, node_name2idx)
+            sg_dict['folder_name'] = folder_name
+            sg_dict['frame_number'] = frame_number
             
-            # scenegraph.visualize(filename="./visualize/%s_%d"%(folder_name, idx))
+            # scenegraph.visualize(filename="./visualize/%s_%s"%(folder_name, frame_number))
 
             sequence.append(sg_dict)
 
@@ -258,15 +273,17 @@ class SceneGraphSequenceGenerator:
             The default value of number_of_frames will be 20; Could be a tunnable hyperparameters.
         '''
         sequence = []
+        frame_numbers = []
         acc_number = 0
         modulo = int(len(scenegraphs) / number_of_frames)
 
         for idx, (timeframe, scenegraph) in enumerate(scenegraphs.items()):
             if idx % modulo == 0 and acc_number < number_of_frames:
                 sequence.append(scenegraph)
+                frame_numbers.append(timeframe)
                 acc_number+=1
     
-        return sequence
+        return sequence, frame_numbers
         
     def get_node_embeddings(self, scenegraph):
         rows = []
@@ -282,11 +299,22 @@ class SceneGraphSequenceGenerator:
             
         def get_embedding(node, row):
             #subtract each vector from corresponding vector of ego to find delta
+            
             if "location" in node.attr:
-                row["rel_location_x"] = (node.attr["location"][0] - ego_attrs["location"][0]) / 50
-                row["rel_location_y"] = (node.attr["location"][1] - ego_attrs["location"][1]) / 50
-                row["rel_location_z"] = (node.attr["location"][2] - ego_attrs["location"][2]) / 50
-                row["distance_abs"] = (math.sqrt(row["rel_location_x"]**2 + row["rel_location_y"]**2 + row["rel_location_z"]**2)) / 50
+                row["rel_location_x"] = (node.attr["location"][0] - ego_attrs["location"][0])
+                row["rel_location_y"] = (node.attr["location"][1] - ego_attrs["location"][1])
+                row["rel_location_z"] = (node.attr["location"][2] - ego_attrs["location"][2])
+                row["distance_abs"] = (math.sqrt(row["rel_location_x"]**2 + row["rel_location_y"]**2 + row["rel_location_z"]**2))
+            if "velocity_abs" in node.attr:
+                row['velocity_abs'] = node.attr["velocity_abs"]
+            if "velocity" in node.attr:
+                row["rel_velocity_x"] = (node.attr["velocity"][0] - ego_attrs["velocity"][0])
+                row["rel_velocity_y"] = (node.attr["velocity"][1] - ego_attrs["velocity"][1])
+                row["rel_velocity_z"] = (node.attr["velocity"][2] - ego_attrs["velocity"][2])
+            if "rotation" in node.attr:
+                row["rel_rotation_x"] = (node.attr["rotation"][0] - ego_attrs["rotation"][0])
+                row["rel_rotation_y"] = (node.attr["rotation"][1] - ego_attrs["rotation"][1])
+                row["rel_rotation_z"] = (node.attr["rotation"][2] - ego_attrs["rotation"][2])
             row['type_'+str(node.type)] = 1 #assign 1hot class label
             return row
         

@@ -49,8 +49,7 @@ class LaneChangeRecorder:
         """
         cam_index = 0
         cam_pos_index = 1
-        # dimensions = [1280, 720]
-        dimensions = [640, 360]
+        dimensions = [1280, 720]
         gamma = 2.2
 
         self.sensors_dict["camera_manager"] = sensors.CameraManager(self.ego, gamma, dimensions, root_path)

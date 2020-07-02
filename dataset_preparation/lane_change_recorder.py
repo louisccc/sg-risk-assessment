@@ -56,6 +56,7 @@ class LaneChangeRecorder:
         self.sensors_dict["camera_manager"] = sensors.CameraManager(self.ego, gamma, dimensions, root_path)
         self.sensors_dict["camera_manager"].transform_index = cam_pos_index
         self.sensors_dict["camera_manager"].set_sensor(cam_index, notify=False)
+        self.sensors_dict["lane_invasion"] = sensors.LaneInvasionDetector(self.ego, root_path)
         # self.sensors_dict["camera_manager_ss"] = sensors.CameraManager(self.ego, gamma, dimensions, root_path)
         # self.sensors_dict["camera_manager_ss"].transform_index = cam_pos_index
         # self.sensors_dict["camera_manager_ss"].set_sensor(cam_index+5, notify=False)
@@ -66,11 +67,8 @@ class LaneChangeRecorder:
         self.sensors_dict = {}
         
     def toggle_recording(self):
-        if 'camera_manager' in self.sensors_dict:
-            self.sensors_dict["camera_manager"].toggle_recording()
-
-        if 'camera_manager_ss' in self.sensors_dict:
-            self.sensors_dict["camera_manager_ss"].toggle_recording()
+        for _, sensor in self.sensors_dict.items():
+            sensor.toggle_recording()
 
     def tick(self, frame_num):
         self.tick_count += 1
@@ -122,9 +120,12 @@ class LaneChangeRecorder:
             self.client.apply_batch_sync([carla.command.SetAutopilot(self.ego, False)], True)
               
         if self.lane_changing:
+            ####### collect the lane invasion data. 
+            ## pull the result from self.sensors_dict["lane_invasion"] 
+            # and update to self.extracotr using API?
             self.extractor.extract_frame(self.carla_world, self.map, frame_num)
             success = self.lane_change_controller.update()
-            if success == py_trees.common.Status.SUCCESS or self.tick_count > 250:
+            if success == py_trees.common.Status.SUCCESS or self.tick_count > 350:
                 #write to metadata file
                 with open((Path(self.new_path) / 'metadata.txt').resolve(),'w') as file:
                     weather=self.carla_world.get_weather()
@@ -189,7 +190,6 @@ class DataExtractor(object):
             if lane is None:
                 break 
             left_lanes.append(("lane", lane))
-            # print("left", lane.lane_type, lane.lane_change, lane.lane_id)
             if lane.lane_type in [carla.LaneType.Shoulder, carla.LaneType.Sidewalk]:
                 break
             if left_lane.lane_id * lane.lane_id < 0: ## special handling.

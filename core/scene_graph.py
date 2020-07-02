@@ -62,7 +62,7 @@ class SceneGraph:
     def add_actor_dict(self, actordict):
         for actor_id, attr in actordict.items():
             # import pdb; pdb.set_trace()
-            if self.egoNode.attr['road_id'] == attr['road_id'] \
+            if (self.egoNode.attr['road_id'] == attr['road_id'] and self.egoNode.attr['lane_id'] * attr['lane_id'] > 0) \
                 or (abs(self.egoNode.attr['rotation'][0] - attr['rotation'][0]) <= 2
                     and abs(self.egoNode.attr['rotation'][1] - attr['rotation'][1]) <= 2
                     and abs(self.egoNode.attr['rotation'][2] - attr['rotation'][2]) <= 2) :

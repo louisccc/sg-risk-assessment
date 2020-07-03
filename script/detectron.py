@@ -9,6 +9,7 @@ import cv2
 import random
 import networkx as nx
 import itertools
+import math
 
 # import some common detectron2 utilities
 from detectron2 import model_zoo
@@ -356,8 +357,9 @@ class RealSceneGraph:
         self.relation_extractor = RelationExtractor()
         self.lane_extractor = lane_extractor
         self.road_node = ObjectNode("Root Road", {}, ActorType.ROAD) # we need to define the type of node.
-        self.ego_node  = ObjectNode("Ego Car", {"x": 0.5, "y": 1}, ActorType.CAR)
-        # we need to fake a preset position of ego car. 
+        #set ego location to middle-bottom of image
+        self.ego_node  = ObjectNode("Ego Car", {"location_x": int(BIRDS_EYE_IMAGE_W/2), "location_y": BIRDS_EYE_IMAGE_H}, ActorType.CAR)
+        
 
         self.add_node(self.road_node)   # adding the road as the root node
         self.add_node(self.ego_node)
@@ -373,9 +375,9 @@ class RealSceneGraph:
                     self.add_relation([lane_line_node, Relations.partOf, self.road_node])
                 
         # bird eye view projection 
+        #warped image is cropped to ROI (contains no sky pixels)
         M = get_birds_eye_matrix()
-        warped_img = get_birds_eye_warp(image_path, M) #warped image is cropped to ROI (contains no sky pixels)
-        #TODO: assign locations to vehicle nodes
+        warped_img = get_birds_eye_warp(image_path, M) 
         #TODO: map lane lines to warped_img. assign locations to lanes
         #TODO: map vehicles to lanes using locations. add relations to graph
 
@@ -404,12 +406,15 @@ class RealSceneGraph:
 
             #map center-bottom of bounding box to warped image
             x_mid = (box[2] + box[1]) / 2
-            y_bottom = box[3] - H_OFFSET #need to offset to account for image crop
+            y_bottom = box[3] - H_OFFSET #offset to account for image crop
             pt = np.array([[[x_mid,y_bottom]]], dtype='float32')
             warp_pt = cv2.perspectiveTransform(pt, M)[0][0]
-            attr['rel_location_x'] = warp_pt[0]
-            attr['rel_location_y'] = warp_pt[1]
-
+            #location/distance in pixels
+            attr['location_x'] = warp_pt[0]
+            attr['location_y'] = warp_pt[1]
+            attr['rel_location_x'] = warp_pt[0] - self.ego_node.attr["location_x"]
+            attr['rel_location_y'] = warp_pt[1] - self.ego_node.attr["location_y"]
+            attr['distance_abs'] = math.sqrt(attr['rel_location_x']**2 + attr['rel_location_y']**2) 
 
             self.add_node(ObjectNode("%s_%d"%(class_name, idx), attr, actor_type))
 

@@ -404,12 +404,12 @@ class RealSceneGraph:
 
             #map center-bottom of bounding box to warped image
             x_mid = (box[2] + box[1]) / 2
-            y_bottom = box[3]
+            y_bottom = box[3] - H_OFFSET #need to offset to account for image crop
             pt = np.array([[[x_mid,y_bottom]]], dtype='float32')
             warp_pt = cv2.perspectiveTransform(pt, M)[0][0]
             attr['rel_location_x'] = warp_pt[0]
             attr['rel_location_y'] = warp_pt[1]
-            
+
 
             self.add_node(ObjectNode("%s_%d"%(class_name, idx), attr, actor_type))
 

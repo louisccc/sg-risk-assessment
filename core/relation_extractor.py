@@ -37,10 +37,12 @@ class Relations(Enum):
     partOf = 5
     instanceOf = 6
     hasAttribute = 7
-    # frontLeft = 8
-    # frontRight = 9
-    # rearLeft = 10
-    # rearRight = 11
+    rear = 8
+    front = 9
+    frontLeft = 10
+    frontRight = 11
+    rearLeft = 12
+    rearRight = 13
 
 #This class extracts relations for every pair of entities in a scene
 class RelationExtractor:
@@ -310,13 +312,9 @@ class RelationExtractor:
         
     #check if an actor is in a certain lane
     def in_lane(self, actor1, actor2):
-        if 'lane_id' in actor1.attr.keys():
+        if 'lane_idx' in actor1.attr.keys():
             # import pdb; pdb.set_trace()
-            if ((abs(int(actor1.attr['lane_id'])) == abs(int(actor2.attr['lane_id']))) \
-                and ((abs(self.ego_node.attr['rotation'][0] - actor1.attr['rotation'][0]) <= 2 \
-                        and abs(self.ego_node.attr['rotation'][1] - actor1.attr['rotation'][1]) <= 2 \
-                        and abs(self.ego_node.attr['rotation'][2] - actor1.attr['rotation'][2]) <= 2) \
-                    or actor1.attr['road_id'] == actor2.attr['road_id'])):
+            if actor1.attr['lane_idx'] == actor2.attr['lane_idx']:
                 return True
         else:
             return False
@@ -324,10 +322,10 @@ class RelationExtractor:
     #gives directional relations between actors based on their 2D absolute positions.
     #TODO: fix these relations, since the locations are based on the world coordinate system and are not relative to ego.
     def extract_directional_relation(self, actor1, actor2):
-        x1 = actor1.attr['location'][0]
-        x2 = actor2.attr['location'][0]
-        y1 = actor1.attr['location'][1]
-        y2 = actor2.attr['location'][1]
+        # x1 = actor1.attr['location'][0]
+        # x2 = actor2.attr['location'][0]
+        # y1 = actor1.attr['location'][1]
+        # y2 = actor2.attr['location'][1]
         
         # x_diff = x2 - x1
         # y_diff = y2 - y1
@@ -341,3 +339,5 @@ class RelationExtractor:
         #         return [actor1, Relations.frontLeft, actor2]
         #     else:
         #         return [actor1, Relations.frontRight, actor2]
+
+        pass

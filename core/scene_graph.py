@@ -62,10 +62,7 @@ class SceneGraph:
     def add_actor_dict(self, actordict):
         for actor_id, attr in actordict.items():
             # import pdb; pdb.set_trace()
-            if (self.egoNode.attr['road_id'] == attr['road_id'] and self.egoNode.attr['lane_id'] * attr['lane_id'] > 0) \
-                or (abs(self.egoNode.attr['rotation'][0] - attr['rotation'][0]) <= 2
-                    and abs(self.egoNode.attr['rotation'][1] - attr['rotation'][1]) <= 2
-                    and abs(self.egoNode.attr['rotation'][2] - attr['rotation'][2]) <= 2) :
+            if attr['lane_idx']:
                 n = Node(actor_id, attr, None)   #using the actor key as the node name and the dict as its attributes.
                 n.name = self.relation_extractor.get_actor_type(n).name.lower() + ":" + actor_id
                 n.type = self.relation_extractor.get_actor_type(n).value
@@ -73,22 +70,10 @@ class SceneGraph:
             
     #adds lanes and their dicts. constructs relation between each lane and the root road node.
     def add_lane_dict(self, lanedict):
-        road_id = lanedict['road_id']
-        
-        lanedict['ego_lane']['road_id'] = road_id
-        n = Node("lane:"+str(lanedict['ego_lane']['lane_id']), lanedict['ego_lane'], ActorType.LANE) #todo: change to true when lanedict entry is complete
-        self.add_node(n)
-        self.add_relation([n, Relations.partOf, self.road_node])
-        
-        for lane in lanedict['left_lanes']:
-            lane['road_id'] = road_id
-            n = Node("lane:"+str(lane['lane_id']), lane, ActorType.LANE)
-            self.add_node(n)
-            self.add_relation([n, Relations.partOf, self.road_node])
-
-        for lane in lanedict['right_lanes']:
-            lane['road_id'] = road_id
-            n = Node("lane:"+str(lane['lane_id']), lane, ActorType.LANE)
+        #TODO: can we filter out the lane that has no car on it?
+        for idx, lane in enumerate(lanedict['lanes']):
+            lane['lane_idx'] = idx
+            n = Node("lane:"+str(idx), lane, ActorType.LANE)
             self.add_node(n)
             self.add_relation([n, Relations.partOf, self.road_node])
             
@@ -201,8 +186,9 @@ class SceneGraphSequenceGenerator:
 
         for path in tqdm(all_video_clip_dirs):
             scenegraphs = {} 
-            scenegraph_txts = sorted(list(glob("%s/**/*.txt" % str(path/"scene_raw"), recursive=True)))
+            scenegraph_txts = sorted(list(glob("%s/**/*.json" % str(path/"scene_raw"), recursive=True)))
             for txt_path in scenegraph_txts:
+                # import pdb; pdb.set_trace()
                 with open(txt_path, 'r') as scene_dict_f:
                     try:
                         framedict = json.loads(scene_dict_f.read())

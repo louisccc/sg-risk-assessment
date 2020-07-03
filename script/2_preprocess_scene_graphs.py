@@ -9,6 +9,7 @@ sys.path.append(os.path.dirname(sys.path[0]))
 from core.graph_learning import utils
 from core.scene_graph import scene_graph, relation_extractor
 
+####DEPRECATED#####
 
 def get_scene_graphs(dir):
     scenegraphs = defaultdict()

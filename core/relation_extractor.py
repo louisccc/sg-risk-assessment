@@ -50,7 +50,7 @@ class RelationExtractor:
         self.ego_node = ego_node 
 
     def get_actor_type(self, actor):
-        if "lane_type" in actor.attr.keys():
+        if "curr" in actor.attr.keys():
             return ActorType.LANE
         if actor.attr["name"] == "Traffic Light":
             return ActorType.LIGHT
@@ -64,8 +64,7 @@ class RelationExtractor:
             return ActorType.BICYCLE
         if "Sign" in actor.attr["name"]:
             return ActorType.SIGN
-            
-        print(actor.attr)
+
         # import pdb; pdb.set_trace()
         raise NameError("Actor name not found for actor with name: " + actor.attr["name"])
             

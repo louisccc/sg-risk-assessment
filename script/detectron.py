@@ -3,7 +3,7 @@ import detectron2
 from detectron2.utils.logger import setup_logger
 setup_logger()
 # import some common libraries
-import sys, os
+import sys, os, pdb
 import numpy as np
 import cv2
 import random
@@ -45,7 +45,7 @@ CARLA_IMAGE_W = 640
 BIRDS_EYE_IMAGE_H = 175 #height of ROI. crops to lane area of carla images
 BIRDS_EYE_IMAGE_W = 640
 H_OFFSET = CARLA_IMAGE_H - BIRDS_EYE_IMAGE_H #offset from top of image to start of ROI
-
+LEN_PIX = 1.43 #7 pixels = 10 feet (estimated visually using lane marking length)
 
 class ObjectNode:
     def __init__(self, name, attr, label):
@@ -362,6 +362,23 @@ class RealSceneGraph:
         self.add_node(self.road_node)   # adding the road as the root node
         self.add_node(self.ego_node)
 
+        # lane/road detection
+        if self.lane_extractor != None:
+            lanedict = self.lane_extractor.get_lanes_from_file(image_path)
+            if lanedict != None:
+                #TODO: use pairs of lane lines to add complete lanes instead of lines to the graph
+                for lane_line, mask in lanedict.items():
+                    lane_line_node = ObjectNode(name="Lane_Marking_" + lane_line, attr=mask, label=ActorType.LANE)
+                    self.add_node(lane_line_node)
+                    self.add_relation([lane_line_node, Relations.partOf, self.road_node])
+                
+        # bird eye view projection 
+        M = get_birds_eye_matrix()
+        warped_img = get_birds_eye_warp(image_path, M) #warped image is cropped to ROI (contains no sky pixels)
+        #TODO: assign locations to vehicle nodes
+        #TODO: map lane lines to warped_img. assign locations to lanes
+        #TODO: map vehicles to lanes using locations. add relations to graph
+
         # start detectron2. 
         boxes, labels, image_size = get_bounding_boxes(image_path)
 
@@ -382,32 +399,21 @@ class RealSceneGraph:
             elif class_name in ['stop sign']:
                 actor_type = ActorType.SIGN
         
-            attr = {'x1': box[0] / image_size[1], 'y1': box[1] / image_size[0], 'x2': box[2] / image_size[1], 'y2': box[3] / image_size[0]}
+            attr = {'x1': box[0], 'y1': box[1], 'x2': box[2], 'y2': box[3]}
             print(attr)
+
+            #map center-bottom of bounding box to warped image
+            x_mid = (box[2] + box[1]) / 2
+            y_bottom = box[3]
+            pt = np.array([[[x_mid,y_bottom]]], dtype='float32')
+            warp_pt = cv2.perspectiveTransform(pt, M)[0][0]
+            attr['rel_location_x'] = warp_pt[0]
+            attr['rel_location_y'] = warp_pt[1]
+            
+
             self.add_node(ObjectNode("%s_%d"%(class_name, idx), attr, actor_type))
-            # import pdb; pdb.set_trace()
+
         
-        # lane/road detection
-        if self.lane_extractor != None:
-            lanedict = self.lane_extractor.get_lanes_from_file(image_path)
-            if lanedict != None:
-                #TODO: use pairs of lane lines to add complete lanes instead of lines to the graph
-                for lane_line, mask in lanedict.items():
-                    lane_line_node = ObjectNode(name="Lane_Marking_" + lane_line, attr=mask, label=ActorType.LANE)
-                    self.add_node(lane_line_node)
-                    self.add_relation([lane_line_node, Relations.partOf, self.road_node])
-                
-        
-        # bird eye view projection 
-        M = get_birds_eye_matrix()
-        warped_img = get_birds_eye_warp(image_path, M) #warped image is cropped to ROI (contains no sky pixels)
-        #TODO: map bottom of bbox to pixel location in warped_img
-        #TODO: assign locations to vehicle nodes
-        #TODO: map lane lines to warped_img. assign locations to lanes
-        #TODO: map vehicles to lanes using locations. add relations to graph
-
-
-
         # get the relations between nodes
         for node_a, node_b in itertools.combinations(self.g.nodes, 2):
             if node_a.label == ActorType.ROAD or node_b.label == ActorType.ROAD:  

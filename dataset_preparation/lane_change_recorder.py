@@ -177,21 +177,16 @@ class DataExtractor(object):
         waypoint = map1.get_waypoint(ego_location, project_to_road=True, lane_type=(carla.LaneType.Driving | carla.LaneType.Shoulder | carla.LaneType.Sidewalk))
 
         ego_lane = waypoint
-        ## build the new lane dictionary and systems. 
-        left_lanes = build_lanes(waypoint)[::-1]
-        right_lanes = build_lanes(waypoint, direction="right")
-        lanes = left_lanes + [build_dict_lane(ego_lane)] + right_lanes
-        #### dict for each lane. 
-        
+                
         def build_dict_lane_single(lane_waypoint):
             return {
                 'lane_id': lane_waypoint.lane_id,
                 'road_id': lane_waypoint.road_id, 
-                'lane_type': lane_waypoint.lane_type, 
+                'lane_type': lane_waypoint.lane_type.name, 
                 'lane_width': lane_waypoint.lane_width, 
-                'right_lane_marking_type': lane_waypoint.right_lane_marking.type, 
-                'left_lane_marking_type': lane_waypoint.left_lane_marking.type,
-                'lane_change': lane_waypoint.lane_change,
+                'right_lane_marking_type': lane_waypoint.right_lane_marking.type.name, 
+                'left_lane_marking_type': lane_waypoint.left_lane_marking.type.name,
+                'lane_change': lane_waypoint.lane_change.name,
                 'is_junction': lane_waypoint.is_junction,
                 ### adding transform if possible.
             }
@@ -226,8 +221,13 @@ class DataExtractor(object):
         # lane 1: [current, next1, next2, previous 1, previous 2]
         # lane 2: ego lane [current, next1, next2, previous 1, previous 2 
 
+        ## build the new lane dictionary and systems. 
+        left_lanes = build_lanes(waypoint)[::-1]
+        right_lanes = build_lanes(waypoint, direction="right")
+        lanes = left_lanes + [build_dict_lane(ego_lane)] + right_lanes
         lanedict['lanes'] = lanes
         lanedict['ego_lane_idx'] = len(left_lanes)
+        import pdb; pdb.set_trace()
 
         egodict = get_vehicle_attributes(self.ego, waypoint)
         if lane_invasion:

@@ -138,7 +138,7 @@ class LaneChangeRecorder:
                                          lane_invasion=lane_invasion,\
                                          lane_change_direction=self.lane_change_direction)
             success = self.lane_change_controller.update()
-            if success == py_trees.common.Status.SUCCESS or self.tick_count > 350:
+            if success == py_trees.common.Status.SUCCESS or self.tick_count > 300:
                 #write to metadata file
                 with open((Path(self.new_path) / 'metadata.txt').resolve(),'w') as file:
                     weather=self.carla_world.get_weather()

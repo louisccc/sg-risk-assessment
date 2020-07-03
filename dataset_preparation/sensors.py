@@ -94,11 +94,8 @@ class LaneInvasionDetector(object):
         self = weak_self()
         if not self:
             return
-        lane_types = set(x.type for x in event.crossed_lane_markings)
-        text = ['%r' % str(x).split()[-1] for x in lane_types]
-
         if self.recording:
-            self.lane_invasion_events.append(events.frame)
+            self.lane_invasion_events.append(event.frame)
 # ==============================================================================
 # -- CameraManager -------------------------------------------------------------
 # ==============================================================================

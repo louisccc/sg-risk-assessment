@@ -21,6 +21,7 @@ class LaneChangeRecorder:
         self.traffic_manager = traffic_manager
         self.sensors_dict = {}
         self.root_path = Path("./_out")
+
         self.root_path.mkdir(exist_ok=True)
         self.new_path = None
         
@@ -276,6 +277,6 @@ class DataExtractor(object):
         self.framedict[frame]={"ego": egodict,"actors": actordict,"pedestrians": peddict,"trafficlights": lightdict,"signs": signdict,"lane": lanedict}
         
     def export_data(self):
-        with open(self.output_dir / (str(list(self.framedict.keys())[0]) + '-' + str(list(self.framedict.keys())[len(self.framedict)-1])+'.txt'), 'w') as file:
+        with open(self.output_dir / (str(list(self.framedict.keys())[0]) + '-' + str(list(self.framedict.keys())[len(self.framedict)-1])+'.json'), 'w') as file:
             file.write(json.dumps(self.framedict))
         self.framedict.clear()

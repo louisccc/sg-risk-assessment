@@ -240,11 +240,12 @@ class DataExtractor(object):
         # import pdb; pdb.set_trace()
 
         egodict = get_vehicle_attributes(self.ego, waypoint)
+        egodict['lane_idx'] = lanedict['ego_lane_idx'] 
         if lane_invasion:
             if lane_change_direction == "left":
-                lane_id = lanedict['ego_lane_idx'] - 1
+                lane_id = egodict['ego_lane_idx'] - 1
             else:
-                lane_id = lanedict['ego_lane_idx'] + 1
+                lane_id = egodict['ego_lane_idx'] + 1
             egodict["invading_lane"] = lane_id
 
         # export data from surrounding vehicles

@@ -61,12 +61,11 @@ class SceneGraph:
     #parses actor dict and adds nodes to graph. this can be used for all actor types.
     def add_actor_dict(self, actordict):
         for actor_id, attr in actordict.items():
-            # import pdb; pdb.set_trace()
-            if attr['lane_idx']:
-                n = Node(actor_id, attr, None)   #using the actor key as the node name and the dict as its attributes.
-                n.name = self.relation_extractor.get_actor_type(n).name.lower() + ":" + actor_id
-                n.type = self.relation_extractor.get_actor_type(n).value
-                self.add_node(n)
+            # import pdb; pdb.set_trace()   
+            n = Node(actor_id, attr, None)   #using the actor key as the node name and the dict as its attributes.
+            n.name = self.relation_extractor.get_actor_type(n).name.lower() + ":" + actor_id
+            n.type = self.relation_extractor.get_actor_type(n).value
+            self.add_node(n)
             
     #adds lanes and their dicts. constructs relation between each lane and the root road node.
     def add_lane_dict(self, lanedict):
@@ -195,7 +194,7 @@ class SceneGraphSequenceGenerator:
                         for frame, frame_dict in framedict.items():
                             scenegraph = SceneGraph(frame_dict)
                             scenegraphs[frame] = scenegraph
-                            # scenegraph.visualize(filename="./visualize/%s_%s"%(path.name, frame))
+                            scenegraph.visualize(filename="./visualize/%s_%s"%(path.name, frame))
                             
                     except Exception as e:
                         print("We have problem parsing the dict.json in %s"%txt_path)

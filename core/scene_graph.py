@@ -36,8 +36,8 @@ class Node:
 class SceneGraph:
     
     #graph can be initialized with a framedict to load all objects at once
-    def __init__(self, framedict):
-        self.g = nx.Graph() #initialize scenegraph as networkx graph
+    def __init__(self, framedict, framenum=None):
+        self.g = nx.MultiDiGraph() #initialize scenegraph as networkx graph
         self.road_node = Node("Root Road", {}, ActorType.ROAD)
         self.add_node(self.road_node)   #adding the road as the root node
         self.parse_json(framedict) # processing json framedict
@@ -131,7 +131,7 @@ class SceneGraph:
                 pos=pos, font_size=8, with_labels=True)
 
         nx.draw_networkx_edge_labels(self.g, pos,edge_labels=edge_label_dicts,font_color='red')
-
+        
         # plt.show()
         plt.savefig(filename)
         plt.clf()
@@ -192,7 +192,7 @@ class SceneGraphSequenceGenerator:
                     try:
                         framedict = json.loads(scene_dict_f.read())
                         for frame, frame_dict in framedict.items():
-                            scenegraph = SceneGraph(frame_dict)
+                            scenegraph = SceneGraph(frame_dict, framenum=frame)
                             scenegraphs[frame] = scenegraph
                             scenegraph.visualize(filename="./visualize/%s_%s"%(path.name, frame))
                             

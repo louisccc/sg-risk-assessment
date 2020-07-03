@@ -80,7 +80,20 @@ class LaneChangeRecorder:
             # choose random vehicle and prepare for recording
             print("Picking vehicle and attaching sensors...")
             self.ego = self.carla_world.get_actor(random.choice(self.vehicles_list))
-            self.carla_world.get_spectator().set_transform(self.ego.get_transform())
+            spetator_transform = self.ego.get_transform()
+            spetator_transform.location.z += 3 
+            if abs(spetator_transform.rotation.yaw) > abs(spetator_transform.rotation.pitch):
+                if spetator_transform.rotation.yaw > 0:
+                    spetator_transform.location.y -= 3 
+                else:
+                    spetator_transform.location.y += 3
+            else: 
+                if spetator_transform.rotation.pitch > 0:
+                    spetator_transform.location.x -= 3 
+                else:
+                    spetator_transform.location.x += 3
+
+            self.carla_world.get_spectator().set_transform(spetator_transform)
 
             print("Attempting lane change...")
             self.lane_change_direction = None
@@ -243,9 +256,9 @@ class DataExtractor(object):
         egodict['lane_idx'] = lanedict['ego_lane_idx'] 
         if lane_invasion:
             if lane_change_direction == "left":
-                lane_id = egodict['ego_lane_idx'] - 1
+                lane_id = egodict['lane_idx'] - 1
             else:
-                lane_id = egodict['ego_lane_idx'] + 1
+                lane_id = egodict['lane_idx'] + 1
             egodict["invading_lane"] = lane_id
 
         # export data from surrounding vehicles

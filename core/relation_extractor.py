@@ -87,16 +87,21 @@ class RelationExtractor:
 
     def extract_relations_car_car(self, actor1, actor2):
         relation_list = []
-        if(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_SUPER_NEAR):
-            relation_list.append([actor1, Relations.super_near, actor2])
-        elif(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_VERY_NEAR):
-            relation_list.append([actor1, Relations.very_near, actor2])
-        elif(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_NEAR):
-            relation_list.append([actor1, Relations.near, actor2])
-        elif(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_VISIBLE):
-            relation_list.append([actor1, Relations.visible, actor2])
-            #relation_list.append(self.extract_directional_relation(actor1, actor2))
-            #relation_list.append(self.extract_directional_relation(actor2, actor1))
+        if actor1.name.startswith("ego:") or actor2.name.startswith("ego:"):
+            if(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_SUPER_NEAR):
+                relation_list.append([actor1, Relations.super_near, actor2])
+            elif(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_VERY_NEAR):
+                relation_list.append([actor1, Relations.very_near, actor2])
+            elif(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_NEAR):
+                relation_list.append([actor1, Relations.near, actor2])
+            elif(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_VISIBLE):
+                relation_list.append([actor1, Relations.visible, actor2])
+
+            # import pdb; pdb.set_trace()
+
+            if(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_NEAR):
+                relation_list.append(self.extract_directional_relation(actor1, actor2))
+                relation_list.append(self.extract_directional_relation(actor2, actor1))
         return relation_list
             
     def extract_relations_car_lane(self, actor1, actor2):
@@ -315,28 +320,31 @@ class RelationExtractor:
             # import pdb; pdb.set_trace()
             if actor1.attr['lane_idx'] == actor2.attr['lane_idx']:
                 return True
+            if "invading_lane" in actor1.attr:
+                if actor1.attr['invading_lane'] == actor2.attr['lane_idx']:
+                    return True
         else:
             return False
     
     #gives directional relations between actors based on their 2D absolute positions.
     #TODO: fix these relations, since the locations are based on the world coordinate system and are not relative to ego.
     def extract_directional_relation(self, actor1, actor2):
-        # x1 = actor1.attr['location'][0]
-        # x2 = actor2.attr['location'][0]
-        # y1 = actor1.attr['location'][1]
-        # y2 = actor2.attr['location'][1]
+        x1 = actor1.attr['location'][0]
+        x2 = actor2.attr['location'][0]
+        y1 = actor1.attr['location'][1]
+        y2 = actor2.attr['location'][1]
         
-        # x_diff = x2 - x1
-        # y_diff = y2 - y1
-        # if (x_diff < 0):
-        #     if (y_diff < 0):
-        #         return [actor1, Relations.rearLeft, actor2]
-        #     else:
-        #         return [actor1, Relations.rearRight, actor2]
-        # else:
-        #     if (y_diff < 0):
-        #         return [actor1, Relations.frontLeft, actor2]
-        #     else:
-        #         return [actor1, Relations.frontRight, actor2]
+        x_diff = x2 - x1
+        y_diff = y2 - y1
+        if (x_diff < 0):
+            if (y_diff < 0):
+                return [actor1, Relations.rearLeft, actor2]
+            else:
+                return [actor1, Relations.rearRight, actor2]
+        else:
+            if (y_diff < 0):
+                return [actor1, Relations.frontLeft, actor2]
+            else:
+                return [actor1, Relations.frontRight, actor2]
 
         pass

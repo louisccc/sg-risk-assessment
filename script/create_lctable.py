@@ -29,7 +29,7 @@ class Config:
         self.dest_base_dir = Path(self.dest_path).resolve()
 
 def create_csv(file_path):
-	input_path = file_path / 'lane-change'
+	input_path = file_path / 'lane-change-804'
 	lctable = input_path / 'LCTable.csv'	
 
 	foldernames = [f for f in sorted(os.listdir(input_path)) if f.isnumeric()]

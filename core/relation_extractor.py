@@ -87,21 +87,21 @@ class RelationExtractor:
 
     def extract_relations_car_car(self, actor1, actor2):
         relation_list = []
-        if actor1.name.startswith("ego:") or actor2.name.startswith("ego:"):
-            if(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_SUPER_NEAR):
-                relation_list.append([actor1, Relations.super_near, actor2])
-            elif(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_VERY_NEAR):
-                relation_list.append([actor1, Relations.very_near, actor2])
-            elif(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_NEAR):
-                relation_list.append([actor1, Relations.near, actor2])
-            elif(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_VISIBLE):
-                relation_list.append([actor1, Relations.visible, actor2])
+        if(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_SUPER_NEAR):
+            relation_list.append([actor1, Relations.super_near, actor2])
+        elif(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_VERY_NEAR):
+            relation_list.append([actor1, Relations.very_near, actor2])
+        elif(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_NEAR):
+            relation_list.append([actor1, Relations.near, actor2])
+        elif(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_VISIBLE):
+            relation_list.append([actor1, Relations.visible, actor2])
 
             # import pdb; pdb.set_trace()
-
-            if(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_NEAR):
+        if actor1.name.startswith("ego:") or actor2.name.startswith("ego:"):
+            if(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_VERY_NEAR):
                 relation_list.append(self.extract_directional_relation(actor1, actor2))
                 relation_list.append(self.extract_directional_relation(actor2, actor1))
+
         return relation_list
             
     def extract_relations_car_lane(self, actor1, actor2):
@@ -346,5 +346,3 @@ class RelationExtractor:
                 return [actor1, Relations.frontLeft, actor2]
             else:
                 return [actor1, Relations.frontRight, actor2]
-
-        pass

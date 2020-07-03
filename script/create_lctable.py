@@ -66,7 +66,7 @@ def write_data_path(file_path):
 	df.to_csv(lctable,header=None,index=None)
 
 def write_risk_label(file_path):
-	input_path = file_path / 'lane-change'
+	input_path = file_path / 'lane-change-804'
 	lctable = input_path / 'LCTable.csv'
 
 	df = pd.read_csv(lctable, header=None, index_col=None)
@@ -114,7 +114,7 @@ if __name__ == '__main__':
 	config = Config(sys.argv[1:])
 
 	if config.task=='createLCtable':
-		if config.create_csv == True:
+		if config.csv == True:
 			create_csv(config.input_base_dir)
 		#write video and gif path to table
 		if config.data_path == True:

@@ -194,7 +194,7 @@ class DataExtractor(object):
         def build_dict_lane(lane_waypoint, distance=100):
             ## called by each neighboring lane.
             lane_dict = {}
-            lane_dict["info"] = build_dict_lane_single(lane_waypoint)
+            lane_dict["curr"]  = [build_dict_lane_single(lane_waypoint)]
             lane_dict["next"] = [build_dict_lane_single(next_waypoint) for next_waypoint in lane_waypoint.next(distance)]
             lane_dict["prev"] = [build_dict_lane_single(next_waypoint) for next_waypoint in lane_waypoint.previous(distance)]
             return lane_dict
@@ -213,6 +213,15 @@ class DataExtractor(object):
                 lanes.append(build_dict_lane(lane))
                 cur_lane = lane
             return lanes
+        
+        def get_actor_lane_idx(lanes, lane_id, road_id):
+            for idx, lane in enumerate(lanes):
+                for key, lane_list in lane.items():
+                    for lane_dict in lane_list:
+                        if lane_dict['lane_id'] == lane_id and lane_dict['road_id'] == road_id:
+                            return idx, key
+            return None, None
+
         # 1. build the road topology based where the ego is at. 
         # 2. build the lane idx by our own. not using the opendriving idx.
         #    also we store waypoints of next(100) and previous(100) for each lane. 
@@ -227,7 +236,7 @@ class DataExtractor(object):
         lanes = left_lanes + [build_dict_lane(ego_lane)] + right_lanes
         lanedict['lanes'] = lanes
         lanedict['ego_lane_idx'] = len(left_lanes)
-        import pdb; pdb.set_trace()
+        # import pdb; pdb.set_trace()
 
         egodict = get_vehicle_attributes(self.ego, waypoint)
         if lane_invasion:
@@ -243,20 +252,25 @@ class DataExtractor(object):
                 # TODO: change the 100m condition to field of view. 
                 if vehicle.id != self.ego.id and distance(vehicle.get_location()) < 100:
                     vehicle_wp = map1.get_waypoint(vehicle.get_location(), project_to_road=True, lane_type=(carla.LaneType.Driving | carla.LaneType.Shoulder | carla.LaneType.Sidewalk))
-                    actordict[vehicle.id] = get_vehicle_attributes(vehicle, vehicle_wp)
-                    ## append the lane_id
+                    vehicle_dict = get_vehicle_attributes(vehicle, vehicle_wp)
+                    vehicle_dict["lane_idx"], vehicle_dict["relative_position"] = get_actor_lane_idx(lanes, vehicle_dict['lane_id'], vehicle_dict['road_id'])# the found lane_idx
+                    if vehicle_dict["lane_idx"] is not None:
+                        actordict[vehicle.id] = vehicle_dict
     
         for p in pedestrians:
-            if p.get_location().distance(self.ego.get_location())<100:
+            if p.get_location().distance(self.ego.get_location()) < 100:
                 ped_wp = map1.get_waypoint(p.get_location(), project_to_road=True, lane_type=(carla.LaneType.Driving | carla.LaneType.Shoulder | carla.LaneType.Sidewalk))
-                peddict[p.id]=get_actor_attributes(p, ped_wp)
+                ped_dict = get_actor_attributes(p, ped_wp)
+                ped_dict["lane_idx"], ped_dict["relative_position"] = get_actor_lane_idx(lanes, ped_dict['lane_id'], ped_dict['road_id'])# the found lane_idx
+                if ped_dict["lane_idx"] is not None:
+                    peddict[p.id] = ped_dict
 
         for t_light in trafficlights:
-            if t_light.get_location().distance(self.ego.get_location())<100:
+            if t_light.get_location().distance(self.ego.get_location()) < 100:
                 lightdict[t_light.id]=get_actor_attributes(t_light)
 
         for s in signs:
-            if s.get_location().distance(self.ego.get_location())<100:
+            if s.get_location().distance(self.ego.get_location()) < 100:
                 signdict[s.id]=get_actor_attributes(s)
 
         self.framedict[frame]={"ego": egodict,"actors": actordict,"pedestrians": peddict,"trafficlights": lightdict,"signs": signdict,"lane": lanedict}

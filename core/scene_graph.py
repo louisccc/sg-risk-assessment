@@ -1,4 +1,3 @@
-import numpy as np
 import networkx as nx
 import matplotlib
 matplotlib.use("Agg")
@@ -12,10 +11,6 @@ import json
 from glob import glob
 from collections import defaultdict
 from sklearn.model_selection import train_test_split
-from sklearn.utils import shuffle
-from pygcn.utils import sparse_mx_to_torch_sparse_tensor, normalize, accuracy
-import scipy.sparse as sp
-import torch.nn.functional as F
 from pathlib import Path 
 from tqdm import tqdm 
 from .relation_extractor import Relations, ActorType, RelationExtractor

@@ -198,7 +198,7 @@ def get_metrics(outputs, labels):
     metrics['confusion'] = str(confusion_matrix(labels_tensor, preds)).replace('\n', ',')
     metrics['precision'] = precision_score(labels_tensor, preds, average="micro")
     metrics['recall'] = recall_score(labels_tensor, preds, average="micro")
-    metrics['auc'] = get_auc(outputs_tensor, labels_tensor, 'dynkg')
+    metrics['auc'] = get_auc(outputs_tensor, labels_tensor)
     metrics['label_distribution'] = str(np.unique(labels_tensor, return_counts=True)[1])
     
     return metrics 
@@ -214,45 +214,13 @@ def encode_onehot(labels, n_classes=None):
     labels_onehot = np.array(list(map(classes_dict.get, labels)),
                              dtype=np.int32)
     return labels_onehot
-    
-    
-def normalize(mx):
-    """Row-normalize sparse matrix"""
-    rowsum = np.array(mx.sum(1))
-    r_inv = np.power(rowsum, -1).flatten()
-    r_inv[np.isinf(r_inv)] = 0.
-    r_mat_inv = sp.diags(r_inv)
-    mx = r_mat_inv.dot(mx)
-    return mx
-    
-    
-def sparse_mx_to_torch_sparse_tensor(sparse_mx):
-    """Convert a scipy sparse matrix to a torch sparse tensor."""
-    sparse_mx = sparse_mx.tocoo().astype(np.float32)
-    indices = torch.from_numpy(
-        np.vstack((sparse_mx.row, sparse_mx.col)).astype(np.int64))
-    values = torch.from_numpy(sparse_mx.data)
-    shape = torch.Size(sparse_mx.shape)
-    return torch.sparse.FloatTensor(indices, values, shape)
 
 #~~~~~~~~~~Scoring Metrics~~~~~~~~~~
 #note: these scoring metrics only work properly for binary classification use cases (graph classification, dyngraph classification) 
-
-#used for output of validation accuracy after each epoch
-def accuracy(output, labels):
-    preds = output.max(1)[1].type_as(labels)
-    correct = preds.eq(labels).double()
-    correct = correct.sum()
-    return correct / len(labels)
-
-def get_auc(outputs, labels, task):
-    try:
-        if(task == "node_classification"):
-            labels = encode_onehot(labels.numpy().tolist(), 8) #multiclass labels
-            auc = roc_auc_score(labels, outputs.numpy(), average="weighted")
-        else:
-            labels = encode_onehot(labels.numpy().tolist(), 2) #binary labels
-            auc = roc_auc_score(labels, outputs.numpy(), average="micro")
+def get_auc(outputs, labels):
+    try:    
+        labels = encode_onehot(labels.numpy().tolist(), 2) #binary labels
+        auc = roc_auc_score(labels, outputs.numpy(), average="micro")
     except ValueError as err: 
         print("error calculating AUC: ", err)
         auc = 0.0
@@ -260,29 +228,25 @@ def get_auc(outputs, labels, task):
 
 #NOTE: ROC curve is only generated for positive class (risky label) confidence values 
 #render parameter determines if the figure is actually generated. If false, it saves the values to a csv file.
-def get_roc_curve(outputs, labels, task, render=False):
-    if task == "node_classification":
-        print("Node classification ROC not implemented")
-        return None
-    else:
-        risk_scores = []
-        outputs = preprocessing.normalize(outputs.numpy(), axis=0)
-        for i in outputs:
-            risk_scores.append(i[1])
-        fpr, tpr, thresholds = roc_curve(labels.numpy(), risk_scores)
-        roc = pd.DataFrame()
-        roc['fpr'] = fpr
-        roc['tpr'] = tpr
-        roc['thresholds'] = thresholds
-        roc.to_csv("ROC_data_"+task+".csv")
+def get_roc_curve(outputs, labels, render=False):
+    risk_scores = []
+    outputs = preprocessing.normalize(outputs.numpy(), axis=0)
+    for i in outputs:
+        risk_scores.append(i[1])
+    fpr, tpr, thresholds = roc_curve(labels.numpy(), risk_scores)
+    roc = pd.DataFrame()
+    roc['fpr'] = fpr
+    roc['tpr'] = tpr
+    roc['thresholds'] = thresholds
+    roc.to_csv("ROC_data_"+task+".csv")
 
-        if(render):
-            plt.figure(figsize=(8,8))
-            plt.xlim((0,1))
-            plt.ylim((0,1))
-            plt.ylabel("TPR")
-            plt.xlabel("FPR")
-            plt.title("Receiver Operating Characteristic for " + task)
-            plt.plot([0,1],[0,1], linestyle='dashed')
-            plt.plot(fpr,tpr, linewidth=2)
-            plt.savefig("ROC_curve_"+task+".svg")
+    if(render):
+        plt.figure(figsize=(8,8))
+        plt.xlim((0,1))
+        plt.ylim((0,1))
+        plt.ylabel("TPR")
+        plt.xlabel("FPR")
+        plt.title("Receiver Operating Characteristic for " + task)
+        plt.plot([0,1],[0,1], linestyle='dashed')
+        plt.plot(fpr,tpr, linewidth=2)
+        plt.savefig("ROC_curve_"+task+".svg")

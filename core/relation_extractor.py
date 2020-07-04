@@ -91,8 +91,7 @@ class RelationExtractor:
         # import pdb; pdb.set_trace()
         if actor1.name.startswith("ego:") or actor2.name.startswith("ego:"):
             if(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_VERY_NEAR):
-                relation_list.append(self.extract_directional_relation(actor1, actor2))
-                relation_list.append(self.extract_directional_relation(actor2, actor1))
+                relation_list += self.extract_directional_relation(actor1, actor2)
 
         return relation_list
             
@@ -331,13 +330,14 @@ class RelationExtractor:
         ego_vector = [ego.attr['location'][0] * math.cos(math.radians(ego.attr['location'][0])), ego.attr['location'][1] * math.sin(math.radians(ego.attr['location'][0]))]
         ego_to_actor_vector = [actor.attr['location'][0] - ego.attr['location'][0], actor.attr['location'][1] - ego.attr['location'][1]]
         dot_product = ego_vector[0] * ego_to_actor_vector[0] + ego_vector[1] * ego_to_actor_vector[1]
+        
         # actor is in front of ego
         if dot_product > 0:
             # actor to the left of ego 
-            if actor['lane_idx'] < actor['lane_idx']:
+            if actor.attr['lane_idx'] < actor.attr['lane_idx']:
                 relation_list.append([ego, Relations.frontLeft, actor])
             # actor to the right of ego 
-            elif actor['lane_idx'] > actor['lane_idx']:
+            elif actor.attr['lane_idx'] > actor.attr['lane_idx']:
                 relation_list.append([ego, Relations.frontRight, actor])
             # actor in the same lane 
             else:
@@ -345,11 +345,12 @@ class RelationExtractor:
         # actor is behind ego
         else:
             # actor to the left of ego 
-            if actor['lane_idx'] < actor['lane_idx']:
+            if actor.attr['lane_idx'] < actor.attr['lane_idx']:
                 relation_list.append([ego, Relations.rearLeft, actor])
             # actor to the right of ego 
-            elif actor['lane_idx'] > actor['lane_idx']:
+            elif actor.attr['lane_idx'] > actor.attr['lane_idx']:
                 relation_list.append([ego, Relations.rearRight, actor])
             # actor in the same lane 
             else:
                 relation_list.append([ego, Relations.rear, actor])
+        return relation_list

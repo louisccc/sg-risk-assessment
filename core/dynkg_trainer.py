@@ -22,7 +22,6 @@ from tqdm import tqdm
 from core.mrgcn import *
 from torch_geometric.data import Data, DataLoader, DataListLoader
 from sklearn.utils.class_weight import compute_class_weight
-import pprint
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
@@ -86,7 +85,9 @@ class DynKGTrainer:
 
     def train(self):
         
-        for epoch_idx in tqdm(range(self.config.epochs)): # iterate through epoch   
+        tqdm_bar = tqdm(range(self.config.epochs))
+
+        for epoch_idx in tqdm_bar: # iterate through epoch   
             acc_loss_train = 0
             
             self.sequence_loader = DataListLoader(self.training_data, batch_size=self.config.batch_size)
@@ -98,8 +99,8 @@ class DynKGTrainer:
                 labels = torch.empty(0).long().to(self.config.device)
                 outputs = torch.empty(0,2).to(self.config.device)
                 for sequence in data_list: # iterate through sequences
-                    data, label = sequence['sequence'], sequence['label']
 
+                    data, label = sequence['sequence'], sequence['label']
                     graph_list = [Data(x=g['node_features'], edge_index=g['edge_index'], edge_attr=g['edge_attr']) for g in data]
                 
                     # data is a sequence that consists of serveral graphs 
@@ -115,14 +116,10 @@ class DynKGTrainer:
                 acc_loss_train += loss_train.detach().cpu().item() * len(data_list)
                 self.optimizer.step()
 
-            print('')
-            print('Epoch: {:04d},'.format(epoch_idx), 'loss_train: {:.4f}'.format(acc_loss_train))
-            print('')
-
+            tqdm_bar.set_description('Epoch: {:04d}, loss_train: {:.4f}'.format(epoch_idx, acc_loss_train))
             
             if epoch_idx % self.config.test_step == 0:
                 _, _, metrics = self.evaluate()
-                # import pdb; pdb.set_trace()
                 self.summary_writer.add_scalar('Acc_Loss/train', metrics['train']['loss'], epoch_idx)
                 self.summary_writer.add_scalar('Acc_Loss/train_acc', metrics['train']['acc'], epoch_idx)
                 self.summary_writer.add_scalar('F1/train', metrics['train']['f1'], epoch_idx)
@@ -155,16 +152,14 @@ class DynKGTrainer:
             output = self.model.forward(sequence.x, sequence.edge_index, sequence.edge_attr, sequence.batch)
             
             loss_test = self.loss_func(output.view(-1, 2), torch.LongTensor([label]).to(self.config.device))
-            # import pdb; pdb.set_trace()
             acc_loss_test += loss_test.detach().cpu().item()
 
             outputs.append(output.detach().cpu().numpy().tolist())
             labels.append(label)
 
-            # print('Dynamic SceneGraph: {:04d}'.format(i), 'acc_test: {:.4f}'.format(acc_test.item()))
 
         return outputs, labels, acc_loss_test
-
+    
     def evaluate(self):
         metrics = {}
 
@@ -172,13 +167,12 @@ class DynKGTrainer:
         metrics['train'] = get_metrics(outputs_train, labels_train)
         metrics['train']['loss'] = acc_loss_train
 
-        pprint.pprint(metrics['train'])
-
         outputs_test, labels_test, acc_loss_test = self.inference(self.testing_data, self.testing_labels)
         metrics['test'] = get_metrics(outputs_test, labels_test)
         metrics['test']['loss'] = acc_loss_test
         
-        pprint.pprint(metrics['test'])
+        print("\ntrain stat:", metrics['train']['acc'], metrics['train']['confusion'], \
+              "\ntest stat:",  metrics['test']['acc'],  metrics['test']['confusion'])
 
         return outputs_test, labels_test, metrics
 
@@ -203,7 +197,7 @@ def get_metrics(outputs, labels):
     metrics = {}
     metrics['acc'] = accuracy_score(labels_tensor, preds)
     metrics['f1'] = f1_score(labels_tensor, preds, average="micro")
-    metrics['confusion'] = str(confusion_matrix(labels_tensor, preds))
+    metrics['confusion'] = str(confusion_matrix(labels_tensor, preds)).replace('\n', ',')
     metrics['precision'] = precision_score(labels_tensor, preds, average="micro")
     metrics['recall'] = recall_score(labels_tensor, preds, average="micro")
     metrics['auc'] = get_auc(outputs_tensor, labels_tensor, 'dynkg')

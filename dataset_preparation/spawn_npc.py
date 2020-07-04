@@ -112,6 +112,7 @@ def main():
     # set number of pedestrians randomly 
     args.number_of_walkers = random.randrange(1, args.number_of_walkers)
 
+    lanechangerecorder = None
     try:
 
         traffic_manager = client.get_trafficmanager(args.tm_port)
@@ -296,8 +297,9 @@ def main():
 
         print('\ndestroying %d vehicles' % len(vehicles_list))
         client.apply_batch([carla.command.DestroyActor(x) for x in vehicles_list])
-
-        lanechangerecorder.destroy_sensors()
+        
+        if lanechangerecorder:
+            lanechangerecorder.destroy_sensors()
         
         # stop walker controllers (list is [controller, actor, controller, actor ...])
         for i in range(0, len(all_id), 2):

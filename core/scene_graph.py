@@ -194,7 +194,7 @@ class SceneGraphSequenceGenerator:
                         for frame, frame_dict in framedict.items():
                             scenegraph = SceneGraph(frame_dict, framenum=frame)
                             scenegraphs[frame] = scenegraph
-                            scenegraph.visualize(filename="./visualize/%s_%s"%(path.name, frame))
+                            # scenegraph.visualize(filename="./visualize/%s_%s"%(path.name, frame))
                             
                     except Exception as e:
                         print("We have problem parsing the dict.json in %s"%txt_path)

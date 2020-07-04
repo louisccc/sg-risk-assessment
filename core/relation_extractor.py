@@ -87,16 +87,8 @@ class RelationExtractor:
 
     def extract_relations_car_car(self, actor1, actor2):
         relation_list = []
-        if(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_SUPER_NEAR):
-            relation_list.append([actor1, Relations.super_near, actor2])
-        elif(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_VERY_NEAR):
-            relation_list.append([actor1, Relations.very_near, actor2])
-        elif(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_NEAR):
-            relation_list.append([actor1, Relations.near, actor2])
-        elif(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_VISIBLE):
-            relation_list.append([actor1, Relations.visible, actor2])
-
-            # import pdb; pdb.set_trace()
+        relation_list += self.create_proximity_relations(actor1, actor2)
+        # import pdb; pdb.set_trace()
         if actor1.name.startswith("ego:") or actor2.name.startswith("ego:"):
             if(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_VERY_NEAR):
                 relation_list.append(self.extract_directional_relation(actor1, actor2))
@@ -126,42 +118,20 @@ class RelationExtractor:
         
     def extract_relations_car_ped(self, actor1, actor2):
         relation_list = []
-        if(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_SUPER_NEAR):
-            relation_list.append([actor1, Relations.super_near, actor2])
-        elif(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_VERY_NEAR):
-            relation_list.append([actor1, Relations.very_near, actor2])
-        elif(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_NEAR):
-            relation_list.append([actor1, Relations.near, actor2])
-        elif(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_VISIBLE):
-            relation_list.append([actor1, Relations.visible, actor2])
-            #relation_list.append(self.extract_directional_relation(actor1, actor2))
-            #relation_list.append(self.extract_directional_relation(actor2, actor1))
+        
+        #relation_list.append(self.extract_directional_relation(actor1, actor2))
+        #relation_list.append(self.extract_directional_relation(actor2, actor1))
         return relation_list
         
     def extract_relations_car_bicycle(self, actor1, actor2):
         relation_list = []
-        if(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_SUPER_NEAR):
-            relation_list.append([actor1, Relations.super_near, actor2])
-        elif(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_VERY_NEAR):
-            relation_list.append([actor1, Relations.very_near, actor2])
-        elif(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_NEAR):
-            relation_list.append([actor1, Relations.near, actor2])
-        elif(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_VISIBLE):
-            relation_list.append([actor1, Relations.visible, actor2])
-            #relation_list.append(self.extract_directional_relation(actor1, actor2))
-            #relation_list.append(self.extract_directional_relation(actor2, actor1))
+        relation_list += self.create_proximity_relations(actor1, actor2)
+        #relation_list.append(self.extract_directional_relation(actor1, actor2))
+        #relation_list.append(self.extract_directional_relation(actor2, actor1))
         return relation_list
         
     def extract_relations_car_moto(self, actor1, actor2):
-        relation_list = []
-        if(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_SUPER_NEAR):
-            relation_list.append([actor1, Relations.super_near, actor2])
-        elif(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_VERY_NEAR):
-            relation_list.append([actor1, Relations.very_near, actor2])
-        elif(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_NEAR):
-            relation_list.append([actor1, Relations.near, actor2])
-        elif(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_VISIBLE):
-            relation_list.append([actor1, Relations.visible, actor2])
+        relation_list = self.create_proximity_relations(actor1, actor2)
             #relation_list.append(self.extract_directional_relation(actor1, actor2))
             #relation_list.append(self.extract_directional_relation(actor2, actor1))
         return relation_list
@@ -326,23 +296,60 @@ class RelationExtractor:
         else:
             return False
     
+    def create_mutual_relations(self, actor1, relation, actor2):
+        relation_list = []
+        relation_list.append([actor1, relation, actor2])
+        relation_list.append([actor2, relation, actor1])
+        return relation_list
+    
+    def create_proximity_relations(self, actor1, actor2):
+        relation_list = []
+        if(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_SUPER_NEAR):
+            relation_list += self.create_mutual_relations(actor1, Relations.super_near, actor2)
+        elif(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_VERY_NEAR):
+            relation_list += self.create_mutual_relations(actor1, Relations.very_near, actor2)
+        elif(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_NEAR):
+            relation_list += self.create_mutual_relations(actor1, Relations.near, actor2)
+        elif(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_VISIBLE):
+            relation_list += self.create_mutual_relations(actor1, Relations.visible, actor2)
+        return relation_list
+
     #gives directional relations between actors based on their 2D absolute positions.
     #TODO: fix these relations, since the locations are based on the world coordinate system and are not relative to ego.
     def extract_directional_relation(self, actor1, actor2):
-        x1 = actor1.attr['location'][0]
-        x2 = actor2.attr['location'][0]
-        y1 = actor1.attr['location'][1]
-        y2 = actor2.attr['location'][1]
-        
-        x_diff = x2 - x1
-        y_diff = y2 - y1
-        if (x_diff < 0):
-            if (y_diff < 0):
-                return [actor1, Relations.rearLeft, actor2]
-            else:
-                return [actor1, Relations.rearRight, actor2]
+        relation_list = []
+        if actor1.name.startswith("ego:"):
+            ego = actor1
+            actor = actor2
         else:
-            if (y_diff < 0):
-                return [actor1, Relations.frontLeft, actor2]
+            ego = actor2
+            actor = actor1
+
+        # use yaw and location (x, y) of ego to get a ego vector
+        # then find another vector from ego to other_actor
+        # take dot product between two vectors and check the sign (positive = front, negative = rear)
+        ego_vector = [ego.attr['location'][0] * math.cos(math.radians(ego.attr['location'][0])), ego.attr['location'][1] * math.sin(math.radians(ego.attr['location'][0]))]
+        ego_to_actor_vector = [actor.attr['location'][0] - ego.attr['location'][0], actor.attr['location'][1] - ego.attr['location'][1]]
+        dot_product = ego_vector[0] * ego_to_actor_vector[0] + ego_vector[1] * ego_to_actor_vector[1]
+        # actor is in front of ego
+        if dot_product > 0:
+            # actor to the left of ego 
+            if actor['lane_idx'] < actor['lane_idx']:
+                relation_list.append([ego, Relations.frontLeft, actor])
+            # actor to the right of ego 
+            elif actor['lane_idx'] > actor['lane_idx']:
+                relation_list.append([ego, Relations.frontRight, actor])
+            # actor in the same lane 
             else:
-                return [actor1, Relations.frontRight, actor2]
+                relation_list.append([ego, Relations.front, actor])
+        # actor is behind ego
+        else:
+            # actor to the left of ego 
+            if actor['lane_idx'] < actor['lane_idx']:
+                relation_list.append([ego, Relations.rearLeft, actor])
+            # actor to the right of ego 
+            elif actor['lane_idx'] > actor['lane_idx']:
+                relation_list.append([ego, Relations.rearRight, actor])
+            # actor in the same lane 
+            else:
+                relation_list.append([ego, Relations.rear, actor])

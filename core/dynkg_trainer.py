@@ -2,19 +2,17 @@ import os, sys
 sys.path.append(os.path.dirname(sys.path[0]))
 
 import torch
-import torch.nn.functional as F
 import torch.optim as optim
 from torch.utils.tensorboard import SummaryWriter
 import numpy as np
 import scipy.sparse as sp
 import pandas as pd
-import random, pprint
-from collections import defaultdict
+import random
 from sklearn.metrics import accuracy_score, f1_score, confusion_matrix, precision_score, recall_score, roc_auc_score, roc_curve
 from sklearn import preprocessing
 from matplotlib import pyplot as plt
 
-from core.scene_graph import SceneGraphSequenceGenerator, build_scenegraph_dataset
+from core.scene_graph import build_scenegraph_dataset
 from core.relation_extractor import Relations
 from argparse import ArgumentParser
 from pathlib import Path
@@ -268,7 +266,6 @@ def get_roc_curve(outputs, labels, task, render=False):
         return None
     else:
         risk_scores = []
-       #pdb.set_trace()
         outputs = preprocessing.normalize(outputs.numpy(), axis=0)
         for i in outputs:
             risk_scores.append(i[1])

@@ -22,6 +22,7 @@ from tqdm import tqdm
 from core.mrgcn import *
 from torch_geometric.data import Data, DataLoader, DataListLoader
 from sklearn.utils.class_weight import compute_class_weight
+import pprint
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
@@ -44,7 +45,7 @@ class Config:
         self.parser.add_argument('--hidden_dim', type=int, default=32, help="Hidden dimension in GIN.")
         self.parser.add_argument('--pooling_type', type=str, default="sagpool", help="Graph pooling type.")
         self.parser.add_argument('--readout_type', type=str, default="mean", help="Readout type.")
-        self.parser.add_argument('--temporal_type', type=str, default="lstm_sum", help="Temporal type.")
+        self.parser.add_argument('--temporal_type', type=str, default="lstm_last", help="Temporal type.")
 
         args_parsed = self.parser.parse_args(args)
         
@@ -148,12 +149,13 @@ class DynKGTrainer:
             data_list = [Data(x=g['node_features'], edge_index=g['edge_index'], edge_attr=g['edge_attr']) for g in data]
 
             self.test_loader = DataLoader(data_list, batch_size=len(data_list))
-            sequence = next(iter(self.train_loader)).to(self.config.device)
+            sequence = next(iter(self.test_loader)).to(self.config.device)
 
             self.model.eval()
             output = self.model.forward(sequence.x, sequence.edge_index, sequence.edge_attr, sequence.batch)
             
             loss_test = self.loss_func(output.view(-1, 2), torch.LongTensor([label]).to(self.config.device))
+            # import pdb; pdb.set_trace()
             acc_loss_test += loss_test.detach().cpu().item()
 
             outputs.append(output.detach().cpu().numpy().tolist())
@@ -170,11 +172,14 @@ class DynKGTrainer:
         metrics['train'] = get_metrics(outputs_train, labels_train)
         metrics['train']['loss'] = acc_loss_train
 
+        pprint.pprint(metrics['train'])
+
         outputs_test, labels_test, acc_loss_test = self.inference(self.testing_data, self.testing_labels)
         metrics['test'] = get_metrics(outputs_test, labels_test)
         metrics['test']['loss'] = acc_loss_test
         
-        pprint.pprint(metrics['train'])
+        pprint.pprint(metrics['test'])
+
         return outputs_test, labels_test, metrics
 
     def save_model(self):
@@ -191,9 +196,9 @@ class DynKGTrainer:
             self.model.eval()
 
 def get_metrics(outputs, labels):
-    labels_tensor = torch.LongTensor(labels)
-    outputs_tensor = torch.FloatTensor(outputs)
-    preds = outputs_tensor.max(1)[1].type_as(labels_tensor)
+    labels_tensor = torch.LongTensor(labels).detach()
+    outputs_tensor = torch.FloatTensor(outputs).detach()
+    preds = outputs_tensor.max(1)[1].type_as(labels_tensor).detach()
 
     metrics = {}
     metrics['acc'] = accuracy_score(labels_tensor, preds)

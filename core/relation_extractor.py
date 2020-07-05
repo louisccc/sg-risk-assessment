@@ -27,7 +27,7 @@ class ActorType(Enum):
     ROAD = 7
     
 ACTOR_NAMES=['car','moto','bicycle','ped','lane','light','sign', 'road']
-    
+
 class Relations(Enum):
     isIn = 0
     super_near = 1
@@ -43,6 +43,8 @@ class Relations(Enum):
     frontRight = 11
     rearLeft = 12
     rearRight = 13
+
+RELATION_COLORS = ["black", "red", "orange", "yellow", "green", "purple", "blue", "sienna", "turquoise", "pink", "pink", "pink", "turquoise", "turquoise"]
 
 #This class extracts relations for every pair of entities in a scene
 class RelationExtractor:

@@ -3,6 +3,7 @@ import sensors
 from sensors import get_actor_attributes, get_vehicle_attributes
 from pathlib import Path
 from collections import defaultdict
+import imageio
 
 SRUNNER_PATH = r'./scenario_runner'
 sys.path.append(SRUNNER_PATH)
@@ -69,6 +70,15 @@ class LaneChangeRecorder:
     def toggle_recording(self):
         for _, sensor in self.sensors_dict.items():
             sensor.toggle_recording()
+    
+    def convert_gif(self, path):
+        path = Path(path).resolve()
+        folder_path = path / 'raw_images'
+        img_path = folder_path.glob('**/*.jpg')
+        images = []
+        for filename in img_path:
+            images.append(imageio.imread(str(filename)))
+        imageio.mimsave(path / 'lane_change.gif', images, format='GIF')
 
     def tick(self, frame_num):
         self.tick_count += 1
@@ -140,6 +150,8 @@ class LaneChangeRecorder:
             success = self.lane_change_controller.update()
             if success == py_trees.common.Status.SUCCESS or self.tick_count > 300:
                 #write to metadata file
+                self.toggle_recording()
+                self.destroy_sensors()
                 with open((Path(self.new_path) / 'metadata.txt').resolve(),'w') as file:
                     weather=self.carla_world.get_weather()
                     
@@ -150,12 +162,12 @@ class LaneChangeRecorder:
                     file.write(json.dumps(metadata_dict))
 
                 self.extractor.export_data()
+                # create gifs
+                self.convert_gif(self.new_path)
                 self.lane_changing = False
                 print('set set_autopilot back to true')
                 self.client.apply_batch_sync([carla.command.SetAutopilot(self.ego, True)], True)
-                self.toggle_recording()
                 print("Cleaning up sensors...")
-                self.destroy_sensors()
                 self.tick_count = 0
 
 class DataExtractor(object):

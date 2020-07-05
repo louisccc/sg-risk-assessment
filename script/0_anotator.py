@@ -41,10 +41,29 @@ def anotate_task(root_folder):
         clip_canvas.delete('all')
         root.title("Lane Change {} Evaluation: Clip {} / {}".format(foldernames[idx].stem, idx, len(foldernames)))
         show_video(clip_canvas, foldernames[idx])
+    
+    def prevClip():
+        print("Loading next clip...")
+        nonlocal idx
+        if (idx > 0):
+            idx -= 1
+            clip_canvas.delete('all')
+            root.title("Lane Change {} Evaluation: Clip {} / {}".format(foldernames[idx].stem, idx, len(foldernames)))
+            show_video(clip_canvas, foldernames[idx])
 
     def replayClip():
         clip_canvas.delete('all')
+        root.title("Lane Change {} Evaluation: Clip {} / {}".format(foldernames[idx].stem, idx, len(foldernames)))
         show_video(clip_canvas, foldernames[idx])
+
+    def jump2Idx():
+        jmp_idx = int(eval(entry.get()))
+        nonlocal idx
+        if (0 <= jmp_idx < len(foldernames)):
+            idx = jmp_idx
+            replayClip()
+        else:
+            print("Error: Invalid index!")
 
     def saveScore():  
         x = int(eval(entry.get()))
@@ -79,8 +98,10 @@ def anotate_task(root_folder):
     entry = Entry(util_canvas)
     entry.grid(row=1)
     Button(util_canvas, text='Save Score', command=saveScore).grid(row=1, column=1)
+    Button(util_canvas, text='Jump to Index', command=jump2Idx).grid(row=1, column=2)
     Button(util_canvas, text='Replay Clip', command=replayClip).grid(row=2, column=0)
-    Button(util_canvas, text='Next Clip', command=nextClip).grid(row=2, column=1)
+    Button(util_canvas, text='Prev Clip', command=prevClip).grid(row=2, column=1)
+    Button(util_canvas, text='Next Clip', command=nextClip).grid(row=2, column=2)
     root.mainloop()
 
 class AppletDisplay:

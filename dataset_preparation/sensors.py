@@ -59,7 +59,43 @@ def get_vehicle_attributes(vehicle, waypoint=None):
     return_dict['brake_light_on'] = True if (light_state.Brake & carla.VehicleLightState.Brake > 0) else False
     return return_dict
 
+class LaneInvasionDetector(object):
+    def __init__(self, parent_actor, storing_path):
+        self.sensor = None
+        self._parent = parent_actor
+        world = self._parent.get_world()
+        bp = world.get_blueprint_library().find('sensor.other.lane_invasion')
+        self.sensor = world.spawn_actor(bp, carla.Transform(), attach_to=self._parent)
+        # We need to pass the lambda a weak reference to self to avoid circular
+        # reference.
+        weak_self = weakref.ref(self)
+        self.sensor.listen(lambda event: LaneInvasionDetector._on_invasion(weak_self, event))
 
+        self.storing_path = storing_path
+        self.recording = False
+
+        self.lane_invasion_events = []
+
+    def toggle_recording(self):
+        self.recording = not self.recording
+
+    def destroy(self):
+        if self.sensor:
+            self.sensor.destroy()
+
+    def is_invading_lane(self, frame):
+        if self.lane_invasion_events:
+            return frame < max(self.lane_invasion_events) + 10
+        else:
+            return False
+
+    @staticmethod
+    def _on_invasion(weak_self, event):
+        self = weak_self()
+        if not self:
+            return
+        if self.recording:
+            self.lane_invasion_events.append(event.frame)
 # ==============================================================================
 # -- CameraManager -------------------------------------------------------------
 # ==============================================================================

@@ -1,58 +1,41 @@
-import sys, os, argparse, pdb
+import sys, os, torch
 sys.path.append(os.path.dirname(sys.path[0]))
-from core.graph_learning.node_trainer import GCNTrainer
-from core.graph_learning.graph_trainer import GraphTrainer
-from core.graph_learning.dyngraph_trainer import DynGraphTrainer
-from core.graph_learning.dynkg_trainer import DynKGTrainer
-from core.graph_learning import utils
+
+from core.dynkg_trainer import *
+
 import pandas as pd
-import torch
 import numpy as np
 
-def get_config(args):
-    task_parser = argparse.ArgumentParser()
-    task_parser.add_argument('--task', type=str, default="node_classification", help="Task to be executed.")
-    task_parser.add_argument('--iterations', type=int, default=3, help="Number of times the model should be built and scored for averaging.")
-    config = task_parser.parse_known_args(args)
-    return config # <parsed config>, <unknown list of argv>
+def train_dynamic_kg(args, iterations=1):
+    ''' Training the dynamic kg algorithm with different attention layer choice.'''
     
-def get_trainer(config):
-    if config.task == "node_classification":
-        # classify the label for each node using the attributes.
-        trainer = GCNTrainer(other_argvs)
+    outputs = []
+    labels = []
+    metrics = []
 
-    elif config.task == "graph_classification":
-        # classify graph by duplicating the risk label.
-        trainer = GraphTrainer(other_argvs)
-
-    elif config.task =="dyngraph_classification":
-        # classify a sequence of graphs using the risk label.
-        trainer = DynGraphTrainer(other_argvs)
-
-    elif config.task =="dynkg_classification":
-        # classify a sequence of graphs using the risk label.
-        trainer = DynKGTrainer(other_argvs)
-
-    return trainer
-
-if __name__ == "__main__":
-    config, other_argvs = get_config(sys.argv[1:])
-    outputs = None
-    labels = None
-    trainer = None
-    for i in range(config.iterations):
-        trainer = get_trainer(config)
+    for i in range(iterations):
+        trainer = DynKGTrainer(args)
         trainer.build_model()
         trainer.train()
-        if i == 0:
-            outputs, labels = trainer.evaluate()
-        else:
-            o, l = trainer.evaluate()
-            outputs = torch.cat((outputs, o))
-            labels = np.concatenate((labels, l))
-            
-    utils.save_outputs(trainer.config.input_base_dir, outputs, labels, config.task)
-    #if config.task != "node_classification": #multiclass metrics not implemented
-    metrics = utils.get_scoring_metrics(outputs, labels, config.task)
-    pd.DataFrame(metrics, index=[0]).to_csv(str(trainer.config.input_base_dir) + "/" + config.task + "_metrics.csv", header=True)
-    pdb.set_trace()
+        output, label, metric = trainer.evaluate()
+
+        outputs += output
+        labels  += label
+        metrics.append(metric)
+
+    # Store the prediction results. 
+    store_path = trainer.config.input_base_dir
+    outputs_pd = pd.DataFrame(outputs)
+    labels_pd  = pd.DataFrame(labels)
+    
+    labels_pd.to_csv(store_path / "dynkg_training_labels.tsv", sep='\t', header=False, index=False)
+    outputs_pd.to_csv(store_path / "dynkg_training_outputs.tsv", sep="\t", header=False, index=False)
+    
+    # Store the metric results. 
+    metrics_pd = pd.DataFrame(metrics[-1]['test'], index=[0])
+    metrics_pd.to_csv(store_path / "dynkg_classification_metrics.csv", header=True)
+
+
+if __name__ == "__main__":
+    """ the entry of dynkg pipeline training """ 
+    train_dynamic_kg(sys.argv[1:])

@@ -27,60 +27,61 @@ def show_video(canvas, clip_folder):
 	UI(canvas, im).grid(row=0)
 
 def anotate_task(root_folder):
-	#iterate through video clip folders under root folder
-	#show video 
-	#ask for labeling information use Input()
-	#store the result back to each clip folder.
-	foldernames = [f for f in root_folder.iterdir() if f.stem.isnumeric()]
-	foldernames = sorted(foldernames, key=lambda x : int(x.stem))
-	
-	idx = 0
+    foldernames = [f for f in root_folder.iterdir() if f.stem.isnumeric()]
+    foldernames = sorted(foldernames, key=lambda x : int(x.stem))
 
-	def nextClip():
-		print("Loading next clip...")
-		nonlocal idx
-		if (idx >= len(foldernames)):
-			root.destroy()
-		clip_canvas.delete('all')
-		root.title("Lane Change Evaluation: Clip {}".format(foldernames[idx].stem))
-		show_video(clip_canvas, foldernames[idx])
-		idx += 1
-		
-	def saveScore():  
-		x = int(eval(entry.get()))
-		if (1 <= x <= 5):
-			score = x - 3
-			label_file = foldernames[idx] / "label.txt"
-			prev_avg_score = 0
-			num_of_scores = 0
-			if label_file.exists():
-				with open(str(label_file), 'r') as f:
-					label_data = [int(x) for x in f.read().split(',')]
-					if len(label_data) == 2:
-						prev_avg_score, num_of_scores = label_data
-			
-			avg_score = ((prev_avg_score * num_of_scores) + score) / (num_of_scores + 1)
-			num_of_scores += 1
+    idx = -1
 
-			with open(str(label_file), 'w') as f:
-				f.write("{}, {}".format(int(avg_score), num_of_scores))
-			
-			entry.delete(0, END)
-			nextClip()
-		else:
-			print("Error: Score not in range.")
+    def nextClip():
+        print("Loading next clip...")
+        nonlocal idx
+        idx += 1
+        if (idx >= len(foldernames)):
+            root.destroy()
+        clip_canvas.delete('all')
+        root.title("Lane Change {} Evaluation: Clip {} / {}".format(foldernames[idx].stem, idx, len(foldernames)))
+        show_video(clip_canvas, foldernames[idx])
 
-	root = Tk()
-	clip_canvas = Canvas(root, width = 400, height = 300)
-	clip_canvas.pack()
-	util_canvas = Canvas(root, width = 400, height = 200)
-	util_canvas.pack()
-	Label(util_canvas, text="Enter a score from 1-5: ").grid(row=0)
-	entry = Entry(util_canvas)
-	entry.grid(row=1)
-	Button(util_canvas, text='Save Score', command=saveScore).grid(row=1, column=1)
-	Button(util_canvas, text='Next Clip', command=nextClip).grid(row=2, column=1)
-	root.mainloop()
+    def replayClip():
+        clip_canvas.delete('all')
+        show_video(clip_canvas, foldernames[idx])
+
+    def saveScore():  
+        x = int(eval(entry.get()))
+        if (1 <= x <= 5):
+            score = x - 3
+            label_file = foldernames[idx] / "label.txt"
+            prev_avg_score = 0
+            num_of_scores = 0
+            if label_file.exists():
+                with open(str(label_file), 'r') as f:
+                    label_data = [int(x) for x in f.read().split(',')]
+                    if len(label_data) == 2:
+                        prev_avg_score, num_of_scores = label_data
+            
+            avg_score = ((prev_avg_score * num_of_scores) + score) / (num_of_scores + 1)
+            num_of_scores += 1
+
+            with open(str(label_file), 'w') as f:
+                f.write("{}, {}".format(int(avg_score), num_of_scores))
+            
+            entry.delete(0, END)
+            nextClip()
+        else:
+            print("Error: Score not in range.")
+
+    root = Tk()
+    clip_canvas = Canvas(root, width = 400, height = 300)
+    clip_canvas.pack()
+    util_canvas = Canvas(root, width = 400, height = 200)
+    util_canvas.pack()
+    Label(util_canvas, text="Enter a score from 1-5: ").grid(row=0)
+    entry = Entry(util_canvas)
+    entry.grid(row=1)
+    Button(util_canvas, text='Save Score', command=saveScore).grid(row=1, column=1)
+    Button(util_canvas, text='Replay Clip', command=replayClip).grid(row=2, column=0)
+    Button(util_canvas, text='Next Clip', command=nextClip).grid(row=2, column=1)
+    root.mainloop()
 
 class AppletDisplay:
     def __init__(self, ui):

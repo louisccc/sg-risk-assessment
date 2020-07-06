@@ -307,32 +307,32 @@ class RelationExtractor:
         relation_list = []
 
         # use yaw and location (x, y) of actor1 to get a actor1 vector
-        # then find another vector from actor1 to other_actor
+        # then find another vector from actor1 to actor2
         # take dot product between two vectors and check the sign (positive = front, negative = rear)
         actor1_vector = [actor1.attr['location'][0] * math.cos(math.radians(actor1.attr['rotation'][0])), actor1.attr['location'][1] * math.sin(math.radians(actor1.attr['rotation'][0]))]
         actor1_to_actor2_vector = [actor2.attr['location'][0] - actor1.attr['location'][0], actor2.attr['location'][1] - actor1.attr['location'][1]]
         dot_product = actor1_vector[0] * actor1_to_actor2_vector[0] + actor1_vector[1] * actor1_to_actor2_vector[1]
         
-        # actor is in front of actor1
+        # actor2 is in front of actor1
         if dot_product > 0:
-            # actor to the left of actor1 
+            # actor2 to the left of actor1 
             if actor2.attr['lane_idx'] < actor2.attr['lane_idx']:
                 relation_list.append([actor1, Relations.frontLeft, actor2])
-            # actor to the right of actor1 
+            # actor2 to the right of actor1 
             elif actor2.attr['lane_idx'] > actor2.attr['lane_idx']:
                 relation_list.append([actor1, Relations.frontRight, actor2])
-            # actor in the same lane 
+            # actor2 in the same lane 
             else:
                 relation_list.append([actor1, Relations.front, actor2])
-        # actor is behind actor1
+        # actor2 is behind actor1
         else:
-            # actor to the left of actor1 
+            # actor2 to the left of actor1 
             if actor2.attr['lane_idx'] < actor2.attr['lane_idx']:
                 relation_list.append([actor1, Relations.rearLeft, actor2])
-            # actor to the right of actor1 
+            # actor2 to the right of actor1 
             elif actor2.attr['lane_idx'] > actor2.attr['lane_idx']:
                 relation_list.append([actor1, Relations.rearRight, actor2])
-            # actor in the same lane 
+            # actor2 in the same lane 
             else:
                 relation_list.append([actor1, Relations.rear, actor2])
 

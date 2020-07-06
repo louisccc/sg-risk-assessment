@@ -41,12 +41,21 @@ coco_class_names = ['person', 'bicycle', 'car', 'motorcycle', 'airplane',
 
 from enum import Enum
 
-CARLA_IMAGE_H = 360
-CARLA_IMAGE_W = 640
-BIRDS_EYE_IMAGE_H = 175 #height of ROI. crops to lane area of carla images
-BIRDS_EYE_IMAGE_W = 640
+#SETTINGS FOR 640x360 CARLA IMAGES:
+# CARLA_IMAGE_H = 360
+# CARLA_IMAGE_W = 640
+# BIRDS_EYE_IMAGE_H = 175 #height of ROI. crops to lane area of carla images
+# BIRDS_EYE_IMAGE_W = 640
+
+#SETTINGS FOR 1280x720 CARLA IMAGES:
+CARLA_IMAGE_H = 720
+CARLA_IMAGE_W = 1280
+BIRDS_EYE_IMAGE_H = 350 #height of ROI. crops to lane area of carla images
+BIRDS_EYE_IMAGE_W = 1280
+
 H_OFFSET = CARLA_IMAGE_H - BIRDS_EYE_IMAGE_H #offset from top of image to start of ROI
 LEN_PIX = 1.43 #7 pixels = 10 feet (estimated visually using lane marking length)
+
 
 class ObjectNode:
     def __init__(self, name, attr, label):

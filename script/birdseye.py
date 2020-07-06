@@ -4,15 +4,15 @@ sys.path.append(".")
 import matplotlib.pyplot as plt
 import numpy as np
 
-H_OFFSET = 185
-ORIGINAL_H = 360
-ORIGINAL_W = 640
-IMAGE_H = 175
-IMAGE_W = 640
-impath = "input/synthesis_data/lane-change/0/raw_images/00025857.png"
+H_OFFSET = 370
+ORIGINAL_H = 720
+ORIGINAL_W = 1280
+IMAGE_H = 350
+IMAGE_W = 1280
+impath = "00017003.jpg"
 
 src = np.float32([[0, IMAGE_H], [IMAGE_W, IMAGE_H], [0, 0], [IMAGE_W, 0]])
-dst = np.float32([[int(IMAGE_W*9/19), IMAGE_H], [int(IMAGE_W*10/19), IMAGE_H], [0, 0], [IMAGE_W, 0]])
+dst = np.float32([[int(IMAGE_W*16/33), IMAGE_H], [int(IMAGE_W*17/33), IMAGE_H], [0, 0], [IMAGE_W, 0]])
 M = cv2.getPerspectiveTransform(src, dst) # The transformation matrix
 Minv = cv2.getPerspectiveTransform(dst, src) # Inverse transformation
 

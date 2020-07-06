@@ -71,8 +71,7 @@ class SceneGraph:
             # filter actors behind ego 
             ego_vector = [self.egoNode.attr['location'][0] * math.cos(math.radians(self.egoNode.attr['rotation'][0])), self.egoNode.attr['location'][1] * math.sin(math.radians(self.egoNode.attr['rotation'][0]))]
             ego_to_actor_vector = [attr['location'][0] - self.egoNode.attr['location'][0], attr['location'][1] - self.egoNode.attr['location'][1]]
-            dot_product = ego_vector[0] * ego_to_actor_vector[0] + ego_vector[1] * ego_to_actor_vector[1]
-            import pdb; pdb.set_trace()  
+            dot_product = ego_vector[0] * ego_to_actor_vector[0] + ego_vector[1] * ego_to_actor_vector[1] 
             if dot_product > 0:
                 n = Node(actor_id, attr, None)   #using the actor key as the node name and the dict as its attributes.
                 n.name = self.relation_extractor.get_actor_type(n).name.lower() + ":" + actor_id

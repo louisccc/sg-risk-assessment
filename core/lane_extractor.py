@@ -18,7 +18,7 @@ class LaneExtractor:
             print("No lanes found for dir: "+str(image_dir))
             self.cached_lanes = None
             self.cached_dir = image_dir
-            continue
+            return
 
         with open(filepath, 'rb') as f:
             lanedict = pkl.load(f)

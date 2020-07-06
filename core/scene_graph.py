@@ -189,7 +189,7 @@ class SceneGraphSequenceGenerator:
 
             if label_path.exists():
                 with open(str(path/"label.txt"), 'r') as label_f:
-                    risk_label = label_f.read().strip().split(",")[0]
+                    risk_label = float(label_f.read().strip().split(",")[0])
 
                 if risk_label >= 0:
                     risk_label = 1
@@ -228,7 +228,7 @@ class SceneGraphSequenceGenerator:
             sg_dict['folder_name'] = folder_name
             sg_dict['frame_number'] = frame_number
             
-            scenegraph.visualize(filename="/home/aung/NAS/louisccc/av/synthesis_data/visualize/%s_%s.png"%(folder_name, frame_number))
+            # scenegraph.visualize(filename="/home/aung/NAS/louisccc/av/synthesis_data/visualize/%s_%s.png"%(folder_name, frame_number))
             # scenegraph.visualize(filename="./visualize/%s_%s.png"%(folder_name, frame_number))
             sequence.append(sg_dict)
 

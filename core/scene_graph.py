@@ -1,5 +1,5 @@
-import numpy as np
 import networkx as nx
+from networkx.drawing.nx_agraph import to_agraph
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -18,7 +18,7 @@ import scipy.sparse as sp
 import torch.nn.functional as F
 from pathlib import Path 
 from tqdm import tqdm 
-from .relation_extractor import Relations, ActorType, RelationExtractor
+from .relation_extractor import Relations, ActorType, RelationExtractor, RELATION_COLORS
 
 #class representing a node in the scene graph. this is mainly used for holding the data for each node.
 class Node:
@@ -36,21 +36,28 @@ class Node:
 class SceneGraph:
     
     #graph can be initialized with a framedict to load all objects at once
-    def __init__(self, framedict):
-        self.g = nx.Graph() #initialize scenegraph as networkx graph
+    def __init__(self, framedict, framenum=None):
+        self.g = nx.MultiDiGraph() #initialize scenegraph as networkx graph
         self.road_node = Node("Root Road", {}, ActorType.ROAD)
         self.add_node(self.road_node)   #adding the road as the root node
         self.parse_json(framedict) # processing json framedict
 
     #add single node to graph. node can be any hashable datatype including objects.
     def add_node(self, node):
-        self.g.add_node(node, attr=node.attr, label=node.name)
+        color = "white"
+        if node.name.startswith("ego"):
+            color = "red"
+        elif node.name.startswith("car"):
+            color = "blue"
+        elif node.name.startswith("lane"):
+            color = "yellow"
+        self.g.add_node(node, attr=node.attr, label=node.name, style='filled', fillcolor=color)
     
     #add relation (edge) between nodes on graph. relation is a list containing [subject, relation, object]
     def add_relation(self, relation):
         if relation != []:
             if relation[0] in self.g.nodes and relation[2] in self.g.nodes:
-                self.g.add_edge(relation[0], relation[2], object=relation[1])
+                self.g.add_edge(relation[0], relation[2], object=relation[1], label=relation[1].name, color=RELATION_COLORS[int(relation[1].value)])
             else:
                 raise NameError("One or both nodes in relation do not exist in graph. Relation: " + str(relation))
         
@@ -107,35 +114,9 @@ class SceneGraph:
                         self.add_relations(self.relation_extractor.extract_relations(node1, node2))
 
     def visualize(self, filename=None):
-        color_map = []
-        edge_color_map = []
-        for node in self.g.nodes():
-            if node.type == ActorType.ROAD.value:
-                color_map.append(1)
-            elif node.type == ActorType.LANE.value:
-                color_map.append(3)
-            else:
-                color_map.append(2)
-
-        for edge in self.g.edges(data=True):
-            edge_type = edge[2]['object']
-            edge_color_map.append(edge_type.value)
-
-        edge_label_dicts = {}
-        for edge in self.g.edges(data=True):
-            edge_label_dicts[(edge[0], edge[1])] = edge[2]['object'].name
-
-        pos = nx.nx_agraph.graphviz_layout(self.g, prog='neato')
-        nx.draw(self.g, node_color=color_map, labels=nx.get_node_attributes(self.g, 'label'), 
-                edges=self.g.edges(), edge_color=edge_color_map,
-                pos=pos, font_size=8, with_labels=True)
-
-        nx.draw_networkx_edge_labels(self.g, pos,edge_labels=edge_label_dicts,font_color='red')
-
-        # plt.show()
-        plt.savefig(filename)
-        plt.clf()
-
+        A = to_agraph(self.g)
+        A.layout('dot')
+        A.draw(filename)
 
 class SceneGraphSequenceGenerator:
     def __init__(self):
@@ -192,9 +173,9 @@ class SceneGraphSequenceGenerator:
                     try:
                         framedict = json.loads(scene_dict_f.read())
                         for frame, frame_dict in framedict.items():
-                            scenegraph = SceneGraph(frame_dict)
+                            scenegraph = SceneGraph(frame_dict, framenum=frame)
                             scenegraphs[frame] = scenegraph
-                            scenegraph.visualize(filename="./visualize/%s_%s"%(path.name, frame))
+                            # scenegraph.visualize(filename="./visualize/%s_%s"%(path.name, frame))
                             
                     except Exception as e:
                         print("We have problem parsing the dict.json in %s"%txt_path)
@@ -204,7 +185,7 @@ class SceneGraphSequenceGenerator:
 
             if label_path.exists():
                 with open(str(path/"label.txt"), 'r') as label_f:
-                    risk_label = int(label_f.read())
+                    risk_label = label_f.read().strip().split(",")[0]
 
                 if risk_label >= 0:
                     risk_label = 1
@@ -243,8 +224,8 @@ class SceneGraphSequenceGenerator:
             sg_dict['folder_name'] = folder_name
             sg_dict['frame_number'] = frame_number
             
-            # scenegraph.visualize(filename="./visualize/%s_%s"%(folder_name, frame_number))
-
+            scenegraph.visualize(filename="/home/aung/NAS/louisccc/av/synthesis_data/visualize/%s_%s.png"%(folder_name, frame_number))
+            # scenegraph.visualize(filename="./visualize/%s_%s.png"%(folder_name, frame_number))
             sequence.append(sg_dict)
 
         return sequence

@@ -3,6 +3,7 @@ import sensors
 from sensors import get_actor_attributes, get_vehicle_attributes
 from pathlib import Path
 from collections import defaultdict
+import imageio
 
 SRUNNER_PATH = r'./scenario_runner'
 sys.path.append(SRUNNER_PATH)
@@ -57,6 +58,7 @@ class LaneChangeRecorder:
         self.sensors_dict["camera_manager"].transform_index = cam_pos_index
         self.sensors_dict["camera_manager"].set_sensor(cam_index, notify=False)
         self.sensors_dict["lane_invasion"] = sensors.LaneInvasionDetector(self.ego, root_path)
+        self.sensors_dict["collision"] = sensors.CollisionSensor(self.ego)
         # self.sensors_dict["camera_manager_ss"] = sensors.CameraManager(self.ego, gamma, dimensions, root_path)
         # self.sensors_dict["camera_manager_ss"].transform_index = cam_pos_index
         # self.sensors_dict["camera_manager_ss"].set_sensor(cam_index+5, notify=False)
@@ -69,6 +71,15 @@ class LaneChangeRecorder:
     def toggle_recording(self):
         for _, sensor in self.sensors_dict.items():
             sensor.toggle_recording()
+    
+    def convert_gif(self, path):
+        path = Path(path).resolve()
+        folder_path = path / 'raw_images'
+        img_path = folder_path.glob('**/*.jpg')
+        images = []
+        for filename in img_path:
+            images.append(imageio.imread(str(filename)))
+        imageio.mimsave(path / 'lane_change.gif', images, format='GIF')
 
     def tick(self, frame_num):
         self.tick_count += 1
@@ -78,9 +89,22 @@ class LaneChangeRecorder:
             self.carla_world.set_weather(random.choice(self.weather_presets))
 
             # choose random vehicle and prepare for recording
-            print("Picking vehicle and attaching sensors...")
+            print("Picking a vehicle...")
             self.ego = self.carla_world.get_actor(random.choice(self.vehicles_list))
-            self.carla_world.get_spectator().set_transform(self.ego.get_transform())
+            spetator_transform = self.ego.get_transform()
+            spetator_transform.location.z += 3 
+            if abs(spetator_transform.rotation.yaw) > abs(spetator_transform.rotation.pitch):
+                if spetator_transform.rotation.yaw > 0:
+                    spetator_transform.location.y -= 3 
+                else:
+                    spetator_transform.location.y += 3
+            else: 
+                if spetator_transform.rotation.pitch > 0:
+                    spetator_transform.location.x -= 3 
+                else:
+                    spetator_transform.location.x += 3
+
+            self.carla_world.get_spectator().set_transform(spetator_transform)
 
             print("Attempting lane change...")
             self.lane_change_direction = None
@@ -125,8 +149,14 @@ class LaneChangeRecorder:
                                          lane_invasion=lane_invasion,\
                                          lane_change_direction=self.lane_change_direction)
             success = self.lane_change_controller.update()
-            if success == py_trees.common.Status.SUCCESS or self.tick_count > 350:
+            if (success == py_trees.common.Status.SUCCESS 
+                or self.sensors_dict['collision'].has_collided()
+                or self.tick_count > 200):
                 #write to metadata file
+                if self.sensors_dict['collision'].has_collided():
+                    print("Collision")
+                self.toggle_recording()
+                self.destroy_sensors()
                 with open((Path(self.new_path) / 'metadata.txt').resolve(),'w') as file:
                     weather=self.carla_world.get_weather()
                     
@@ -137,12 +167,12 @@ class LaneChangeRecorder:
                     file.write(json.dumps(metadata_dict))
 
                 self.extractor.export_data()
+                # create gifs
+                self.convert_gif(self.new_path)
                 self.lane_changing = False
                 print('set set_autopilot back to true')
                 self.client.apply_batch_sync([carla.command.SetAutopilot(self.ego, True)], True)
-                self.toggle_recording()
                 print("Cleaning up sensors...")
-                self.destroy_sensors()
                 self.tick_count = 0
 
 class DataExtractor(object):
@@ -243,9 +273,9 @@ class DataExtractor(object):
         egodict['lane_idx'] = lanedict['ego_lane_idx'] 
         if lane_invasion:
             if lane_change_direction == "left":
-                lane_id = egodict['ego_lane_idx'] - 1
+                lane_id = egodict['lane_idx'] - 1
             else:
-                lane_id = egodict['ego_lane_idx'] + 1
+                lane_id = egodict['lane_idx'] + 1
             egodict["invading_lane"] = lane_id
 
         # export data from surrounding vehicles

@@ -2,19 +2,17 @@ import os, sys
 sys.path.append(os.path.dirname(sys.path[0]))
 
 import torch
-import torch.nn.functional as F
 import torch.optim as optim
 from torch.utils.tensorboard import SummaryWriter
 import numpy as np
 import scipy.sparse as sp
 import pandas as pd
-import random, pprint
-from collections import defaultdict
+import random
 from sklearn.metrics import accuracy_score, f1_score, confusion_matrix, precision_score, recall_score, roc_auc_score, roc_curve
 from sklearn import preprocessing
 from matplotlib import pyplot as plt
 
-from core.scene_graph import SceneGraphSequenceGenerator, build_scenegraph_dataset
+from core.scene_graph import build_scenegraph_dataset
 from core.relation_extractor import Relations
 from argparse import ArgumentParser
 from pathlib import Path
@@ -44,7 +42,7 @@ class Config:
         self.parser.add_argument('--hidden_dim', type=int, default=32, help="Hidden dimension in GIN.")
         self.parser.add_argument('--pooling_type', type=str, default="sagpool", help="Graph pooling type.")
         self.parser.add_argument('--readout_type', type=str, default="mean", help="Readout type.")
-        self.parser.add_argument('--temporal_type', type=str, default="lstm_sum", help="Temporal type.")
+        self.parser.add_argument('--temporal_type', type=str, default="lstm_last", help="Temporal type.")
 
         args_parsed = self.parser.parse_args(args)
         
@@ -85,7 +83,9 @@ class DynKGTrainer:
 
     def train(self):
         
-        for epoch_idx in tqdm(range(self.config.epochs)): # iterate through epoch   
+        tqdm_bar = tqdm(range(self.config.epochs))
+
+        for epoch_idx in tqdm_bar: # iterate through epoch   
             acc_loss_train = 0
             
             self.sequence_loader = DataListLoader(self.training_data, batch_size=self.config.batch_size)
@@ -97,8 +97,8 @@ class DynKGTrainer:
                 labels = torch.empty(0).long().to(self.config.device)
                 outputs = torch.empty(0,2).to(self.config.device)
                 for sequence in data_list: # iterate through sequences
-                    data, label = sequence['sequence'], sequence['label']
 
+                    data, label = sequence['sequence'], sequence['label']
                     graph_list = [Data(x=g['node_features'], edge_index=g['edge_index'], edge_attr=g['edge_attr']) for g in data]
                 
                     # data is a sequence that consists of serveral graphs 
@@ -114,14 +114,10 @@ class DynKGTrainer:
                 acc_loss_train += loss_train.detach().cpu().item() * len(data_list)
                 self.optimizer.step()
 
-            print('')
-            print('Epoch: {:04d},'.format(epoch_idx), 'loss_train: {:.4f}'.format(acc_loss_train))
-            print('')
-
+            tqdm_bar.set_description('Epoch: {:04d}, loss_train: {:.4f}'.format(epoch_idx, acc_loss_train))
             
             if epoch_idx % self.config.test_step == 0:
                 _, _, metrics = self.evaluate()
-                # import pdb; pdb.set_trace()
                 self.summary_writer.add_scalar('Acc_Loss/train', metrics['train']['loss'], epoch_idx)
                 self.summary_writer.add_scalar('Acc_Loss/train_acc', metrics['train']['acc'], epoch_idx)
                 self.summary_writer.add_scalar('F1/train', metrics['train']['f1'], epoch_idx)
@@ -148,7 +144,7 @@ class DynKGTrainer:
             data_list = [Data(x=g['node_features'], edge_index=g['edge_index'], edge_attr=g['edge_attr']) for g in data]
 
             self.test_loader = DataLoader(data_list, batch_size=len(data_list))
-            sequence = next(iter(self.train_loader)).to(self.config.device)
+            sequence = next(iter(self.test_loader)).to(self.config.device)
 
             self.model.eval()
             output = self.model.forward(sequence.x, sequence.edge_index, sequence.edge_attr, sequence.batch)
@@ -159,10 +155,9 @@ class DynKGTrainer:
             outputs.append(output.detach().cpu().numpy().tolist())
             labels.append(label)
 
-            # print('Dynamic SceneGraph: {:04d}'.format(i), 'acc_test: {:.4f}'.format(acc_test.item()))
 
         return outputs, labels, acc_loss_test
-
+    
     def evaluate(self):
         metrics = {}
 
@@ -174,7 +169,9 @@ class DynKGTrainer:
         metrics['test'] = get_metrics(outputs_test, labels_test)
         metrics['test']['loss'] = acc_loss_test
         
-        pprint.pprint(metrics['train'])
+        print("\ntrain stat:", metrics['train']['acc'], metrics['train']['confusion'], \
+              "\ntest stat:",  metrics['test']['acc'],  metrics['test']['confusion'])
+
         return outputs_test, labels_test, metrics
 
     def save_model(self):
@@ -191,17 +188,17 @@ class DynKGTrainer:
             self.model.eval()
 
 def get_metrics(outputs, labels):
-    labels_tensor = torch.LongTensor(labels)
-    outputs_tensor = torch.FloatTensor(outputs)
-    preds = outputs_tensor.max(1)[1].type_as(labels_tensor)
+    labels_tensor = torch.LongTensor(labels).detach()
+    outputs_tensor = torch.FloatTensor(outputs).detach()
+    preds = outputs_tensor.max(1)[1].type_as(labels_tensor).detach()
 
     metrics = {}
     metrics['acc'] = accuracy_score(labels_tensor, preds)
     metrics['f1'] = f1_score(labels_tensor, preds, average="micro")
-    metrics['confusion'] = str(confusion_matrix(labels_tensor, preds))
+    metrics['confusion'] = str(confusion_matrix(labels_tensor, preds)).replace('\n', ',')
     metrics['precision'] = precision_score(labels_tensor, preds, average="micro")
     metrics['recall'] = recall_score(labels_tensor, preds, average="micro")
-    metrics['auc'] = get_auc(outputs_tensor, labels_tensor, 'dynkg')
+    metrics['auc'] = get_auc(outputs_tensor, labels_tensor)
     metrics['label_distribution'] = str(np.unique(labels_tensor, return_counts=True)[1])
     
     return metrics 
@@ -217,45 +214,13 @@ def encode_onehot(labels, n_classes=None):
     labels_onehot = np.array(list(map(classes_dict.get, labels)),
                              dtype=np.int32)
     return labels_onehot
-    
-    
-def normalize(mx):
-    """Row-normalize sparse matrix"""
-    rowsum = np.array(mx.sum(1))
-    r_inv = np.power(rowsum, -1).flatten()
-    r_inv[np.isinf(r_inv)] = 0.
-    r_mat_inv = sp.diags(r_inv)
-    mx = r_mat_inv.dot(mx)
-    return mx
-    
-    
-def sparse_mx_to_torch_sparse_tensor(sparse_mx):
-    """Convert a scipy sparse matrix to a torch sparse tensor."""
-    sparse_mx = sparse_mx.tocoo().astype(np.float32)
-    indices = torch.from_numpy(
-        np.vstack((sparse_mx.row, sparse_mx.col)).astype(np.int64))
-    values = torch.from_numpy(sparse_mx.data)
-    shape = torch.Size(sparse_mx.shape)
-    return torch.sparse.FloatTensor(indices, values, shape)
 
 #~~~~~~~~~~Scoring Metrics~~~~~~~~~~
 #note: these scoring metrics only work properly for binary classification use cases (graph classification, dyngraph classification) 
-
-#used for output of validation accuracy after each epoch
-def accuracy(output, labels):
-    preds = output.max(1)[1].type_as(labels)
-    correct = preds.eq(labels).double()
-    correct = correct.sum()
-    return correct / len(labels)
-
-def get_auc(outputs, labels, task):
-    try:
-        if(task == "node_classification"):
-            labels = encode_onehot(labels.numpy().tolist(), 8) #multiclass labels
-            auc = roc_auc_score(labels, outputs.numpy(), average="weighted")
-        else:
-            labels = encode_onehot(labels.numpy().tolist(), 2) #binary labels
-            auc = roc_auc_score(labels, outputs.numpy(), average="micro")
+def get_auc(outputs, labels):
+    try:    
+        labels = encode_onehot(labels.numpy().tolist(), 2) #binary labels
+        auc = roc_auc_score(labels, outputs.numpy(), average="micro")
     except ValueError as err: 
         print("error calculating AUC: ", err)
         auc = 0.0
@@ -263,30 +228,25 @@ def get_auc(outputs, labels, task):
 
 #NOTE: ROC curve is only generated for positive class (risky label) confidence values 
 #render parameter determines if the figure is actually generated. If false, it saves the values to a csv file.
-def get_roc_curve(outputs, labels, task, render=False):
-    if task == "node_classification":
-        print("Node classification ROC not implemented")
-        return None
-    else:
-        risk_scores = []
-       #pdb.set_trace()
-        outputs = preprocessing.normalize(outputs.numpy(), axis=0)
-        for i in outputs:
-            risk_scores.append(i[1])
-        fpr, tpr, thresholds = roc_curve(labels.numpy(), risk_scores)
-        roc = pd.DataFrame()
-        roc['fpr'] = fpr
-        roc['tpr'] = tpr
-        roc['thresholds'] = thresholds
-        roc.to_csv("ROC_data_"+task+".csv")
+def get_roc_curve(outputs, labels, render=False):
+    risk_scores = []
+    outputs = preprocessing.normalize(outputs.numpy(), axis=0)
+    for i in outputs:
+        risk_scores.append(i[1])
+    fpr, tpr, thresholds = roc_curve(labels.numpy(), risk_scores)
+    roc = pd.DataFrame()
+    roc['fpr'] = fpr
+    roc['tpr'] = tpr
+    roc['thresholds'] = thresholds
+    roc.to_csv("ROC_data_"+task+".csv")
 
-        if(render):
-            plt.figure(figsize=(8,8))
-            plt.xlim((0,1))
-            plt.ylim((0,1))
-            plt.ylabel("TPR")
-            plt.xlabel("FPR")
-            plt.title("Receiver Operating Characteristic for " + task)
-            plt.plot([0,1],[0,1], linestyle='dashed')
-            plt.plot(fpr,tpr, linewidth=2)
-            plt.savefig("ROC_curve_"+task+".svg")
+    if(render):
+        plt.figure(figsize=(8,8))
+        plt.xlim((0,1))
+        plt.ylim((0,1))
+        plt.ylabel("TPR")
+        plt.xlabel("FPR")
+        plt.title("Receiver Operating Characteristic for " + task)
+        plt.plot([0,1],[0,1], linestyle='dashed')
+        plt.plot(fpr,tpr, linewidth=2)
+        plt.savefig("ROC_curve_"+task+".svg")

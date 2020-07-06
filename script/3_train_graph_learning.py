@@ -1,10 +1,8 @@
-import sys, os, torch
+import sys, os
 sys.path.append(os.path.dirname(sys.path[0]))
-
 from core.dynkg_trainer import *
-
 import pandas as pd
-import numpy as np
+
 
 def train_dynamic_kg(args, iterations=1):
     ''' Training the dynamic kg algorithm with different attention layer choice.'''

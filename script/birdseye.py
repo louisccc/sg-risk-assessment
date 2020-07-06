@@ -21,8 +21,9 @@ img = cv2.imread(impath, cv2.IMREAD_UNCHANGED) # Read the test img
 img = img[H_OFFSET:(H_OFFSET+IMAGE_H), 0:IMAGE_W] # Apply np slicing for ROI crop
 warped_img = cv2.warpPerspective(img, M, (IMAGE_W, IMAGE_H)) # Image warping
 plt.imshow(cv2.cvtColor(warped_img, cv2.COLOR_BGR2RGB)) # Show results
-plt.show()
 #pdb.set_trace()
-loc = np.array([[[300,175]]], dtype='float32')
+loc = np.array([[[300,100]]], dtype='float32')
 loc2 = cv2.perspectiveTransform(loc, M)
 print(loc2[0][0]) 
+plt.plot(loc2[0][0][0], loc2[0][0][1], color='cyan', marker='o')
+plt.show()

@@ -10,6 +10,7 @@ import random
 import networkx as nx
 import itertools
 import math
+import matplotlib.pyplot as plt
 
 # import some common detectron2 utilities
 from detectron2 import model_zoo
@@ -391,6 +392,8 @@ class RealSceneGraph:
         #TODO: map lane lines to warped_img. assign locations to lanes
         #TODO: map vehicles to lanes using locations. add relations to graph
 
+        plt.imshow(cv2.cvtColor(warped_img, cv2.COLOR_BGR2RGB)) #plot warped image
+
         # start detectron2. 
         boxes, labels, image_size = get_bounding_boxes(image_path)
 
@@ -419,6 +422,9 @@ class RealSceneGraph:
             y_bottom = box[3] - H_OFFSET #offset to account for image crop
             pt = np.array([[[x_mid,y_bottom]]], dtype='float32')
             warp_pt = cv2.perspectiveTransform(pt, M)[0][0]
+
+            plt.plot(warp_pt[0], warp_pt[1], color='cyan', marker='o') #plot marked bbox locations
+            
             #location/distance in feet
             attr['location_x'] = warp_pt[0] * X_SCALE
             attr['location_y'] = warp_pt[1] * Y_SCALE
@@ -427,7 +433,8 @@ class RealSceneGraph:
             attr['distance_abs'] = math.sqrt(attr['rel_location_x']**2 + attr['rel_location_y']**2) 
 
             self.add_node(ObjectNode("%s_%d"%(class_name, idx), attr, actor_type))
-
+            
+        plt.show()
         
         # get the relations between nodes
         for node_a, node_b in itertools.combinations(self.g.nodes, 2):

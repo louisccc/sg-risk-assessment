@@ -7,7 +7,7 @@ import pickle as pkl
 import pandas as pd
 import math
 import torch
-import json
+import json, itertools
 
 from glob import glob
 from collections import defaultdict
@@ -111,11 +111,10 @@ class SceneGraph:
     
     #calls RelationExtractor to build semantic relations between every pair of entity nodes in graph. call this function after all nodes have been added to graph.
     def extract_semantic_relations(self):
-        for node1 in self.g.nodes():
-            for node2 in self.g.nodes():
-                if node1.name != node2.name: #dont build self-relations
-                    if node1.type != ActorType.ROAD.value and node2.type != ActorType.ROAD.value:  # dont build relations w/ road
-                        self.add_relations(self.relation_extractor.extract_relations(node1, node2))
+        for node1, node2 in itertools.combinations(self.g.nodes, 2):
+            if node1.name != node2.name: #dont build self-relations
+                if node1.type != ActorType.ROAD.value and node2.type != ActorType.ROAD.value:  # dont build relations w/ road
+                    self.add_relations(self.relation_extractor.extract_relations(node1, node2))
 
     def visualize(self, filename=None):
         A = to_agraph(self.g)

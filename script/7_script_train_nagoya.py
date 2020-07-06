@@ -1,5 +1,6 @@
 import sys
-sys.path.append('../core')
+sys.path.append('../nagoya')
+sys.path.append('../')
 from nagoya.dataset import *
 from nagoya.models import Models
 from argparse import ArgumentParser
@@ -45,7 +46,7 @@ def train_cnn_to_lstm(dataset):
 	cache_folder.mkdir(exist_ok=True)
 	print(cache_folder)
 	#import pdb; pdb.set_trace()
-	model.model.save(str(cache_folder / '804_maskRCNN_CNN_lstm_GPU_20.h5'))
+	model.model.save(str(cache_folder / '100balanced_maskRCNN_CNN_lstm_GPU_20.h5'))
 	
 
 def process_raw_images_to_masked_images(src_path: Path, dst_path: Path, coco_path: Path):
@@ -62,7 +63,7 @@ if __name__ == '__main__':
 	config = Config(sys.argv[1:])
 	
 	root_folder_path = config.input_base_dir #Path('../input/synthesis_data').resolve()
-	raw_image_path = root_folder_path / 'lane-change-804'
+	raw_image_path = root_folder_path / 'lane-change-100-balanced'
 	label_table_path = raw_image_path / "LCTable.csv"
 	
 	do_mask_rcnn = True
@@ -78,7 +79,6 @@ if __name__ == '__main__':
 		
 		print(raw_folders,masked_folders)
 		if len(raw_folders)!=len(masked_folders):
-			print('here')
 		#if raw_folders[-1]!=masked_folders[-1]:
 			process_raw_images_to_masked_images(raw_image_path, masked_image_path, coco_model_path)
 		

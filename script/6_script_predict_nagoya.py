@@ -27,7 +27,7 @@ if __name__ == '__main__':
 	raw_image_path = root_folder_path / 'lane-change-804'
 	label_table_path = raw_image_path / "LCTable.csv"
 	masked_image_path = root_folder_path / (raw_image_path.stem + '_masked') # the path in parallel with raw_image_path
-	cache_model_path = Path('../cache').resolve() / '804_maskRCNN_CNN_lstm_GPU_1.h5'
+	cache_model_path = Path('../cache').resolve() / '804_maskRCNN_CNN_lstm_GPU_20.h5'
 
 	if not cache_model_path.exists():
 		print("Please train the model first.")
@@ -41,12 +41,12 @@ if __name__ == '__main__':
 	'''
 
 	true_label = np.argmax(dataset.risk_one_hot,axis=-1)
-	#end = int(0.7*len(dataset.video))
+	end = int(0.7*len(dataset.video))
 	#import pdb;pdb.set_trace()
 
-	output = model.predict_proba(dataset.video)
+	output = model.predict_proba(dataset.video[end:])
 
-	metrics = get_metrics(output,true_label,"risk_classification") 
+	metrics = get_metrics(output,true_label) 
 	print(metrics)
 	print(' safe | dangerous \n', output)
 	import pdb;pdb.set_trace()

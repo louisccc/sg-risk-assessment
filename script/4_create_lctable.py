@@ -29,7 +29,7 @@ class Config:
         self.dest_base_dir = Path(self.dest_path).resolve()
 
 def create_csv(file_path):
-	input_path = file_path / 'lane-change'
+	input_path = file_path / 'lane-change-100-balanced'
 	lctable = input_path / 'LCTable.csv'	
 
 	foldernames = [f for f in sorted(os.listdir(input_path)) if f.isnumeric()]
@@ -44,8 +44,38 @@ def create_csv(file_path):
 		#import pdb;pdb.set_trace()
 		filewriter.writerow([foldername,'',str(video_path),str(gif_path)])
 
+def copy_csv(file_path):
+	# copy risk label from another csv
+	input_path = file_path / 'lane-change-100-balanced'
+	old_csv = file_path / 'lane-change-804' / 'LCTable.csv'
+	new_csv = file_path / 'lane-change-100-balanced' / 'LCTable.csv'
+
+	old_df = pd.read_csv(old_csv, header=None, index_col=None)
+	new_df = pd.read_csv(new_csv, header=None, index_col=None)
+	foldernames = [f for f in os.listdir(input_path) if f.isnumeric()]
+	foldernames = sorted(foldernames,key=int)
+	
+	for index,foldername in enumerate(tqdm(foldernames)):
+		new_df.iloc[index,6] = old_df.iloc[int(foldername),6]
+
+	new_df.to_csv(new_csv,header=None,index=None)
+
+def renumber(file_path):
+	# renumber folders to be consecutive for nagoya pipeline
+	input_path = file_path / 'lane-change-100-balanced_masked'
+	lctable = input_path / 'LCTable.csv'
+
+	df = pd.read_csv(lctable, header=None, index_col=None)
+	foldernames = [f for f in sorted(os.listdir(input_path)) if f.isnumeric()]
+	foldernames = sorted(foldernames,key=int)
+	for index,foldername in enumerate(tqdm(foldernames)):
+		df.iloc[index,0] = index
+		os.rename(str(input_path)+'/'+str(foldername), str(input_path)+'/'+str(index)) 
+
+	df.to_csv(lctable,header=None,index=None)	
+
 def write_data_path(file_path):
-	input_path = file_path / 'lane-change-804'
+	input_path = file_path / 'lane-change-100-balanced'
 	lctable = input_path / 'LCTable.csv'	
 
 	df = pd.read_csv(lctable, header=None, index_col=None)
@@ -53,15 +83,14 @@ def write_data_path(file_path):
 	foldernames = [f for f in sorted(os.listdir(input_path)) if f.isnumeric()]
 	foldernames = sorted(foldernames,key=int)
 
-	for foldername in tqdm(foldernames):
+	for index,foldername in enumerate(tqdm(foldernames)):
 		video_path = input_path / foldername
 		gif_path = video_path / "lane_change.gif"
-
 		#df.iloc[int(foldername),0] = int(foldername)
 
 		#video path in column 2, gif path in column 3
-		df.iloc[int(foldername),2] = video_path
-		df.iloc[int(foldername),3] = gif_path
+		df.iloc[index,2] = video_path
+		df.iloc[index,3] = gif_path
 		
 	df.to_csv(lctable,header=None,index=None)
 
@@ -127,3 +156,9 @@ if __name__ == '__main__':
 	elif config.task=='merge':
 		#merge 2 datasets
 		merge_dataset(config.src_base_dir,config.dest_base_dir)
+	
+	elif config.task=='copy':
+		copy_csv(config.input_base_dir)
+
+	elif config.task=='renumber':
+		renumber(config.input_base_dir)

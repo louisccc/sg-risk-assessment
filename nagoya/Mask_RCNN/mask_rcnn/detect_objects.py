@@ -9,7 +9,8 @@ import matplotlib.pyplot as plt
 from Mask_RCNN.mask_rcnn import model as modellib
 from Mask_RCNN.mask_rcnn import visualize
 from Mask_RCNN.mask_rcnn import coco
-
+import skimage.io as io
+io.use_plugin('pil')
 
 class DetectObjects:
 
@@ -83,14 +84,15 @@ class DetectObjects:
                 CURRENT_IMAGE_PATH= CURRENT_IMAGE_DIR / image_file_name
                 OUTPUT_IMAGE_PATH = CURRENT_OUTPUT_DIR / image_file_name
                 
-                if CURRENT_IMAGE_PATH.suffix.lower() == ".jpg":
-                    img = skimage.io.imread(CURRENT_IMAGE_PATH) 
-                elif CURRENT_IMAGE_PATH.suffix.lower() == ".png":
-                    img_rgba = skimage.io.imread(CURRENT_IMAGE_PATH)
-                    img = skimage.color.rgba2rgb(img_rgba)
-                    img=img*255
+                #import pdb; pdb.set_trace()
+                #if CURRENT_IMAGE_PATH.suffix.lower() == ".jpg":
+                #    img = skimage.io.imread(CURRENT_IMAGE_PATH) 
+                #elif CURRENT_IMAGE_PATH.suffix.lower() == ".png":
+                img_rgba = skimage.io.imread(CURRENT_IMAGE_PATH)
+                img = skimage.color.rgba2rgb(img_rgba)
+                img=img*255
                 results = model.detect([img], verbose=1)
-                import pdb; pdb.set_trace()
+
                 r = results[0]
                 # r['masks'], r['rois'], r['class_ids'], r['scores'] = self.filter_masks(r['masks'], r['rois'], r['class_ids'], r['scores'])
                 # doesn't require filering in carla scenario as the placement of camera is perfect. 

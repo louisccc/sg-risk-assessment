@@ -110,7 +110,7 @@ class Models:
         for i in tqdm(range(n)):
 
             # randomize how we split the videos
-            # random.shuffle(rand_indexes)
+            random.shuffle(rand_indexes)
             # take
             #int(nb_samples * training_to_all_data_ratio) * 0.05
             

@@ -1,10 +1,13 @@
 import sys
-sys.path.append('../core')
+sys.path.append('../nagoya')
+sys.path.append('../')
 from nagoya.dataset import *
 from nagoya.models import Models
 from argparse import ArgumentParser
 from pathlib import Path
+import skimage.io as io
 
+io.use_plugin('pil')
 class Config:
 
     def __init__(self, args):
@@ -30,9 +33,10 @@ def train_cnn_to_lstm(dataset):
 	nb_epoch = 100
 	batch_size = 32
 
-	video_sequence = dataset.video
+	end = int(0.7*len(dataset.video)) #training_to_all_data_ratio*len(dataset.video))
+	video_sequence = dataset.video[:end]
 	label = dataset.risk_one_hot
-
+	#import pdb;pdb.set_trace()
 	model = Models(nb_epoch=nb_epoch, batch_size=batch_size, class_weights=class_weight)
 	model.build_cnn_to_lstm_model(input_shape=video_sequence.shape[1:])
 	model.train_n_fold_cross_val(video_sequence, label, training_to_all_data_ratio=training_to_all_data_ratio, n=nb_cross_val, print_option=0, plot_option=0, save_option=0)
@@ -42,7 +46,7 @@ def train_cnn_to_lstm(dataset):
 	cache_folder.mkdir(exist_ok=True)
 	print(cache_folder)
 	#import pdb; pdb.set_trace()
-	model.model.save(str(cache_folder / 'maskRCNN_CNN_lstm_GPU.h5'))
+	model.model.save(str(cache_folder / '100balanced_maskRCNN_CNN_lstm_GPU_20.h5'))
 	
 
 def process_raw_images_to_masked_images(src_path: Path, dst_path: Path, coco_path: Path):
@@ -59,7 +63,7 @@ if __name__ == '__main__':
 	config = Config(sys.argv[1:])
 	
 	root_folder_path = config.input_base_dir #Path('../input/synthesis_data').resolve()
-	raw_image_path = root_folder_path / 'lane-change-100-old'
+	raw_image_path = root_folder_path / 'lane-change-100-balanced'
 	label_table_path = raw_image_path / "LCTable.csv"
 	
 	do_mask_rcnn = True
@@ -88,4 +92,6 @@ if __name__ == '__main__':
 	# train import from core
 	# output store in maskRCNN_CNN_lstm_GPU.h5
 	# use prediction script to evaluate
+	#import pdb; pdb.set_trace()
+
 	train_cnn_to_lstm(dataset)

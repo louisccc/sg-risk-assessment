@@ -58,6 +58,7 @@ class LaneChangeRecorder:
         self.sensors_dict["camera_manager"].transform_index = cam_pos_index
         self.sensors_dict["camera_manager"].set_sensor(cam_index, notify=False)
         self.sensors_dict["lane_invasion"] = sensors.LaneInvasionDetector(self.ego, root_path)
+        self.sensors_dict["collision"] = sensors.CollisionSensor(self.ego)
         # self.sensors_dict["camera_manager_ss"] = sensors.CameraManager(self.ego, gamma, dimensions, root_path)
         # self.sensors_dict["camera_manager_ss"].transform_index = cam_pos_index
         # self.sensors_dict["camera_manager_ss"].set_sensor(cam_index+5, notify=False)
@@ -88,7 +89,7 @@ class LaneChangeRecorder:
             self.carla_world.set_weather(random.choice(self.weather_presets))
 
             # choose random vehicle and prepare for recording
-            print("Picking vehicle and attaching sensors...")
+            print("Picking a vehicle...")
             self.ego = self.carla_world.get_actor(random.choice(self.vehicles_list))
             spetator_transform = self.ego.get_transform()
             spetator_transform.location.z += 3 
@@ -148,8 +149,12 @@ class LaneChangeRecorder:
                                          lane_invasion=lane_invasion,\
                                          lane_change_direction=self.lane_change_direction)
             success = self.lane_change_controller.update()
-            if success == py_trees.common.Status.SUCCESS or self.tick_count > 300:
+            if (success == py_trees.common.Status.SUCCESS 
+                or self.sensors_dict['collision'].has_collided()
+                or self.tick_count > 200):
                 #write to metadata file
+                if self.sensors_dict['collision'].has_collided():
+                    print("Collision")
                 self.toggle_recording()
                 self.destroy_sensors()
                 with open((Path(self.new_path) / 'metadata.txt').resolve(),'w') as file:

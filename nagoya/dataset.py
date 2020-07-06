@@ -9,7 +9,6 @@ import pandas as pd
 from Mask_RCNN.mask_rcnn.detect_objects import DetectObjects
 from pathlib import Path
 
-
 class DataSet:
 
     def __init__(self):
@@ -34,7 +33,7 @@ class DataSet:
                    scaling='no scaling', scale_x=0.1, scale_y=0.1):
 
         foldernames = [f for f in sorted(os.listdir(data_dir),key=int) if f.isnumeric() and not f.startswith('.')]
-        
+        #import pdb;pdb.set_trace()
         self.read_image_data(str(data_dir/foldernames[0]), scaling=scaling, scale_x=scale_x, scale_y=scale_y)
 
         if len(self.image_seq) == 0:
@@ -140,7 +139,7 @@ class DataSet:
         self.can_seq = []
 
     def read_risk_data(self, file_path):
-        df = pd.read_csv(file_path, header=None, usecols=[7], names=['risk_score'])
+        df = pd.read_csv(file_path, header=None, usecols=[6], names=['risk_score'])
         #import pdb; pdb.set_trace()
         self.risk_scores = df['risk_score'].tolist()
 
@@ -251,7 +250,7 @@ def load_dataset(masked_image_path: Path, label_table_path: Path):
         and neccessary scaling and normalizing. Also it reads and converts the labeling info.
     '''
     dataset = DataSet()
-    dataset.read_video(masked_image_path, option='fixed frame amount', number_of_frames=5, scaling='scale', scale_x=0.1, scale_y=0.1)
+    dataset.read_video(masked_image_path, option='fixed frame amount', number_of_frames=20, scaling='scale', scale_x=0.1, scale_y=0.1)
 
     '''
         order videos by risk and find top riskiest

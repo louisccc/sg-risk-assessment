@@ -59,6 +59,7 @@ def get_vehicle_attributes(vehicle, waypoint=None):
     return_dict['brake_light_on'] = True if (light_state.Brake & carla.VehicleLightState.Brake > 0) else False
     return return_dict
 
+
 class LaneInvasionDetector(object):
     def __init__(self, parent_actor, storing_path):
         self.sensor = None
@@ -96,6 +97,52 @@ class LaneInvasionDetector(object):
             return
         if self.recording:
             self.lane_invasion_events.append(event.frame)
+
+
+class CollisionSensor(object):
+    def __init__(self, parent_actor):
+        self.sensor = None
+        self.history = []
+        self.collision = False
+        self.recording = False
+        self._parent = parent_actor
+        world = self._parent.get_world()
+        bp = world.get_blueprint_library().find('sensor.other.collision')
+        self.sensor = world.spawn_actor(bp, carla.Transform(), attach_to=self._parent)
+        # We need to pass the lambda a weak reference to self to avoid circular
+        # reference.
+        weak_self = weakref.ref(self)
+        self.sensor.listen(lambda event: CollisionSensor._on_collision(weak_self, event))
+
+    def get_collision_history(self):
+        history = defaultdict(int)
+        for frame, intensity in self.history:
+            history[frame] += intensity
+        return history
+
+    def has_collided(self):
+        return self.collision
+        
+    def toggle_recording(self):
+        self.recording = not self.recording
+
+    @staticmethod
+    def _on_collision(weak_self, event):
+        self = weak_self()
+        if not self:
+            return
+        if self.recording:
+            self.collision = True
+            impulse = event.normal_impulse
+            intensity = math.sqrt(impulse.x**2 + impulse.y**2 + impulse.z**2)
+            self.history.append((event.frame, intensity))
+            if len(self.history) > 4000:
+                self.history.pop(0)
+
+    def destroy(self):
+        if self.sensor:
+            self.sensor.destroy()
+            
 # ==============================================================================
 # -- CameraManager -------------------------------------------------------------
 # ==============================================================================
@@ -205,7 +252,6 @@ class CameraManager(object):
                 image.save_to_disk('%s/raw_images/%08d.jpg' % (str(self.storing_path), image.frame))
             else:
                 image.save_to_disk('%s/ss_images/%08d.jpg' % (str(self.storing_path), image.frame))
-
 
     def destroy(self):
         if self.sensor:

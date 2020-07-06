@@ -37,10 +37,10 @@ class Relations(Enum):
     partOf = 5
     instanceOf = 6
     hasAttribute = 7
-    rear = 8
-    front = 9
-    frontLeft = 10
-    frontRight = 11
+    front = 8
+    frontLeft = 9
+    frontRight = 10
+    rear = 11
     rearLeft = 12
     rearRight = 13
 
@@ -316,10 +316,10 @@ class RelationExtractor:
         # actor2 is in front of actor1
         if dot_product > 0:
             # actor2 to the left of actor1 
-            if actor2.attr['lane_idx'] < actor2.attr['lane_idx']:
+            if actor2.attr['lane_idx'] < actor1.attr['lane_idx']:
                 relation_list.append([actor1, Relations.frontLeft, actor2])
             # actor2 to the right of actor1 
-            elif actor2.attr['lane_idx'] > actor2.attr['lane_idx']:
+            elif actor2.attr['lane_idx'] > actor1.attr['lane_idx']:
                 relation_list.append([actor1, Relations.frontRight, actor2])
             # actor2 in the same lane 
             else:
@@ -327,10 +327,10 @@ class RelationExtractor:
         # actor2 is behind actor1
         else:
             # actor2 to the left of actor1 
-            if actor2.attr['lane_idx'] < actor2.attr['lane_idx']:
+            if actor2.attr['lane_idx'] < actor1.attr['lane_idx']:
                 relation_list.append([actor1, Relations.rearLeft, actor2])
             # actor2 to the right of actor1 
-            elif actor2.attr['lane_idx'] > actor2.attr['lane_idx']:
+            elif actor2.attr['lane_idx'] > actor1.attr['lane_idx']:
                 relation_list.append([actor1, Relations.rearRight, actor2])
             # actor2 in the same lane 
             else:

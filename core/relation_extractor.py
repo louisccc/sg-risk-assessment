@@ -315,7 +315,7 @@ class RelationExtractor:
         # use yaw and location (x, y) of ego to get a ego vector
         # then find another vector from ego to other_actor
         # take dot product between two vectors and check the sign (positive = front, negative = rear)
-        ego_vector = [ego.attr['location'][0] * math.cos(math.radians(ego.attr['location'][0])), ego.attr['location'][1] * math.sin(math.radians(ego.attr['location'][0]))]
+        ego_vector = [ego.attr['location'][0] * math.cos(math.radians(ego.attr['rotation'][0])), ego.attr['location'][1] * math.sin(math.radians(ego.attr['rotation'][0]))]
         ego_to_actor_vector = [actor.attr['location'][0] - ego.attr['location'][0], actor.attr['location'][1] - ego.attr['location'][1]]
         dot_product = ego_vector[0] * ego_to_actor_vector[0] + ego_vector[1] * ego_to_actor_vector[1]
         

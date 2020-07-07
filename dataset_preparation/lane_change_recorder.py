@@ -187,6 +187,7 @@ class DataExtractor(object):
 
         self.framedict=defaultdict()
         self.ego = ego
+        self.orig_ego_lane_idx = None
 
     def extract_frame(self, world, map1, frame, lane_invasion=False, lane_change_direction="left"):
         t = self.ego.get_transform()
@@ -271,11 +272,14 @@ class DataExtractor(object):
 
         egodict = get_vehicle_attributes(self.ego, waypoint)
         egodict['lane_idx'] = lanedict['ego_lane_idx'] 
+        if self.orig_ego_lane_idx == None:
+            self.orig_ego_lane_idx = lanedict['ego_lane_idx'] 
+        egodict['orig_lane_idx'] =  self.orig_ego_lane_idx 
         if lane_invasion:
             if lane_change_direction == "left":
-                lane_id = egodict['lane_idx'] - 1
+                lane_id = self.orig_ego_lane_idx - 1
             else:
-                lane_id = egodict['lane_idx'] + 1
+                lane_id = self.orig_ego_lane_idx + 1
             egodict["invading_lane"] = lane_id
 
         # export data from surrounding vehicles

@@ -299,6 +299,9 @@ class RelationExtractor:
             if "invading_lane" in actor1.attr:
                 if actor1.attr['invading_lane'] == actor2.attr['lane_idx']:
                     return True
+                if "orig_lane_idx" in actor1.attr:
+                    if actor1.attr['orig_lane_idx'] == actor2.attr['lane_idx']:
+                        return True
         else:
             return False
     

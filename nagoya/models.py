@@ -1,5 +1,7 @@
 from __future__ import print_function
-
+import sys
+sys.path.append('../')
+from core.dynkg_trainer import get_metrics
 import numpy as np
 import random
 import keras
@@ -130,7 +132,12 @@ class Models:
             c2 = 1 - c1
             self.class_weights = {0: c2, 1: c1}
             self.train_model(X_train, y_train, X_test, y_test, print_option=print_option, verbose=verbose)
-
+            
+            
+            output = self.model.predict_proba(X_test)
+            true_label = np.argmax(y_test,axis=-1)
+            metrics = get_metrics(output,true_label)
+            
             if plot_option == 1:
                 if i == 0:
                     #plt.plot(self.history.AUC_train[0::epoch_resolution], 'r--')
@@ -145,6 +152,7 @@ class Models:
             else:
                 plt.show()
         plt.close()
+        return metrics
 
     def get_lastMpercent_loss(self, m=0.1):
 

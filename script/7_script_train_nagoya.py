@@ -28,26 +28,27 @@ def train_cnn_to_lstm(dataset):
 	'''
 
 	class_weight = {0: 0.05, 1: 0.95}
-	training_to_all_data_ratio = 0.8
+	training_to_all_data_ratio = 0.7
 	nb_cross_val = 1
 	nb_epoch = 100
 	batch_size = 32
 
 	end = int(0.7*len(dataset.video)) #training_to_all_data_ratio*len(dataset.video))
-	video_sequence = dataset.video[:end]
+	video_sequence = dataset.video
 	label = dataset.risk_one_hot
 	#import pdb;pdb.set_trace()
 	model = Models(nb_epoch=nb_epoch, batch_size=batch_size, class_weights=class_weight)
 	model.build_cnn_to_lstm_model(input_shape=video_sequence.shape[1:])
-	model.train_n_fold_cross_val(video_sequence, label, training_to_all_data_ratio=training_to_all_data_ratio, n=nb_cross_val, print_option=0, plot_option=0, save_option=0)
+	metrics = model.train_n_fold_cross_val(video_sequence, label, training_to_all_data_ratio=training_to_all_data_ratio, n=nb_cross_val, print_option=0, plot_option=0, save_option=0)
 	
 	# storing the model weights to cache folder.
 	cache_folder = Path('../cache').resolve()
 	cache_folder.mkdir(exist_ok=True)
 	print(cache_folder)
 	#import pdb; pdb.set_trace()
-	model.model.save(str(cache_folder / '100balanced_maskRCNN_CNN_lstm_GPU_20.h5'))
-	
+	model.model.save(str(cache_folder / '804_maskRCNN_CNN_lstm_GPU_20_2.h5'))
+	print(metrics)
+	import pdb;pdb.set_trace()
 
 def process_raw_images_to_masked_images(src_path: Path, dst_path: Path, coco_path: Path):
     ''' 
@@ -63,7 +64,7 @@ if __name__ == '__main__':
 	config = Config(sys.argv[1:])
 	
 	root_folder_path = config.input_base_dir #Path('../input/synthesis_data').resolve()
-	raw_image_path = root_folder_path / 'lane-change-100-balanced'
+	raw_image_path = root_folder_path / 'lane-change-804'
 	label_table_path = raw_image_path / "LCTable.csv"
 	
 	do_mask_rcnn = True

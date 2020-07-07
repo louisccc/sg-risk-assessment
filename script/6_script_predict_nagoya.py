@@ -24,10 +24,10 @@ if __name__ == '__main__':
 	config = Config(sys.argv[1:])
 
 	root_folder_path = config.input_base_dir #Path('../input/synthesis_data').resolve()
-	raw_image_path = root_folder_path / 'lane-change-804'
+	raw_image_path = root_folder_path / 'lane-change-100-balanced'
 	label_table_path = raw_image_path / "LCTable.csv"
 	masked_image_path = root_folder_path / (raw_image_path.stem + '_masked') # the path in parallel with raw_image_path
-	cache_model_path = Path('../cache').resolve() / '804_maskRCNN_CNN_lstm_GPU_20.h5'
+	cache_model_path = Path('../cache').resolve() / '100balanced_maskRCNN_CNN_lstm_GPU_20.h5'
 
 	if not cache_model_path.exists():
 		print("Please train the model first.")
@@ -46,7 +46,7 @@ if __name__ == '__main__':
 
 	output = model.predict_proba(dataset.video[end:])
 
-	metrics = get_metrics(output,true_label) 
+	metrics = get_metrics(output,true_label[end:]) 
 	print(metrics)
 	print(' safe | dangerous \n', output)
 	import pdb;pdb.set_trace()

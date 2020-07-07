@@ -37,10 +37,10 @@ class Relations(Enum):
     partOf = 5
     instanceOf = 6
     hasAttribute = 7
-    rear = 8
-    front = 9
-    frontLeft = 10
-    frontRight = 11
+    front = 8
+    frontLeft = 9
+    frontRight = 10
+    rear = 11
     rearLeft = 12
     rearRight = 13
 
@@ -305,42 +305,36 @@ class RelationExtractor:
     #TODO: fix these relations, since the locations are based on the world coordinate system and are not relative to ego.
     def extract_directional_relation(self, actor1, actor2):
         relation_list = []
-        if actor1.name.startswith("ego:"):
-            ego = actor1
-            actor = actor2
-        else:
-            ego = actor2
-            actor = actor1
 
-        # use yaw and location (x, y) of ego to get a ego vector
-        # then find another vector from ego to other_actor
+        # use yaw and location (x, y) of actor1 to get a actor1 vector
+        # then find another vector from actor1 to actor2
         # take dot product between two vectors and check the sign (positive = front, negative = rear)
-        ego_vector = [ego.attr['location'][0] * math.cos(math.radians(ego.attr['location'][0])), ego.attr['location'][1] * math.sin(math.radians(ego.attr['location'][0]))]
-        ego_to_actor_vector = [actor.attr['location'][0] - ego.attr['location'][0], actor.attr['location'][1] - ego.attr['location'][1]]
-        dot_product = ego_vector[0] * ego_to_actor_vector[0] + ego_vector[1] * ego_to_actor_vector[1]
+        actor1_vector = [actor1.attr['location'][0] * math.cos(math.radians(actor1.attr['rotation'][0])), actor1.attr['location'][1] * math.sin(math.radians(actor1.attr['rotation'][0]))]
+        actor1_to_actor2_vector = [actor2.attr['location'][0] - actor1.attr['location'][0], actor2.attr['location'][1] - actor1.attr['location'][1]]
+        dot_product = actor1_vector[0] * actor1_to_actor2_vector[0] + actor1_vector[1] * actor1_to_actor2_vector[1]
         
-        # actor is in front of ego
+        # actor2 is in front of actor1
         if dot_product > 0:
-            # actor to the left of ego 
-            if actor.attr['lane_idx'] < actor.attr['lane_idx']:
-                relation_list.append([ego, Relations.frontLeft, actor])
-            # actor to the right of ego 
-            elif actor.attr['lane_idx'] > actor.attr['lane_idx']:
-                relation_list.append([ego, Relations.frontRight, actor])
-            # actor in the same lane 
+            # actor2 to the left of actor1 
+            if actor2.attr['lane_idx'] < actor1.attr['lane_idx']:
+                relation_list.append([actor1, Relations.frontLeft, actor2])
+            # actor2 to the right of actor1 
+            elif actor2.attr['lane_idx'] > actor1.attr['lane_idx']:
+                relation_list.append([actor1, Relations.frontRight, actor2])
+            # actor2 in the same lane 
             else:
-                relation_list.append([ego, Relations.front, actor])
-        # actor is behind ego
+                relation_list.append([actor1, Relations.front, actor2])
+        # actor2 is behind actor1
         else:
-            # actor to the left of ego 
-            if actor.attr['lane_idx'] < actor.attr['lane_idx']:
-                relation_list.append([ego, Relations.rearLeft, actor])
-            # actor to the right of ego 
-            elif actor.attr['lane_idx'] > actor.attr['lane_idx']:
-                relation_list.append([ego, Relations.rearRight, actor])
-            # actor in the same lane 
+            # actor2 to the left of actor1 
+            if actor2.attr['lane_idx'] < actor1.attr['lane_idx']:
+                relation_list.append([actor1, Relations.rearLeft, actor2])
+            # actor2 to the right of actor1 
+            elif actor2.attr['lane_idx'] > actor1.attr['lane_idx']:
+                relation_list.append([actor1, Relations.rearRight, actor2])
+            # actor2 in the same lane 
             else:
-                relation_list.append([ego, Relations.rear, actor])
+                relation_list.append([actor1, Relations.rear, actor2])
 
         ### disable rear relations help the inference. 
         return relation_list

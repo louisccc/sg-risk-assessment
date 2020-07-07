@@ -7,7 +7,7 @@ import pickle as pkl
 import pandas as pd
 import math
 import torch
-import json
+import json, itertools
 
 from glob import glob
 from collections import defaultdict
@@ -68,11 +68,15 @@ class SceneGraph:
     #parses actor dict and adds nodes to graph. this can be used for all actor types.
     def add_actor_dict(self, actordict):
         for actor_id, attr in actordict.items():
-            # import pdb; pdb.set_trace()   
-            n = Node(actor_id, attr, None)   #using the actor key as the node name and the dict as its attributes.
-            n.name = self.relation_extractor.get_actor_type(n).name.lower() + ":" + actor_id
-            n.type = self.relation_extractor.get_actor_type(n).value
-            self.add_node(n)
+            # filter actors behind ego 
+            ego_vector = [self.egoNode.attr['location'][0] * math.cos(math.radians(self.egoNode.attr['rotation'][0])), self.egoNode.attr['location'][1] * math.sin(math.radians(self.egoNode.attr['rotation'][0]))]
+            ego_to_actor_vector = [attr['location'][0] - self.egoNode.attr['location'][0], attr['location'][1] - self.egoNode.attr['location'][1]]
+            dot_product = ego_vector[0] * ego_to_actor_vector[0] + ego_vector[1] * ego_to_actor_vector[1] 
+            if dot_product > 0:
+                n = Node(actor_id, attr, None)   #using the actor key as the node name and the dict as its attributes.
+                n.name = self.relation_extractor.get_actor_type(n).name.lower() + ":" + actor_id
+                n.type = self.relation_extractor.get_actor_type(n).value
+                self.add_node(n)
             
     #adds lanes and their dicts. constructs relation between each lane and the root road node.
     def add_lane_dict(self, lanedict):
@@ -107,11 +111,10 @@ class SceneGraph:
     
     #calls RelationExtractor to build semantic relations between every pair of entity nodes in graph. call this function after all nodes have been added to graph.
     def extract_semantic_relations(self):
-        for node1 in self.g.nodes():
-            for node2 in self.g.nodes():
-                if node1.name != node2.name: #dont build self-relations
-                    if node1.type != ActorType.ROAD.value and node2.type != ActorType.ROAD.value:  # dont build relations w/ road
-                        self.add_relations(self.relation_extractor.extract_relations(node1, node2))
+        for node1, node2 in itertools.combinations(self.g.nodes, 2):
+            if node1.name != node2.name: #dont build self-relations
+                if node1.type != ActorType.ROAD.value and node2.type != ActorType.ROAD.value:  # dont build relations w/ road
+                    self.add_relations(self.relation_extractor.extract_relations(node1, node2))
 
     def visualize(self, filename=None):
         A = to_agraph(self.g)
@@ -185,7 +188,7 @@ class SceneGraphSequenceGenerator:
 
             if label_path.exists():
                 with open(str(path/"label.txt"), 'r') as label_f:
-                    risk_label = label_f.read().strip().split(",")[0]
+                    risk_label = float(label_f.read().strip().split(",")[0])
 
                 if risk_label >= 0:
                     risk_label = 1
@@ -224,7 +227,7 @@ class SceneGraphSequenceGenerator:
             sg_dict['folder_name'] = folder_name
             sg_dict['frame_number'] = frame_number
             
-            scenegraph.visualize(filename="/home/aung/NAS/louisccc/av/synthesis_data/visualize/%s_%s.png"%(folder_name, frame_number))
+            # scenegraph.visualize(filename="/home/aung/NAS/louisccc/av/synthesis_data/visualize/%s_%s.png"%(folder_name, frame_number))
             # scenegraph.visualize(filename="./visualize/%s_%s.png"%(folder_name, frame_number))
             sequence.append(sg_dict)
 

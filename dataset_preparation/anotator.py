@@ -32,6 +32,16 @@ def anotate_task(root_folder):
 
     idx = -1
 
+    def read_score(path):
+        prev_avg_score = 0
+        num_of_scores = 0
+        if path.exists():
+            with open(str(path), 'r') as f:
+                label_data = [int(x) for x in f.read().split(',')]
+                if len(label_data) == 2:
+                    prev_avg_score, num_of_scores = label_data
+        return prev_avg_score+3, num_of_scores
+
     def nextClip():
         print("Loading next clip...")
         nonlocal idx
@@ -39,7 +49,10 @@ def anotate_task(root_folder):
         if (idx >= len(foldernames)):
             root.destroy()
         clip_canvas.delete('all')
-        root.title("Lane Change {} Evaluation: Clip {} / {}".format(foldernames[idx].stem, idx, len(foldernames)))
+        
+        prev_avg_score, num_of_scores = read_score(foldernames[idx] / "label.txt")
+        
+        root.title("Lane Change {} Evaluation: Clip {} / {}, curr:({}, {})".format(foldernames[idx].stem, idx, len(foldernames), prev_avg_score, num_of_scores))
         show_video(clip_canvas, foldernames[idx])
     
     def prevClip():
@@ -48,12 +61,17 @@ def anotate_task(root_folder):
         if (idx > 0):
             idx -= 1
             clip_canvas.delete('all')
-            root.title("Lane Change {} Evaluation: Clip {} / {}".format(foldernames[idx].stem, idx, len(foldernames)))
+
+            prev_avg_score, num_of_scores = read_score(foldernames[idx] / "label.txt")
+
+            root.title("Lane Change {} Evaluation: Clip {} / {}, curr:({}, {})".format(foldernames[idx].stem, idx, len(foldernames), prev_avg_score, num_of_scores))
             show_video(clip_canvas, foldernames[idx])
 
     def replayClip():
         clip_canvas.delete('all')
-        root.title("Lane Change {} Evaluation: Clip {} / {}".format(foldernames[idx].stem, idx, len(foldernames)))
+
+        prev_avg_score, num_of_scores = read_score(foldernames[idx] / "label.txt")
+        root.title("Lane Change {} Evaluation: Clip {} / {}, curr:({}, {})".format(foldernames[idx].stem, idx, len(foldernames), prev_avg_score, num_of_scores))
         show_video(clip_canvas, foldernames[idx])
 
     def jump2Idx():
@@ -80,7 +98,8 @@ def anotate_task(root_folder):
             
             avg_score = ((prev_avg_score * num_of_scores) + score) / (num_of_scores + 1)
             num_of_scores += 1
-
+            
+            print("%f stored to %s" %(avg_score, label_file))
             with open(str(label_file), 'w') as f:
                 f.write("{}, {}".format(int(avg_score), num_of_scores))
             
@@ -94,7 +113,7 @@ def anotate_task(root_folder):
     clip_canvas.pack()
     util_canvas = Canvas(root, width = 400, height = 200)
     util_canvas.pack()
-    Label(util_canvas, text="Enter a score from 1-5: ").grid(row=0)
+    Label(util_canvas, text="Enter a score from 1-5(safe-risk): ").grid(row=0)
     entry = Entry(util_canvas)
     entry.grid(row=1)
     Button(util_canvas, text='Save Score', command=saveScore).grid(row=1, column=1)

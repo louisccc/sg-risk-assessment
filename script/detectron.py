@@ -10,6 +10,7 @@ import random
 import networkx as nx
 import itertools
 import math
+import matplotlib.pyplot as plt
 
 # import some common detectron2 utilities
 from detectron2 import model_zoo
@@ -41,12 +42,22 @@ coco_class_names = ['person', 'bicycle', 'car', 'motorcycle', 'airplane',
 
 from enum import Enum
 
-CARLA_IMAGE_H = 360
-CARLA_IMAGE_W = 640
-BIRDS_EYE_IMAGE_H = 175 #height of ROI. crops to lane area of carla images
-BIRDS_EYE_IMAGE_W = 640
+#SETTINGS FOR 640x360 CARLA IMAGES:
+# CARLA_IMAGE_H = 360
+# CARLA_IMAGE_W = 640
+# BIRDS_EYE_IMAGE_H = 175 #height of ROI. crops to lane area of carla images
+# BIRDS_EYE_IMAGE_W = 640
+
+#SETTINGS FOR 1280x720 CARLA IMAGES:
+CARLA_IMAGE_H = 720
+CARLA_IMAGE_W = 1280
+BIRDS_EYE_IMAGE_H = 350 #height of ROI. crops to lane area of carla images
+BIRDS_EYE_IMAGE_W = 1280
+
 H_OFFSET = CARLA_IMAGE_H - BIRDS_EYE_IMAGE_H #offset from top of image to start of ROI
-LEN_PIX = 1.43 #7 pixels = 10 feet (estimated visually using lane marking length)
+Y_SCALE = 1.429 #7 pixels = length of lane line (10 feet)
+X_SCALE = 0.545 #22 pixels = width of lane (12 feet)
+
 
 class ObjectNode:
     def __init__(self, name, attr, label):
@@ -358,7 +369,7 @@ class RealSceneGraph:
         self.lane_extractor = lane_extractor
         self.road_node = ObjectNode("Root Road", {}, ActorType.ROAD) # we need to define the type of node.
         #set ego location to middle-bottom of image
-        self.ego_node  = ObjectNode("Ego Car", {"location_x": int(BIRDS_EYE_IMAGE_W/2), "location_y": BIRDS_EYE_IMAGE_H}, ActorType.CAR)
+        self.ego_node  = ObjectNode("Ego Car", {"location_x": (BIRDS_EYE_IMAGE_W/2) * X_SCALE, "location_y": BIRDS_EYE_IMAGE_H * Y_SCALE}, ActorType.CAR)
         
 
         self.add_node(self.road_node)   # adding the road as the root node
@@ -380,6 +391,8 @@ class RealSceneGraph:
         warped_img = get_birds_eye_warp(image_path, M) 
         #TODO: map lane lines to warped_img. assign locations to lanes
         #TODO: map vehicles to lanes using locations. add relations to graph
+
+        plt.imshow(cv2.cvtColor(warped_img, cv2.COLOR_BGR2RGB)) #plot warped image
 
         # start detectron2. 
         boxes, labels, image_size = get_bounding_boxes(image_path)
@@ -409,15 +422,19 @@ class RealSceneGraph:
             y_bottom = box[3] - H_OFFSET #offset to account for image crop
             pt = np.array([[[x_mid,y_bottom]]], dtype='float32')
             warp_pt = cv2.perspectiveTransform(pt, M)[0][0]
-            #location/distance in pixels
-            attr['location_x'] = warp_pt[0]
-            attr['location_y'] = warp_pt[1]
-            attr['rel_location_x'] = warp_pt[0] - self.ego_node.attr["location_x"]
-            attr['rel_location_y'] = warp_pt[1] - self.ego_node.attr["location_y"]
+
+            plt.plot(warp_pt[0], warp_pt[1], color='cyan', marker='o') #plot marked bbox locations
+            
+            #location/distance in feet
+            attr['location_x'] = warp_pt[0] * X_SCALE
+            attr['location_y'] = warp_pt[1] * Y_SCALE
+            attr['rel_location_x'] = attr['location_x'] - self.ego_node.attr["location_x"]
+            attr['rel_location_y'] = attr['location_y'] - self.ego_node.attr["location_y"]
             attr['distance_abs'] = math.sqrt(attr['rel_location_x']**2 + attr['rel_location_y']**2) 
 
             self.add_node(ObjectNode("%s_%d"%(class_name, idx), attr, actor_type))
-
+            
+        plt.show()
         
         # get the relations between nodes
         for node_a, node_b in itertools.combinations(self.g.nodes, 2):

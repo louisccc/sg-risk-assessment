@@ -418,7 +418,7 @@ class RealSceneGraph:
             print(attr)
 
             #map center-bottom of bounding box to warped image
-            x_mid = (box[2] + box[1]) / 2
+            x_mid = (box[2] + box[0]) / 2
             y_bottom = box[3] - H_OFFSET #offset to account for image crop
             pt = np.array([[[x_mid,y_bottom]]], dtype='float32')
             warp_pt = cv2.perspectiveTransform(pt, M)[0][0]
@@ -534,7 +534,7 @@ def get_bounding_boxes(img_path, out_img_path=None):
 #birds eye matrix fixed for all images using the assumption that camera perspective does not change over time.
 def get_birds_eye_matrix():
     src = np.float32([[0, BIRDS_EYE_IMAGE_H], [BIRDS_EYE_IMAGE_W, BIRDS_EYE_IMAGE_H], [0, 0], [BIRDS_EYE_IMAGE_W, 0]]) #original dimensions (cropped to ROI)
-    dst = np.float32([[int(BIRDS_EYE_IMAGE_W*9/19), BIRDS_EYE_IMAGE_H], [int(BIRDS_EYE_IMAGE_W*10/19), BIRDS_EYE_IMAGE_H], [0, 0], [BIRDS_EYE_IMAGE_W, 0]]) #warped dimensions
+    dst = np.float32([[int(BIRDS_EYE_IMAGE_W*16/33), BIRDS_EYE_IMAGE_H], [int(BIRDS_EYE_IMAGE_W*17/33), BIRDS_EYE_IMAGE_H], [0, 0], [BIRDS_EYE_IMAGE_W, 0]]) #warped dimensions
     M = cv2.getPerspectiveTransform(src, dst) # The transformation matrix
     #Minv = cv2.getPerspectiveTransform(dst, src) # Inverse transformation (if needed)
     return M

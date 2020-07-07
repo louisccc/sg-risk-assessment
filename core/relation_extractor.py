@@ -6,10 +6,10 @@ MOTO_NAMES = ["Harley-Davidson", "Kawasaki", "Yamaha"]
 BICYCLE_NAMES = ["Gazelle", "Diamondback", "Bh"]
 CAR_NAMES = ["Ford", "Bmw", "Toyota", "Nissan", "Mini", "Tesla", "Seat", "Lincoln", "Audi", "Carlamotors", "Citroen", "Mercedes-Benz", "Chevrolet", "Volkswagen", "Jeep", "Nissan", "Dodge", "Mustang"]
 
-CAR_PROXIMITY_THRESH_SUPER_NEAR = 10 # max number of feet between a car and another entity to build proximity relation
-CAR_PROXIMITY_THRESH_VERY_NEAR = 25
-CAR_PROXIMITY_THRESH_NEAR = 50
-CAR_PROXIMITY_THRESH_VISIBLE = 100
+CAR_PROXIMITY_THRESH_SUPER_NEAR = 2 # max number of feet between a car and another entity to build proximity relation
+CAR_PROXIMITY_THRESH_VERY_NEAR = 10
+CAR_PROXIMITY_THRESH_NEAR = 25
+CAR_PROXIMITY_THRESH_VISIBLE = 50
 MOTO_PROXIMITY_THRESH = 50
 BICYCLE_PROXIMITY_THRESH = 50
 PED_PROXIMITY_THRESH = 50
@@ -92,7 +92,7 @@ class RelationExtractor:
         relation_list += self.create_proximity_relations(actor1, actor2)
         # import pdb; pdb.set_trace()
         # if actor1.name.startswith("ego:") or actor2.name.startswith("ego:"):
-        if(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_VERY_NEAR):
+        if(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_NEAR):
             relation_list += self.extract_directional_relation(actor1, actor2)
 
         return relation_list

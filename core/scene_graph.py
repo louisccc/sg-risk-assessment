@@ -197,7 +197,7 @@ class SceneGraphSequenceGenerator:
 
                 # scenegraph_dict contains node embeddings edge indexes and edge attrs.
                 scenegraphs_dict = {}
-                scenegraphs_dict['sequence'] = self.process_graph_sequences(scenegraphs, 15, folder_name=path.name)
+                scenegraphs_dict['sequence'] = self.process_graph_sequences(scenegraphs, 20, folder_name=path.name)
                 scenegraphs_dict['label'] = risk_label
                 scenegraphs_dict['folder_name'] = path.name
 
@@ -245,6 +245,8 @@ class SceneGraphSequenceGenerator:
         frame_numbers = []
         acc_number = 0
         modulo = int(len(scenegraphs) / number_of_frames)
+        if modulo == 0:
+            modulo = 1
 
         for idx, (timeframe, scenegraph) in enumerate(scenegraphs.items()):
             if idx % modulo == 0 and acc_number < number_of_frames:

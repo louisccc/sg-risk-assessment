@@ -43,8 +43,11 @@ class Relations(Enum):
     rear = 11
     rearLeft = 12
     rearRight = 13
+    leftOf = 14
+    rightOf = 15
 
-RELATION_COLORS = ["black", "red", "orange", "yellow", "green", "purple", "blue", "sienna", "turquoise", "pink", "pink", "pink", "turquoise", "turquoise"]
+RELATION_COLORS = ["black", "red", "orange", "yellow", "green", "purple", "blue", 
+                "sienna", "pink", "pink", "pink",  "turquoise", "turquoise", "turquoise", "violet", "violet"]
 
 #This class extracts relations for every pair of entities in a scene
 class RelationExtractor:
@@ -247,6 +250,15 @@ class RelationExtractor:
 
     def extract_relations_lane_lane(self, actor1, actor2):
         relation_list = []
+        # actor2 is right neighbor lane of actor1
+        if actor1.attr['lane_idx'] - actor2.attr['lane_idx'] == -1:
+            relation_list.append([actor2, Relations.rightOf, actor1])
+            relation_list.append([actor1, Relations.leftOf, actor2])
+        # actor2 is left neighbor lane of actor1
+        elif actor1.attr['lane_idx'] - actor2.attr['lane_idx'] == 1:
+            relation_list.append([actor2, Relations.leftOf, actor1])
+            relation_list.append([actor1, Relations.rightOf, actor2])
+        # import pdb; pdb.set_trace()
         return relation_list
         
     def extract_relations_lane_light(self, actor1, actor2):

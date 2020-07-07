@@ -197,7 +197,7 @@ class SceneGraphSequenceGenerator:
 
                 # scenegraph_dict contains node embeddings edge indexes and edge attrs.
                 scenegraphs_dict = {}
-                scenegraphs_dict['sequence'] = self.process_graph_sequences(scenegraphs, 20, folder_name=path.name)
+                scenegraphs_dict['sequence'] = self.process_graph_sequences(scenegraphs, 15, folder_name=path.name)
                 scenegraphs_dict['label'] = risk_label
                 scenegraphs_dict['folder_name'] = path.name
 
@@ -215,7 +215,7 @@ class SceneGraphSequenceGenerator:
             in tensor formats.
         '''
         sequence = []
-        subsampled_scenegraphs, frame_numbers = self.subsample(scenegraphs, number_of_frames=20)
+        subsampled_scenegraphs, frame_numbers = self.subsample(scenegraphs, number_of_frames)
 
         for idx, (scenegraph, frame_number) in enumerate(zip(subsampled_scenegraphs, frame_numbers)):
             sg_dict = {}

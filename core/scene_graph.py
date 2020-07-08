@@ -69,7 +69,7 @@ class SceneGraph:
     def add_actor_dict(self, actordict):
         for actor_id, attr in actordict.items():
             # filter actors behind ego 
-            ego_vector = [self.egoNode.attr['location'][0] * math.cos(math.radians(self.egoNode.attr['rotation'][0])), self.egoNode.attr['location'][1] * math.sin(math.radians(self.egoNode.attr['rotation'][0]))]
+            ego_vector = [math.cos(math.radians(self.egoNode.attr['rotation'][0])), math.sin(math.radians(self.egoNode.attr['rotation'][0]))]
             ego_to_actor_vector = [attr['location'][0] - self.egoNode.attr['location'][0], attr['location'][1] - self.egoNode.attr['location'][1]]
             dot_product = ego_vector[0] * ego_to_actor_vector[0] + ego_vector[1] * ego_to_actor_vector[1] 
             if dot_product > 0:

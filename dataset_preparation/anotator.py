@@ -37,9 +37,9 @@ def anotate_task(root_folder):
         num_of_scores = 0
         if path.exists():
             with open(str(path), 'r') as f:
-                label_data = [int(x) for x in f.read().split(',')]
+                label_data = [x for x in f.read().split(',')]
                 if len(label_data) == 2:
-                    prev_avg_score, num_of_scores = label_data
+                    prev_avg_score, num_of_scores = float(label_data[0]), int(label_data[1])
         return prev_avg_score+3, num_of_scores
 
     def nextClip():
@@ -92,16 +92,16 @@ def anotate_task(root_folder):
             num_of_scores = 0
             if label_file.exists():
                 with open(str(label_file), 'r') as f:
-                    label_data = [int(x) for x in f.read().split(',')]
+                    label_data = [x for x in f.read().split(',')]
                     if len(label_data) == 2:
-                        prev_avg_score, num_of_scores = label_data
+                        prev_avg_score, num_of_scores = float(label_data[0]), int(label_data[1])
             
             avg_score = ((prev_avg_score * num_of_scores) + score) / (num_of_scores + 1)
             num_of_scores += 1
             
             print("%f stored to %s" %(avg_score, label_file))
             with open(str(label_file), 'w') as f:
-                f.write("{}, {}".format(int(avg_score), num_of_scores))
+                f.write("{}, {}".format(avg_score, num_of_scores))
             
             entry.delete(0, END)
             nextClip()

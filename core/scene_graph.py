@@ -122,14 +122,14 @@ class SceneGraph:
         A.draw(filename)
 
 class CarlaSceneGraphSequenceGenerator:
-    def __init__(self):
+    def __init__(self, cache_fname='dyngraph_embeddings.pkl'):
         # [ 
         #   {'node_embeddings':..., 'edge_indexes':..., 'edge_attrs':..., 'label':...}  
         # ]
         self.scenegraphs_sequence = []
 
         # cache_filename determine the name of caching file name storing self.scenegraphs_sequence and 
-        self.cache_filename = 'dyngraph_embeddings.pkl'
+        self.cache_filename = cache_fname
         
         # config used for parsing CARLA:
         # this is the number of global classes defined in CARLA.
@@ -204,8 +204,9 @@ class CarlaSceneGraphSequenceGenerator:
                 self.scenegraphs_sequence.append(scenegraphs_dict)
             else:
                 raise Exception("no label.txt in %s" % path) 
-        
-        with open('dyngraph_embeddings.pkl', 'wb') as f:
+    
+    def cache_dataset(self, filename):
+        with open(str(filename), 'wb') as f:
             pkl.dump((self.scenegraphs_sequence, self.feature_list), f)
             
     def process_graph_sequences(self, scenegraphs, number_of_frames=20, folder_name=None):

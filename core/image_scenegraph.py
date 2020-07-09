@@ -15,6 +15,7 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 from tqdm import tqdm
 from collections import defaultdict
+import pickle as pkl
 
 import torch
 import pandas as pd
@@ -310,14 +311,14 @@ def get_birds_eye_warp(image_path, M):
 
 
 class ImageSceneGraphSequenceGenerator:
-    def __init__(self):
+    def __init__(self, cache_fname='real_dyngraph_embeddings.pkl'):
         # [ 
         #   {'node_embeddings':..., 'edge_indexes':..., 'edge_attrs':..., 'label':...}  
         # ]
         self.scenegraphs_sequence = []
 
         # cache_filename determine the name of caching file name storing self.scenegraphs_sequence and 
-        self.cache_filename = 'real_dyngraph_embeddings.pkl'
+        self.cache_filename = cache_fname
         
         # config used for parsing CARLA:
         # this is the number of global classes defined in CARLA.
@@ -384,8 +385,9 @@ class ImageSceneGraphSequenceGenerator:
                 self.scenegraphs_sequence.append(scenegraphs_dict)
             else:
                 raise Exception("no label.txt in %s" % path) 
-        
-        with open(str(self.cache_filename), 'wb') as f:
+    
+    def cache_dataset(self, filename):
+        with open(str(filename), 'wb') as f:
             pkl.dump((self.scenegraphs_sequence, self.feature_list), f)
     
     def get_bounding_boxes(self, img_path, out_img_path=None):
@@ -500,5 +502,5 @@ class ImageSceneGraphSequenceGenerator:
 if __name__ == "__main__":
 
     le = None #LaneExtractor(r"/home/aung/NAS/louisccc/av/synthesis_data/lane-change-804/0/raw_images")
-    generator = SceneGraphSequenceGenerator()
+    generator = ImageSceneGraphSequenceGenerator()
     generator.load(Path("/home/aung/NAS/louisccc/av/synthesis_data/new_recording_3"))

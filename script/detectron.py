@@ -22,7 +22,7 @@ from detectron2.data import MetadataCatalog
 # panoptic seg
 sys.path.append(os.path.dirname(sys.path[0]))
 from core.relation_extractor import ActorType, Relations
-from core.lane_extractor import LaneExtractor
+#from core.lane_extractor import LaneExtractor #(not currently used)
 
 from enum import Enum
 
@@ -41,6 +41,8 @@ CAR_PROXIMITY_THRESH_VERY_NEAR = 150
 CAR_PROXIMITY_THRESH_NEAR = 300
 CAR_PROXIMITY_THRESH_VISIBLE = 500
 
+LANE_THRESHOLD = 6 #feet. if object's center is more than this distance away from ego's center, build left or right lane relation
+CENTER_LANE_THRESHOLD = 9 #feet. if object's center is within this distance of ego's center, build middle lane relation
 
 def create_text_labels_with_idx(classes, scores, class_names):
     """
@@ -90,6 +92,7 @@ class RealSceneGraph:
         self.add_node(self.road_node)   # adding the road as the root node
         self.add_node(self.ego_node)
 
+
         self.cfg = get_cfg()
         # add project-specific config (e.g., TensorMask) here if you're not running a model in detectron2's core library
         self.cfg.merge_from_file(model_zoo.get_config_file("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"))
@@ -100,16 +103,7 @@ class RealSceneGraph:
         self.coco_class_names = MetadataCatalog.get(self.cfg.DATASETS.TRAIN[0]).get("thing_classes")
         
         self.predictor = DefaultPredictor(self.cfg)
-        
-        # lane/road detection
-        if self.lane_extractor != None:
-            lanedict = self.lane_extractor.get_lanes_from_file(image_path)
-            if lanedict != None:
-                #TODO: use pairs of lane lines to add complete lanes instead of lines to the graph
-                for lane_line, mask in lanedict.items():
-                    lane_line_node = ObjectNode(name="Lane_Marking_" + lane_line, attr=mask, label=ActorType.LANE)
-                    self.add_node(lane_line_node)
-                    self.add_relation([lane_line_node, Relations.partOf, self.road_node])
+
                 
         # bird eye view projection 
         #warped image is cropped to ROI (contains no sky pixels)
@@ -161,9 +155,10 @@ class RealSceneGraph:
             attr['rel_location_x'] = attr['location_x'] - self.ego_node.attr["location_x"]
             attr['rel_location_y'] = attr['location_y'] - self.ego_node.attr["location_y"]
             attr['distance_abs'] = math.sqrt(attr['rel_location_x']**2 + attr['rel_location_y']**2) 
+            node = ObjectNode("%s_%d"%(class_name, idx), attr, actor_type)
+            self.add_node(node)
+            self.map_to_relative_lanes(node)
 
-            self.add_node(ObjectNode("%s_%d"%(class_name, idx), attr, actor_type))
-        
         plt.show()
         
         # get the relations between nodes
@@ -224,6 +219,43 @@ class RealSceneGraph:
         ### disable rear relations help the inference. 
         return relation_list
 
+    # lane/road detection using LaneNet (not currently used)
+    def extract_lanenet_lanes(self):
+        if self.lane_extractor != None:
+            lanedict = self.lane_extractor.get_lanes_from_file(image_path)
+            if lanedict != None:
+                #TODO: use pairs of lane lines to add complete lanes instead of lines to the graph
+                for lane_line, mask in lanedict.items():
+                    lane_line_node = ObjectNode(name="Lane_Marking_" + lane_line, attr=mask, label=ActorType.LANE)
+                    self.add_node(lane_line_node)
+                    self.add_relation([lane_line_node, Relations.partOf, self.road_node])
+
+    #relative lane mapping method. Each vehicle is assigned to left, middle, or right lane depending on relative position to ego
+    def extract_relative_lanes(self):
+        self.left_lane = ObjectNode("Left Lane", {}, ActorType.LANE)
+        self.right_lane = ObjectNode("Right Lane", {}, ActorType.LANE)
+        self.middle_lane = ObjectNode("Middle Lane", {}, ActorType.LANE)
+        self.add_node(self.left_lane)
+        self.add_node(self.right_lane)
+        self.add_node(self.middle_lane)
+        self.add_relation([self.left_lane, Relations.partOf, self.road_node])
+        self.add_relation([self.right_lane, Relations.partOf, self.road_node])
+        self.add_relation([self.middle_lane, Relations.partOf, self.road_node])
+        self.add_relation([self.ego_node, Relations.isIn, self.middle_lane])
+
+    #builds isIn relation between object and lane depending on x-displacement relative to ego
+    #left/middle and right/middle relations have an overlap area determined by the size of CENTER_LANE_THRESHOLD and LANE_THRESHOLD.
+    #TODO: move to relation_extractor in replacement of current lane-vehicle relation code
+    def map_to_relative_lanes(self, object_node):
+        if object_node.label in [ActorType.LANE, ActorType.LIGHT, ActorType.SIGN, ActorType.ROAD]: #don't build lane relations with static objects
+            return
+        if object_node.attr['rel_location_x'] < -LANE_THRESHOLD:
+            self.add_relation([object_node, Relations.isIn, self.left_lane])
+        elif object_node.attr['rel_location_x'] > LANE_THRESHOLD:
+            self.add_relation([object_node, Relations.isIn, self.right_lane])
+        if object_node.attr['rel_location_x'] > -CENTER_LANE_THRESHOLD and object_node.attr['rel_location_x'] < CENTER_LANE_THRESHOLD:
+            self.add_relation([object_node, Relations.isIn, self.middle_lane])
+
     #add single node to graph. node can be any hashable datatype including objects.
     def add_node(self, node):
         self.g.add_node(node, attr=node.attr, label=node.name)
@@ -248,21 +280,22 @@ class RealSceneGraph:
             n.type = self.relation_extractor.get_actor_type(n).value
             self.add_node(n)
             
-    #adds lanes and their dicts. constructs relation between each lane and the root road node.
-    def add_lane_dict(self, lanedict):
-        n = Node("lane:"+str(lanedict['ego_lane']['lane_id']), lanedict['ego_lane'], ActorType.LANE) 
-        self.add_node(n)
-        self.add_relation([n, Relations.partOf, self.road_node])
+    ###DEPRECATED###. TODO: remove if not needed
+    # #adds lanes and their dicts. constructs relation between each lane and the root road node.
+    # def add_lane_dict(self, lanedict):
+    #     n = Node("lane:"+str(lanedict['ego_lane']['lane_id']), lanedict['ego_lane'], ActorType.LANE) 
+    #     self.add_node(n)
+    #     self.add_relation([n, Relations.partOf, self.road_node])
         
-        for lane in lanedict['left_lanes']:
-            n = Node("lane:"+str(lane['lane_id']), lane, ActorType.LANE)
-            self.add_node(n)
-            self.add_relation([n, Relations.partOf, self.road_node])
+    #     for lane in lanedict['left_lanes']:
+    #         n = Node("lane:"+str(lane['lane_id']), lane, ActorType.LANE)
+    #         self.add_node(n)
+    #         self.add_relation([n, Relations.partOf, self.road_node])
 
-        for lane in lanedict['right_lanes']:
-            n = Node("lane:"+str(lane['lane_id']), lane, ActorType.LANE)
-            self.add_node(n)
-            self.add_relation([n, Relations.partOf, self.road_node])
+    #     for lane in lanedict['right_lanes']:
+    #         n = Node("lane:"+str(lane['lane_id']), lane, ActorType.LANE)
+    #         self.add_node(n)
+    #         self.add_relation([n, Relations.partOf, self.road_node])
             
     #add signs as entities of the road.
     def add_sign_dict(self, signdict):

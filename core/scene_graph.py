@@ -121,7 +121,7 @@ class SceneGraph:
         A.layout('dot')
         A.draw(filename)
 
-class SceneGraphSequenceGenerator:
+class CarlaSceneGraphSequenceGenerator:
     def __init__(self):
         # [ 
         #   {'node_embeddings':..., 'edge_indexes':..., 'edge_attrs':..., 'label':...}  

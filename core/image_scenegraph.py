@@ -102,8 +102,8 @@ class RealSceneGraph:
         self.ego_node  = ObjectNode("Ego Car", {"location_x": self.ego_location[0], "location_y": self.ego_location[1]}, ActorType.CAR)
         self.add_node(self.ego_node)
         
-        self.add_relation([self.ego_node, Relations.isIn, self.road_node])
-
+        self.extract_relative_lanes() ### three lane formulation.
+        
         boxes, labels, image_size = bounding_boxes
 
         ### TODO: Arnav's part lane/road detection
@@ -163,10 +163,8 @@ class RealSceneGraph:
             attr['distance_abs'] = math.sqrt(attr['rel_location_x']**2 + attr['rel_location_y']**2) 
             node = ObjectNode("%s_%d"%(class_name, idx), attr, actor_type)
             self.add_node(node)
-            self.map_to_relative_lanes(node)
+            self.add_mapping_to_relative_lanes(node)
 
-            self.add_node(ObjectNode("%s_%d"%(class_name, idx), attr, actor_type))
-             
         # get the relations between nodes
         for node_a, node_b in itertools.combinations(self.g.nodes, 2):
             relation_list = []
@@ -174,41 +172,34 @@ class RealSceneGraph:
                 # dont build relations w/ road
                 continue
             if node_a.label == ActorType.CAR and node_b.label == ActorType.CAR:
-                relation_list += self.create_proximity_relations(node_a, node_b)
-                relation_list += self.create_directional_relations(node_a, node_b)
-                relation_list += self.create_proximity_relations(node_b, node_a)
-                relation_list += self.create_directional_relations(node_b, node_a)
+                relation_list += self.extract_proximity_relations(node_a, node_b)
+                relation_list += self.extract_directional_relations(node_a, node_b)
+                relation_list += self.extract_proximity_relations(node_b, node_a)
+                relation_list += self.extract_directional_relations(node_b, node_a)
                 self.add_relations(relation_list)
-        # self.visualize("/home/aung/NAS/louisccc/av/synthesis_data/temp.png")
     
-    def visualize(self, filename):
-        A = to_agraph(self.g)
-        A.layout('dot')
-        A.draw(filename)
-
-    def create_proximity_relations(self, actor1, actor2):
-        if self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_SUPER_NEAR:
+    def extract_proximity_relations(self, actor1, actor2):
+        if   self.get_euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_SUPER_NEAR:
             return [[actor1, Relations.super_near, actor2]]
-        elif self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_VERY_NEAR:
+        elif self.get_euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_VERY_NEAR:
             return [[actor1, Relations.very_near, actor2]]
-        elif self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_NEAR:
+        elif self.get_euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_NEAR:
             return [[actor1, Relations.near, actor2]]
-        elif self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_VISIBLE:
+        elif self.get_euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_VISIBLE:
             return [[actor1, Relations.visible, actor2]]
         return []
 
-    def euclidean_distance(self, actor1, actor2):
-        #import pdb; pdb.set_trace()
+    def get_euclidean_distance(self, actor1, actor2):
         l1 = (actor1.attr['location_x'], actor1.attr['location_y'])
         l2 = (actor2.attr['location_x'], actor2.attr['location_y'])
         return math.sqrt((l1[0] - l2[0])**2 + (l1[1]- l2[1])**2)
 
-    def create_directional_relations(self, actor1, actor2):
+    def extract_directional_relations(self, actor1, actor2):
         relation_list = []
 
         # actor2 is in front of actor1
         if actor2.attr['location_y'] < actor1.attr['location_y']:
-            if abs(actor2.attr['location_x'] - actor1.attr['location_x']) <= 10:
+            if abs(actor2.attr['location_x'] - actor1.attr['location_x']) <= CENTER_LANE_THRESHOLD:
                 relation_list.append([actor1, Relations.front, actor2])
             # actor2 to the left of actor1 
             elif actor2.attr['location_x'] < actor1.attr['location_x']:
@@ -220,7 +211,7 @@ class RealSceneGraph:
         # actor2 is behind actor1
         else:
             # actor2 is directly behind of actor1
-            if  abs(actor2.attr['location_x'] - actor1.attr['location_x']) <= 10:
+            if  abs(actor2.attr['location_x'] - actor1.attr['location_x']) <= CENTER_LANE_THRESHOLD:
                 relation_list.append([actor1, Relations.rear, actor2])
             # actor2 to the left of actor1 
             elif actor2.attr['location_x'] < actor1.attr['location_x']:
@@ -259,14 +250,14 @@ class RealSceneGraph:
     #builds isIn relation between object and lane depending on x-displacement relative to ego
     #left/middle and right/middle relations have an overlap area determined by the size of CENTER_LANE_THRESHOLD and LANE_THRESHOLD.
     #TODO: move to relation_extractor in replacement of current lane-vehicle relation code
-    def map_to_relative_lanes(self, object_node):
+    def add_mapping_to_relative_lanes(self, object_node):
         if object_node.label in [ActorType.LANE, ActorType.LIGHT, ActorType.SIGN, ActorType.ROAD]: #don't build lane relations with static objects
             return
         if object_node.attr['rel_location_x'] < -LANE_THRESHOLD:
             self.add_relation([object_node, Relations.isIn, self.left_lane])
         elif object_node.attr['rel_location_x'] > LANE_THRESHOLD:
             self.add_relation([object_node, Relations.isIn, self.right_lane])
-        if object_node.attr['rel_location_x'] > -CENTER_LANE_THRESHOLD and object_node.attr['rel_location_x'] < CENTER_LANE_THRESHOLD:
+        if abs(object_node.attr['rel_location_x']) <= CENTER_LANE_THRESHOLD:
             self.add_relation([object_node, Relations.isIn, self.middle_lane])
 
     #add single node to graph. node can be any hashable datatype including objects.
@@ -292,46 +283,10 @@ class RealSceneGraph:
         for relation in relations_list:
             self.add_relation(relation)
             
-    #parses actor dict and adds nodes to graph. this can be used for all actor types.
-    def add_actor_dict(self, actordict):
-        for actor_id, attr in actordict.items():
-            n = Node(actor_id, attr, None)   #using the actor key as the node name and the dict as its attributes.
-            n.name = self.relation_extractor.get_actor_type(n).name.lower() + ":" + actor_id
-            n.type = self.relation_extractor.get_actor_type(n).value
-            self.add_node(n)
-            
-    ###DEPRECATED###. TODO: remove if not needed
-    # #adds lanes and their dicts. constructs relation between each lane and the root road node.
-    # def add_lane_dict(self, lanedict):
-    #     n = Node("lane:"+str(lanedict['ego_lane']['lane_id']), lanedict['ego_lane'], ActorType.LANE) 
-    #     self.add_node(n)
-    #     self.add_relation([n, Relations.partOf, self.road_node])
-        
-    #     for lane in lanedict['left_lanes']:
-    #         n = Node("lane:"+str(lane['lane_id']), lane, ActorType.LANE)
-    #         self.add_node(n)
-    #         self.add_relation([n, Relations.partOf, self.road_node])
-
-    #     for lane in lanedict['right_lanes']:
-    #         n = Node("lane:"+str(lane['lane_id']), lane, ActorType.LANE)
-    #         self.add_node(n)
-    #         self.add_relation([n, Relations.partOf, self.road_node])
-            
-    #add signs as entities of the road.
-    def add_sign_dict(self, signdict):
-        for sign_id, signattr in signdict.items():
-            n = Node(sign_id, signattr, ActorType.SIGN)
-            self.add_node(n)
-            self.add_relation([n, Relations.partOf, self.road_node])
-   
-    #calls RelationExtractor to build semantic relations between every pair of entity nodes in graph. call this function after all nodes have been added to graph.
-    def extract_semantic_relations(self):
-        for node1 in self.g.nodes():
-            for node2 in self.g.nodes():
-                if node1.name != node2.name: #dont build self-relations
-                    if node1.type != ActorType.ROAD.value and node2.type != ActorType.ROAD.value:  # dont build relations w/ road
-                        self.add_relations(self.relation_extractor.extract_relations(node1, node2))
-
+    def visualize(self, to_filename):
+        A = to_agraph(self.g)
+        A.layout('dot')
+        A.draw(to_filename)
 
 #ROI: Region of Interest
 #returns transformation matrix for warping image to birds eye projection
@@ -354,7 +309,7 @@ def get_birds_eye_warp(image_path, M):
     return warped_img
 
 
-class SceneGraphSequenceGenerator:
+class ImageSceneGraphSequenceGenerator:
     def __init__(self):
         # [ 
         #   {'node_embeddings':..., 'edge_indexes':..., 'edge_attrs':..., 'label':...}  
@@ -362,7 +317,7 @@ class SceneGraphSequenceGenerator:
         self.scenegraphs_sequence = []
 
         # cache_filename determine the name of caching file name storing self.scenegraphs_sequence and 
-        self.cache_filename = 'dyngraph_embeddings.pkl'
+        self.cache_filename = 'real_dyngraph_embeddings.pkl'
         
         # config used for parsing CARLA:
         # this is the number of global classes defined in CARLA.
@@ -430,7 +385,7 @@ class SceneGraphSequenceGenerator:
             else:
                 raise Exception("no label.txt in %s" % path) 
         
-        with open('dyngraph_embeddings.pkl', 'wb') as f:
+        with open(str(self.cache_filename), 'wb') as f:
             pkl.dump((self.scenegraphs_sequence, self.feature_list), f)
     
     def get_bounding_boxes(self, img_path, out_img_path=None):
@@ -469,7 +424,7 @@ class SceneGraphSequenceGenerator:
             sg_dict['folder_name'] = folder_name
             sg_dict['frame_number'] = frame_number
             
-            scenegraph.visualize(filename="/home/aung/NAS/louisccc/av/synthesis_data/visualize_detectron/%s_%s.png"%(folder_name, frame_number))
+            scenegraph.visualize(to_filename="/home/aung/NAS/louisccc/av/synthesis_data/visualize_detectron/%s_%s.png"%(folder_name, frame_number))
             # scenegraph.visualize(filename="./visualize/%s_%s.png"%(folder_name, frame_number))
             sequence.append(sg_dict)
         # import pdb; pdb.set_trace()

@@ -8,10 +8,16 @@ import numpy as np
 import cv2
 import random
 import networkx as nx
+from networkx.drawing.nx_agraph import to_agraph
 import itertools
 import math
 import matplotlib.pyplot as plt
 from pathlib import Path
+from tqdm import tqdm
+from collections import defaultdict
+
+import torch
+import pandas as pd
 
 # import some common detectron2 utilities
 from detectron2 import model_zoo
@@ -21,7 +27,7 @@ import detectron2.utils.visualizer
 from detectron2.data import MetadataCatalog
 # panoptic seg
 sys.path.append(os.path.dirname(sys.path[0]))
-from core.relation_extractor import ActorType, Relations
+from core.relation_extractor import ActorType, Relations, RELATION_COLORS
 from core.lane_extractor import LaneExtractor
 
 from enum import Enum
@@ -41,7 +47,7 @@ CAR_PROXIMITY_THRESH_VERY_NEAR = 150
 CAR_PROXIMITY_THRESH_NEAR = 300
 CAR_PROXIMITY_THRESH_VISIBLE = 500
 
-
+''' preconfiguring detectron ''' 
 def create_text_labels_with_idx(classes, scores, class_names):
     """
     Args:
@@ -71,37 +77,34 @@ class ObjectNode:
         self.label = label # ActorType
 
     def __repr__(self):
-        return "%s" % self.name  
+        return "%s" % (self.name)
 
                 
 class RealSceneGraph: 
     ''' 
         scene graph the real images 
+        arguments: 
+            image_path : path to the image for which the scene graph is generated
+            lane extractor: used to load lane dicts from image directories. Pass None to disable the use of lane information
     '''
-    #image_path : path to the image for which the scene graph is generated
-    #lane extractor: used to load lane dicts from image directories. Pass None to disable the use of lane information
-    def __init__(self, image_path, lane_extractor=None):
-        self.g = nx.Graph() #initialize scenegraph as networkx graph
+    def __init__(self, image_path, bounding_boxes, coco_class_names=None, lane_extractor=None):
+        self.g = nx.MultiDiGraph() #initialize scenegraph as networkx graph
 
+        # road and lane settings.
         self.lane_extractor = lane_extractor
         self.road_node = ObjectNode("Root Road", {}, ActorType.ROAD) # we need to define the type of node.
-        #set ego location to middle-bottom of image
-        self.ego_node  = ObjectNode("Ego Car", {"location_x": (BIRDS_EYE_IMAGE_W/2) * X_SCALE, "location_y": BIRDS_EYE_IMAGE_H * Y_SCALE}, ActorType.CAR)
         self.add_node(self.road_node)   # adding the road as the root node
+        
+        # set ego location to middle-bottom of image.
+        self.ego_location = ((BIRDS_EYE_IMAGE_W/2) * X_SCALE, BIRDS_EYE_IMAGE_H * Y_SCALE)
+        self.ego_node  = ObjectNode("Ego Car", {"location_x": self.ego_location[0], "location_y": self.ego_location[1]}, ActorType.CAR)
         self.add_node(self.ego_node)
+        
+        self.add_relation([self.ego_node, Relations.isIn, self.road_node])
 
-        self.cfg = get_cfg()
-        # add project-specific config (e.g., TensorMask) here if you're not running a model in detectron2's core library
-        self.cfg.merge_from_file(model_zoo.get_config_file("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"))
-        self.cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.5  # set threshold for this model
-        # Find a model from detectron2's model zoo. You can use the https://dl.fbaipublicfiles... url as well
-        self.cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml")
-        
-        self.coco_class_names = MetadataCatalog.get(self.cfg.DATASETS.TRAIN[0]).get("thing_classes")
-        
-        self.predictor = DefaultPredictor(self.cfg)
-        
-        # lane/road detection
+        boxes, labels, image_size = bounding_boxes
+
+        ### TODO: Arnav's part lane/road detection
         if self.lane_extractor != None:
             lanedict = self.lane_extractor.get_lanes_from_file(image_path)
             if lanedict != None:
@@ -111,23 +114,19 @@ class RealSceneGraph:
                     self.add_node(lane_line_node)
                     self.add_relation([lane_line_node, Relations.partOf, self.road_node])
                 
-        # bird eye view projection 
-        #warped image is cropped to ROI (contains no sky pixels)
+        # bird eye view projection
+        # warped image is cropped to ROI (contains no sky pixels)
         M = get_birds_eye_matrix()
         warped_img = get_birds_eye_warp(image_path, M) 
         #TODO: map lane lines to warped_img. assign locations to lanes
         #TODO: map vehicles to lanes using locations. add relations to graph
 
-        plt.imshow(cv2.cvtColor(warped_img, cv2.COLOR_BGR2RGB)) #plot warped image
-
-        # start detectron2. 
-        out_img_path = Path(image_path).resolve().parent.parent / "obj_det_results"
-        out_img_path.mkdir(exist_ok=True)
-        boxes, labels, image_size = self.get_bounding_boxes(image_path, str(out_img_path / str(Path(image_path).name)))
+        cv2.imwrite( "./warped.jpg", cv2.cvtColor(warped_img, cv2.COLOR_BGR2RGB)) #plot warped image
+        ### TODO: Arnav's part lane/road detection
 
         for idx, (box, label) in enumerate(zip(boxes, labels)):
             box = box.cpu().numpy().tolist()
-            class_name = self.coco_class_names[label]
+            class_name = coco_class_names[label]
 
             if class_name in ['car', 'truck', 'bus']:
                 actor_type = ActorType.CAR
@@ -145,7 +144,6 @@ class RealSceneGraph:
                 continue
         
             attr = {'x1': box[0], 'y1': box[1], 'x2': box[2], 'y2': box[3]}
-            print(attr)
 
             #map center-bottom of bounding box to warped image
             x_mid = (box[2] + box[0]) / 2
@@ -163,9 +161,7 @@ class RealSceneGraph:
             attr['distance_abs'] = math.sqrt(attr['rel_location_x']**2 + attr['rel_location_y']**2) 
 
             self.add_node(ObjectNode("%s_%d"%(class_name, idx), attr, actor_type))
-        
-        plt.show()
-        
+             
         # get the relations between nodes
         for node_a, node_b in itertools.combinations(self.g.nodes, 2):
             relation_list = []
@@ -175,8 +171,15 @@ class RealSceneGraph:
             if node_a.label == ActorType.CAR and node_b.label == ActorType.CAR:
                 relation_list += self.create_proximity_relations(node_a, node_b)
                 relation_list += self.create_directional_relations(node_a, node_b)
+                relation_list += self.create_proximity_relations(node_b, node_a)
+                relation_list += self.create_directional_relations(node_b, node_a)
                 self.add_relations(relation_list)
-            import pdb; pdb.set_trace()
+        # self.visualize("/home/aung/NAS/louisccc/av/synthesis_data/temp.png")
+    
+    def visualize(self, filename):
+        A = to_agraph(self.g)
+        A.layout('dot')
+        A.draw(filename)
 
     def create_proximity_relations(self, actor1, actor2):
         if self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_SUPER_NEAR:
@@ -200,7 +203,7 @@ class RealSceneGraph:
 
         # actor2 is in front of actor1
         if actor2.attr['location_y'] < actor1.attr['location_y']:
-            if abs(actor2.attr['location_x'] - actor1.attr['location_x']) <= 12:
+            if abs(actor2.attr['location_x'] - actor1.attr['location_x']) <= 10:
                 relation_list.append([actor1, Relations.front, actor2])
             # actor2 to the left of actor1 
             elif actor2.attr['location_x'] < actor1.attr['location_x']:
@@ -212,7 +215,7 @@ class RealSceneGraph:
         # actor2 is behind actor1
         else:
             # actor2 is directly behind of actor1
-            if  abs(actor2.attr['location_x'] - actor1.attr['location_x']) <= 12:
+            if  abs(actor2.attr['location_x'] - actor1.attr['location_x']) <= 10:
                 relation_list.append([actor1, Relations.rear, actor2])
             # actor2 to the left of actor1 
             elif actor2.attr['location_x'] < actor1.attr['location_x']:
@@ -226,13 +229,20 @@ class RealSceneGraph:
 
     #add single node to graph. node can be any hashable datatype including objects.
     def add_node(self, node):
-        self.g.add_node(node, attr=node.attr, label=node.name)
+        color = "white"
+        if node.name.startswith("ego"):
+            color = "red"
+        elif node.name.startswith("car"):
+            color = "blue"
+        elif node.name.startswith("lane"):
+            color = "yellow"
+        self.g.add_node(node, attr=node.attr, label=node.name,  style='filled', fillcolor=color)
     
     #add relation (edge) between nodes on graph. relation is a list containing [subject, relation, object]
     def add_relation(self, relation):
         if relation != []:
             if relation[0] in self.g.nodes and relation[2] in self.g.nodes:
-                self.g.add_edge(relation[0], relation[2], object=relation[1])
+                self.g.add_edge(relation[0], relation[2], object=relation[1], label=relation[1].name, color=RELATION_COLORS[int(relation[1].value)])
             else:
                 raise NameError("One or both nodes in relation do not exist in graph. Relation: " + str(relation))
         
@@ -279,25 +289,6 @@ class RealSceneGraph:
                     if node1.type != ActorType.ROAD.value and node2.type != ActorType.ROAD.value:  # dont build relations w/ road
                         self.add_relations(self.relation_extractor.extract_relations(node1, node2))
 
-    def get_bounding_boxes(self, img_path, out_img_path=None):
-        im = cv2.imread(img_path)
-        outputs = self.predictor(im)
-
-        # look at the outputs. See https://detectron2.readthedocs.io/tutorials/models.html#model-output-format for specification
-        print(outputs["instances"].pred_classes)
-        print(outputs["instances"].pred_boxes)
-        
-        # import pdb; pdb.set_trace()
-
-        if out_img_path:
-            # We can use `Visualizer` to draw the predictions on the image.
-            v = detectron2.utils.visualizer.Visualizer(im[:, :, ::-1], MetadataCatalog.get(self.cfg.DATASETS.TRAIN[0]), scale=1.2)
-            out = v.draw_instance_predictions(outputs["instances"].to("cpu"))
-            cv2.imwrite(out_img_path, out.get_image()[:, :, ::-1])
-
-        return outputs["instances"].pred_boxes, outputs["instances"].pred_classes, outputs["instances"].image_size
-
-
 
 #ROI: Region of Interest
 #returns transformation matrix for warping image to birds eye projection
@@ -320,11 +311,202 @@ def get_birds_eye_warp(image_path, M):
     return warped_img
 
 
+class SceneGraphSequenceGenerator:
+    def __init__(self):
+        # [ 
+        #   {'node_embeddings':..., 'edge_indexes':..., 'edge_attrs':..., 'label':...}  
+        # ]
+        self.scenegraphs_sequence = []
+
+        # cache_filename determine the name of caching file name storing self.scenegraphs_sequence and 
+        self.cache_filename = 'dyngraph_embeddings.pkl'
+        
+        # config used for parsing CARLA:
+        # this is the number of global classes defined in CARLA.
+        self.num_classes = 8
+        
+        # gets a list of all feature labels (which will be used) for all scenegraphs
+        self.feature_list = {"rel_location_x", 
+                             "rel_location_y", #add 3 columns for relative vector values
+                             "distance_abs", # adding absolute distance to ego
+                            }
+        # create 1hot class labels columns.
+        for i in range(self.num_classes):
+            self.feature_list.add("type_"+str(i))
+        
+        # detectron setup. 
+        self.cfg = get_cfg()
+        self.cfg.merge_from_file(model_zoo.get_config_file("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"))
+        self.cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.5  # set threshold for this model
+        self.cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml")
+        self.coco_class_names = MetadataCatalog.get(self.cfg.DATASETS.TRAIN[0]).get("thing_classes")
+        self.predictor = DefaultPredictor(self.cfg)
+
+    def cache_exists(self):
+        return Path(self.cache_filename).exists()
+
+    def load_from_cache(self):
+        with open(self.cache_filename,'rb') as f: 
+            self.scenegraphs_sequence , self.feature_list = pkl.load(f)
+
+    def load(self, input_path):
+        all_video_clip_dirs = [x for x in input_path.iterdir() if x.is_dir()]
+
+        for path in tqdm(all_video_clip_dirs):
+            scenegraphs = {} 
+            raw_images = sorted(list(path.glob("raw_images/*.jpg")), key=lambda x: int(x.stem))
+            for raw_image_path in raw_images:
+                frame = raw_image_path.stem
+                ### get bounding boxes using detectron. 
+                out_img_path = Path(raw_image_path).resolve().parent.parent / "obj_det_results"
+                out_img_path.mkdir(exist_ok=True)
+                bounding_boxes = self.get_bounding_boxes(str(raw_image_path), str(out_img_path / str(Path(raw_image_path).name)))
+                ### get lane prediction using lanenet.
+                ### use two information to generate the corresponding scenegraphs.
+                scenegraph = RealSceneGraph(str(raw_image_path), bounding_boxes, coco_class_names=self.coco_class_names)
+                scenegraphs[frame] = scenegraph
+            
+            label_path = (path/"label.txt").resolve()
+
+            if label_path.exists():
+                with open(str(path/"label.txt"), 'r') as label_f:
+                    risk_label = float(label_f.read().strip().split(",")[0])
+
+                if risk_label >= 0:
+                    risk_label = 1
+                else:
+                    risk_label = 0
+
+                # scenegraph_dict contains node embeddings edge indexes and edge attrs.
+                scenegraphs_dict = {}
+                scenegraphs_dict['sequence'] = self.process_graph_sequences(scenegraphs, 20, folder_name=path.name)
+                scenegraphs_dict['label'] = risk_label
+                scenegraphs_dict['folder_name'] = path.name
+                
+                self.scenegraphs_sequence.append(scenegraphs_dict)
+            else:
+                raise Exception("no label.txt in %s" % path) 
+        
+        with open('dyngraph_embeddings.pkl', 'wb') as f:
+            pkl.dump((self.scenegraphs_sequence, self.feature_list), f)
+    
+    def get_bounding_boxes(self, img_path, out_img_path=None):
+        im = cv2.imread(img_path)
+        outputs = self.predictor(im)
+
+        # look at the outputs. See https://detectron2.readthedocs.io/tutorials/models.html#model-output-format for specification
+        # print(outputs["instances"].pred_classes)
+        # print(outputs["instances"].pred_boxes)
+        # import pdb; pdb.set_trace()
+
+        if out_img_path:
+            # We can use `Visualizer` to draw the predictions on the image.
+            v = detectron2.utils.visualizer.Visualizer(im[:, :, ::-1], MetadataCatalog.get(self.cfg.DATASETS.TRAIN[0]), scale=1.2)
+            out = v.draw_instance_predictions(outputs["instances"].to("cpu"))
+            cv2.imwrite(out_img_path, out.get_image()[:, :, ::-1])
+
+        return outputs["instances"].pred_boxes, outputs["instances"].pred_classes, outputs["instances"].image_size
+            
+    def process_graph_sequences(self, scenegraphs, number_of_frames=20, folder_name=None):
+        '''
+            The self.scenegraphs_sequence should be having same length after the subsampling. 
+            This function will get the graph-related features (node embeddings, edge types, adjacency matrix) from scenegraphs.
+            in tensor formats.
+        '''
+        sequence = []
+        subsampled_scenegraphs, frame_numbers = self.subsample(scenegraphs, number_of_frames)
+
+        for idx, (scenegraph, frame_number) in enumerate(zip(subsampled_scenegraphs, frame_numbers)):
+            sg_dict = {}
+            
+            node_name2idx = {node:idx for idx, node in enumerate(scenegraph.g.nodes)}
+
+            sg_dict['node_features']                    = self.get_node_embeddings(scenegraph)
+            sg_dict['edge_index'], sg_dict['edge_attr'] = self.get_edge_embeddings(scenegraph, node_name2idx)
+            sg_dict['folder_name'] = folder_name
+            sg_dict['frame_number'] = frame_number
+            
+            scenegraph.visualize(filename="/home/aung/NAS/louisccc/av/synthesis_data/visualize_detectron/%s_%s.png"%(folder_name, frame_number))
+            # scenegraph.visualize(filename="./visualize/%s_%s.png"%(folder_name, frame_number))
+            sequence.append(sg_dict)
+        # import pdb; pdb.set_trace()
+        return sequence
+
+    def subsample(self, scenegraphs, number_of_frames=20): 
+        '''
+            This function will subsample the original scenegraph sequence dataset (self.scenegraphs_sequence). 
+            Before running this function, it includes a variant length of graph sequences. 
+            We expect the length of graph sequences will be homogenenous after running this function.
+
+            The default value of number_of_frames will be 20; Could be a tunnable hyperparameters.
+        '''
+        sequence = []
+        frame_numbers = []
+        acc_number = 0
+        modulo = int(len(scenegraphs) / number_of_frames)
+        if modulo == 0:
+            modulo = 1
+
+        for idx, (timeframe, scenegraph) in enumerate(scenegraphs.items()):
+            if idx % modulo == 0 and acc_number < number_of_frames:
+                sequence.append(scenegraph)
+                frame_numbers.append(timeframe)
+                acc_number+=1
+    
+        return sequence, frame_numbers
+        
+    def get_node_embeddings(self, scenegraph):
+        rows = []
+        labels=[]
+        ego_attrs = None
+        
+        #extract ego attrs for creating relative features
+        for node, data in scenegraph.g.nodes.items():
+            if "ego" in str(node).lower():
+                ego_attrs = data['attr']
+           
+        if ego_attrs == None:
+            raise NameError("Ego not found in scenegraph")
+          
+        def get_embedding(node, row):
+            for key in self.feature_list:
+                if key in node.attr:
+                    row[key] = node.attr[key]
+            row['type_'+str(node.label.value)] = 1 #assign 1hot class label
+            return row
+        
+        for idx, node in enumerate(scenegraph.g.nodes):
+            d = defaultdict()
+            row = get_embedding(node, d)
+            labels.append(node.label.value)
+            rows.append(row)
+            
+        embedding = pd.DataFrame(data=rows, columns=self.feature_list)
+        embedding = embedding.fillna(value=0) #fill in NaN with zeros
+        embedding = torch.FloatTensor(embedding.values)
+        
+        return embedding
+
+    def get_edge_embeddings(self, scenegraph, node_name2idx):
+        edge_index = []
+        edge_attr = []
+        for src, dst, edge in scenegraph.g.edges(data=True):
+            edge_index.append((node_name2idx[src], node_name2idx[dst]))
+            edge_attr.append(edge['object'].value)
+        
+        edge_index = torch.transpose(torch.LongTensor(edge_index), 0, 1)
+        edge_attr  = torch.LongTensor(edge_attr)
+        
+        return edge_index, edge_attr
+
 if __name__ == "__main__":
     ##can't use the path on NAS. 
     #　\\128.200.5.40\temp\louisccc\av\synthesis_data\lane-change-804\0\raw_images 00032989.jpg
     le = None #LaneExtractor(r"/home/aung/NAS/louisccc/av/synthesis_data/lane-change-804/0/raw_images")
-    realSG = RealSceneGraph(r"/home/aung/NAS/louisccc/av/synthesis_data/new_recording_2/3/raw_images/00016995.jpg", le)
-    print(realSG.g.nodes)
-    print(realSG.g.edges)
+    # realSG = RealSceneGraph(r"/home/aung/NAS/louisccc/av/synthesis_data/new_recording_3/1/raw_images/17840803.jpg", le)
+    # print(realSG.g.nodes)
+    # print(realSG.g.edges)
     # get_bounding_boxes(r"/home/aung/NAS/louisccc/av/synthesis_data/lane-change-804/0/raw_images/00032989.jpg", "./00032989.jpg")
+
+    generator = SceneGraphSequenceGenerator()
+    generator.load(Path("/home/aung/NAS/louisccc/av/synthesis_data/new_recording_3"))

@@ -220,7 +220,7 @@ class RealSceneGraph:
         return relation_list
 
     # lane/road detection using LaneNet (not currently used)
-    def extract_lanenet_lanes(self):
+    def extract_lanenet_lanes(self, image_path):
         if self.lane_extractor != None:
             lanedict = self.lane_extractor.get_lanes_from_file(image_path)
             if lanedict != None:

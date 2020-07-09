@@ -543,13 +543,7 @@ class SceneGraphSequenceGenerator:
         return edge_index, edge_attr
 
 if __name__ == "__main__":
-    ##can't use the path on NAS. 
-    #　\\128.200.5.40\temp\louisccc\av\synthesis_data\lane-change-804\0\raw_images 00032989.jpg
-    le = None #LaneExtractor(r"/home/aung/NAS/louisccc/av/synthesis_data/lane-change-804/0/raw_images")
-    # realSG = RealSceneGraph(r"/home/aung/NAS/louisccc/av/synthesis_data/new_recording_3/1/raw_images/17840803.jpg", le)
-    # print(realSG.g.nodes)
-    # print(realSG.g.edges)
-    # get_bounding_boxes(r"/home/aung/NAS/louisccc/av/synthesis_data/lane-change-804/0/raw_images/00032989.jpg", "./00032989.jpg")
 
+    le = None #LaneExtractor(r"/home/aung/NAS/louisccc/av/synthesis_data/lane-change-804/0/raw_images")
     generator = SceneGraphSequenceGenerator()
     generator.load(Path("/home/aung/NAS/louisccc/av/synthesis_data/new_recording_3"))

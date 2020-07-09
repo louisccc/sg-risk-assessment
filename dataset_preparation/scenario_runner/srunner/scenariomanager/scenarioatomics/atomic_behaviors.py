@@ -1230,7 +1230,7 @@ class LaneChange(WaypointFollower):
             # driving on new lane
             distance = current_position_actor.transform.location.distance(self._pos_before_lane_change)
 
-            if distance > 50:
+            if distance > 20:
                 # long enough distance on new lane --> SUCCESS
                 status = py_trees.common.Status.SUCCESS
         else:

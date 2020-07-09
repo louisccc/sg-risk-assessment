@@ -27,11 +27,13 @@ class MRGCN(nn.Module):
         self.conv1 = RGCNConv(self.num_features, self.hidden_dim, self.num_relations, num_bases=30)
         self.conv2 = RGCNConv(self.hidden_dim,   self.hidden_dim, self.num_relations, num_bases=30)
         self.conv3 = RGCNConv(self.hidden_dim,   self.hidden_dim, self.num_relations, num_bases=30)
+        self.conv4 = RGCNConv(self.hidden_dim,   self.hidden_dim, self.num_relations, num_bases=30)
+        self.conv5 = RGCNConv(self.hidden_dim,   self.hidden_dim, self.num_relations, num_bases=30)
 
         if self.pooling_type == "sagpool":
-            self.pool1 = SAGPooling(self.hidden_dim, ratio=0.8)
+            self.pool1 = SAGPooling(self.hidden_dim, ratio=0.5)
         elif self.pooling_type == "topk":
-            self.pool1 = TopKPooling(self.hidden_dim, ratio=0.8)
+            self.pool1 = TopKPooling(self.hidden_dim, ratio=0.5)
 
         if "lstm" in self.temporal_type:
             self.lstm = LSTM(self.hidden_dim, self.hidden_dim, batch_first=True, bidirectional=True)
@@ -55,6 +57,11 @@ class MRGCN(nn.Module):
         x = F.dropout(x, self.dropout, training=self.training)
         x = F.relu(self.conv3(x, edge_index, edge_attr))
         x = F.dropout(x, self.dropout, training=self.training)
+        x = F.relu(self.conv4(x, edge_index, edge_attr))
+        x = F.dropout(x, self.dropout, training=self.training)
+        x = F.relu(self.conv5(x, edge_index, edge_attr))
+        x = F.dropout(x, self.dropout, training=self.training)
+
 
         if self.pooling_type == "sagpool":
             x, edge_index, _, batch, attn_weights['pool_perm'], attn_weights['pool_score'] = self.pool1(x, edge_index, edge_attr=edge_attr, batch=batch)
@@ -74,7 +81,7 @@ class MRGCN(nn.Module):
         else:
             pass
 
-        x = F.normalize(x, dim=-1, p=1)
+        # x = F.normalize(x, dim=-1, p=1)
         x = self.bn2(x)
         if self.temporal_type == "mean":
             x = F.relu(x.mean(axis=0))

@@ -94,10 +94,6 @@ class RelationExtractor:
         relation_list = []
         relation_list += self.create_proximity_relations(actor1, actor2)
         relation_list += self.create_proximity_relations(actor2, actor1)
-        # import pdb; pdb.set_trace()
-        # if actor1.name.startswith("ego:") or actor2.name.startswith("ego:"):
-        #     print(self.euclidean_distance(actor1, actor2))
-        #     print(self.create_proximity_relations(actor1, actor2))
         if(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_NEAR):
             relation_list += self.extract_directional_relation(actor1, actor2)
             relation_list += self.extract_directional_relation(actor2, actor1)

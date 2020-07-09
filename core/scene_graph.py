@@ -329,7 +329,7 @@ class CarlaSceneGraphSequenceGenerator:
 
 
 def build_scenegraph_dataset(input_path, number_of_frames=20, train_to_test_ratio=0.3):
-    sge = SceneGraphSequenceGenerator()
+    sge = CarlaSceneGraphSequenceGenerator()
     if not sge.cache_exists():
         sge.load(input_path)
     else:

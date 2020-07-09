@@ -138,7 +138,8 @@ class LaneChangeRecorder:
             self.toggle_recording()
 
             ## setting 
-            self.lane_change_controller = LaneChange(self.ego, direction=self.lane_change_direction)
+            abs_velocity = 3.6 * math.sqrt(velocity.x**2 + velocity.y**2 + velocity.z**2)
+            self.lane_change_controller = LaneChange(self.ego, speed=abs_velocity, direction=self.lane_change_direction, distance_other_lane=50)
             self.lane_change_controller.initialise()
 
             self.client.apply_batch_sync([carla.command.SetAutopilot(self.ego, False)], True)

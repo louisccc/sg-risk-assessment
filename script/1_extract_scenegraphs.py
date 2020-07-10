@@ -1,11 +1,9 @@
-import sys, pdb, os
-import json
+import sys, os
 from pathlib import Path
 from argparse import ArgumentParser
 
 sys.path.append(os.path.dirname(sys.path[0]))
-from core.scene_graph import CarlaSceneGraphSequenceGenerator
-from core.image_scenegraph import ImageSceneGraphSequenceGenerator
+
 
 class Config:
     def __init__(self, args):
@@ -23,11 +21,13 @@ class Config:
 if __name__ == '__main__':
     cfg = Config(sys.argv[1:])
     if cfg.platform == "carla":
+        from core.scene_graph import CarlaSceneGraphSequenceGenerator
         generator = CarlaSceneGraphSequenceGenerator()
         generator.load(cfg.input_base_dir)
         generator.cache_dataset("carla_dataset.pkl")
 
     elif cfg.platform == "image":
+        from core.image_scenegraph import ImageSceneGraphSequenceGenerator
         generator = ImageSceneGraphSequenceGenerator()
         generator.load(cfg.input_base_dir)
         generator.cache_dataset("image_dataset.pkl")

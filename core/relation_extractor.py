@@ -35,16 +35,14 @@ class Relations(Enum):
     near = 3
     visible = 4
     partOf = 5
-    instanceOf = 6
-    hasAttribute = 7
-    front = 8
-    frontLeft = 9
-    frontRight = 10
-    rear = 11
-    rearLeft = 12
-    rearRight = 13
-    leftOf = 14
-    rightOf = 15
+    front = 6
+    frontLeft = 7
+    frontRight = 8
+    rear = 9
+    rearLeft = 10
+    rearRight = 11
+    leftOf = 12
+    rightOf = 13
 
 RELATION_COLORS = ["black", "red", "orange", "yellow", "green", "purple", "blue", 
                 "sienna", "pink", "pink", "pink",  "turquoise", "turquoise", "turquoise", "violet", "violet"]

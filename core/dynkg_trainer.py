@@ -27,7 +27,7 @@ class Config:
     '''Argument Parser for script to train scenegraphs.'''
     def __init__(self, args):
         self.parser = ArgumentParser(description='The parameters for training the scene graph using GCN.')
-        self.parser.add_argument('--input_path', type=str, default="../input/synthesis_data/lane-change/", help="Path to code directory.")
+        self.parser.add_argument('--cache_path', type=str, default="../script/image_dataset.pkl", help="Path to the cache file.")
         self.parser.add_argument('--learning_rate', default=0.0001, type=float, help='The initial learning rate for GCN.')
         self.parser.add_argument('--seed', type=int, default=random.randint(0,2**32), help='Random seed.')
         self.parser.add_argument('--epochs', type=int, default=200, help='Number of epochs to train.')
@@ -49,7 +49,7 @@ class Config:
         for arg_name in vars(args_parsed):
             self.__dict__[arg_name] = getattr(args_parsed, arg_name)
 
-        self.input_base_dir = Path(self.input_path).resolve()
+        self.cache_path = Path(self.cache_path).resolve()
 
 
 class DynKGTrainer:
@@ -61,7 +61,7 @@ class DynKGTrainer:
         torch.manual_seed(self.config.seed)
 
         # load carla cheating scene graph txts into memory 
-        self.training_data, self.testing_data, self.feature_list = build_scenegraph_dataset(self.config.input_base_dir)
+        self.training_data, self.testing_data, self.feature_list = build_scenegraph_dataset(self.config.cache_path)
         self.training_labels = [data['label'] for data in self.training_data]
         self.testing_labels = [data['label'] for data in self.testing_data]
         self.class_weights = torch.from_numpy(compute_class_weight('balanced', np.unique(self.training_labels), self.training_labels))

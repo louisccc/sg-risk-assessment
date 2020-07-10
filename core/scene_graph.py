@@ -328,12 +328,12 @@ class CarlaSceneGraphSequenceGenerator:
         return edge_index, edge_attr
 
 
-def build_scenegraph_dataset(input_path, number_of_frames=20, train_to_test_ratio=0.3):
-    sge = CarlaSceneGraphSequenceGenerator()
+def build_scenegraph_dataset(cache_path, number_of_frames=20, train_to_test_ratio=0.3):
+    sge = CarlaSceneGraphSequenceGenerator(cache_fname=cache_path)
     if not sge.cache_exists():
-        sge.load(input_path)
+        raise Exception("Cache file do not exist.")
     else:
         sge.load_from_cache()
        
-    train, test = train_test_split(sge.scenegraphs_sequence , test_size=train_to_test_ratio, shuffle=True)
+    train, test = train_test_split(sge.scenegraphs_sequence, test_size=train_to_test_ratio, shuffle=True)
     return train, test, sge.feature_list

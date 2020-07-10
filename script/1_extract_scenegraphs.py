@@ -4,14 +4,14 @@ from pathlib import Path
 from argparse import ArgumentParser
 
 sys.path.append(os.path.dirname(sys.path[0]))
-from core.scene_graph.scene_graph import CarlaSceneGraphSequenceGenerator
+from core.scene_graph import CarlaSceneGraphSequenceGenerator
 from core.image_scenegraph import ImageSceneGraphSequenceGenerator
 
 class Config:
     def __init__(self, args):
-        parser = ArgumentParser(description="Parameters for extracting scenegraphs.")
-        parser.add_argument('--input_path', type=str, default="/home/aung/NAS/louisccc/av/synthesis_data/new_recording_3", help="Path to lane-change clips directory.")
-        parser.add_argument('--platform', type=str, default="image", help="Method for scenegraph extraction (carla or image).")
+        self.parser = ArgumentParser(description="Parameters for extracting scenegraphs.")
+        self.parser.add_argument('--input_path', type=str, default="/home/aung/NAS/louisccc/av/synthesis_data/new_recording_3", help="Path to lane-change clips directory.")
+        self.parser.add_argument('--platform', type=str, default="image", help="Method for scenegraph extraction (carla or image).")
 
         args_parsed = self.parser.parse_args(args)
             

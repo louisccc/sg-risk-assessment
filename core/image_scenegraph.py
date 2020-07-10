@@ -312,7 +312,7 @@ def get_birds_eye_warp(image_path, M):
 
 
 class ImageSceneGraphSequenceGenerator:
-    def __init__(self, cache_fname='real_dyngraph_embeddings.pkl'):
+    def __init__(self, cache_fname='real_dyngraph_embeddings.pkl', visualize=False, vis_path="./visualize"):
         # [ 
         #   {'node_embeddings':..., 'edge_indexes':..., 'edge_attrs':..., 'label':...}  
         # ]
@@ -320,6 +320,11 @@ class ImageSceneGraphSequenceGenerator:
 
         # cache_filename determine the name of caching file name storing self.scenegraphs_sequence and 
         self.cache_filename = cache_fname
+
+        # flag for turning on visualization
+        self.visualize = visualize
+        self.vis_save_path = Path(vis_path).resolve()
+        self.vis_save_path.mkdir(exist_ok=True)
         
         # config used for parsing CARLA:
         # this is the number of global classes defined in CARLA.
@@ -354,13 +359,16 @@ class ImageSceneGraphSequenceGenerator:
 
         for path in tqdm(all_video_clip_dirs):
             scenegraphs = {} 
-            raw_images = sorted(list(path.glob("raw_images/*.jpg")), key=lambda x: int(x.stem))
+            raw_images = sorted(list(path.glob("raw_images/*.jpg")) + list(path.glob("raw_images/*.png")), key=lambda x: int(x.stem))
             for raw_image_path in raw_images:
                 frame = raw_image_path.stem
                 ### get bounding boxes using detectron. 
-                out_img_path = Path(raw_image_path).resolve().parent.parent / "obj_det_results"
-                out_img_path.mkdir(exist_ok=True)
-                bounding_boxes = self.get_bounding_boxes(str(raw_image_path), str(out_img_path / str(Path(raw_image_path).name)))
+                out_img_path = None
+                if self.visualize:
+                    out_img_path = Path(raw_image_path).resolve().parent.parent / "obj_det_results"
+                    out_img_path.mkdir(exist_ok=True)
+                    out_img_path = str(out_img_path / str(Path(raw_image_path).name))
+                bounding_boxes = self.get_bounding_boxes(str(raw_image_path),out_img_path=out_img_path)
                 ### get lane prediction using lanenet.
                 ### use two information to generate the corresponding scenegraphs.
                 scenegraph = RealSceneGraph(str(raw_image_path), bounding_boxes, coco_class_names=self.coco_class_names)
@@ -426,10 +434,10 @@ class ImageSceneGraphSequenceGenerator:
             sg_dict['edge_index'], sg_dict['edge_attr'] = self.get_edge_embeddings(scenegraph, node_name2idx)
             sg_dict['folder_name'] = folder_name
             sg_dict['frame_number'] = frame_number
-            
-            scenegraph.visualize(to_filename="/home/aung/NAS/louisccc/av/synthesis_data/visualize_detectron/%s_%s.png"%(folder_name, frame_number))
-            # scenegraph.visualize(filename="./visualize/%s_%s.png"%(folder_name, frame_number))
             sequence.append(sg_dict)
+            
+            if self.visualize:
+                scenegraph.visualize(to_filename=str(self.vis_save_path / "{}_{}.png".format(folder_name, frame_number)))
         # import pdb; pdb.set_trace()
         return sequence
 

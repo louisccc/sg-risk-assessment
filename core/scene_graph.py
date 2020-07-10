@@ -122,7 +122,7 @@ class SceneGraph:
         A.draw(filename)
 
 class CarlaSceneGraphSequenceGenerator:
-    def __init__(self, cache_fname='dyngraph_embeddings.pkl'):
+    def __init__(self, cache_fname='dyngraph_embeddings.pkl', visualize=False, vis_path="./visualize"):
         # [ 
         #   {'node_embeddings':..., 'edge_indexes':..., 'edge_attrs':..., 'label':...}  
         # ]
@@ -130,6 +130,11 @@ class CarlaSceneGraphSequenceGenerator:
 
         # cache_filename determine the name of caching file name storing self.scenegraphs_sequence and 
         self.cache_filename = cache_fname
+
+        # flag for turning on visualization
+        self.visualize = visualize
+        self.vis_save_path = Path(vis_path).resolve()
+        self.vis_save_path.mkdir(exist_ok=True)
         
         # config used for parsing CARLA:
         # this is the number of global classes defined in CARLA.
@@ -227,11 +232,10 @@ class CarlaSceneGraphSequenceGenerator:
             sg_dict['edge_index'], sg_dict['edge_attr'] = self.get_edge_embeddings(scenegraph, node_name2idx)
             sg_dict['folder_name'] = folder_name
             sg_dict['frame_number'] = frame_number
-            
-            # scenegraph.visualize(filename="/home/aung/NAS/louisccc/av/synthesis_data/visualize/%s_%s.png"%(folder_name, frame_number))
-            # scenegraph.visualize(filename="./visualize/%s_%s.png"%(folder_name, frame_number))
             sequence.append(sg_dict)
 
+            if self.visualize:
+                scenegraph.visualize(filename=str(self.vis_save_path / "{}_{}.png".format(folder_name, frame_number)))
         return sequence
 
     def subsample(self, scenegraphs, number_of_frames=20): 
@@ -331,7 +335,7 @@ class CarlaSceneGraphSequenceGenerator:
 def build_scenegraph_dataset(cache_path, number_of_frames=20, train_to_test_ratio=0.3):
     sge = CarlaSceneGraphSequenceGenerator(cache_fname=cache_path)
     if not sge.cache_exists():
-        raise Exception("Cache file do not exist.")
+        raise Exception("Cache file do not exist. Run 1_extract_scenegraphs.py to generate the cache file.")
     else:
         sge.load_from_cache()
        

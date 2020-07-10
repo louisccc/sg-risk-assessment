@@ -2,7 +2,7 @@ import sys
 sys.path.append('../nagoya')
 sys.path.append('../')
 from nagoya.dataset import *
-from nagoya.models import Models
+from nagoya.models import Models, load_model
 from argparse import ArgumentParser
 from pathlib import Path
 import skimage.io as io
@@ -13,16 +13,19 @@ class Config:
     def __init__(self, args):
         self.parser = ArgumentParser(description='The parameters for creating gifs of input videos.')
         self.parser.add_argument('--input_path', type=str, default="../input/synthesis_data", help="Path to data directory.")
-
-        args_parsed = self.parser.parse_args(args)
+		self.parser.add_argument('--load_model', type=lambda x: (str(x).lower() == 'true'), default=False, help='Load model from cache.')
+		self.parser.add_argument('--model_path', type=str, default="../cache/RCNN_CNN_lstm_GPU_20_2.h5", help="Path to cached model file.")
+		self.parser.add_argument('--mask_rcnn', type=lambda x: (str(x).lower() == 'true'), default=True, help='Create masked imgages.')
+		args_parsed = self.parser.parse_args(args)
         
         for arg_name in vars(args_parsed):
             self.__dict__[arg_name] = getattr(args_parsed, arg_name)
 
         self.input_base_dir = Path(self.input_path).resolve()
+		self.cache_model_path = Path(self.model_path).resolve()
 
 
-def train_cnn_to_lstm(dataset):
+def train_cnn_to_lstm(dataset, cache_path):
 	'''
 		This step is for training the CNN to LSTM model. (train from scratch architecture.)
 	'''
@@ -36,19 +39,14 @@ def train_cnn_to_lstm(dataset):
 	end = int(0.7*len(dataset.video)) #training_to_all_data_ratio*len(dataset.video))
 	video_sequence = dataset.video
 	label = dataset.risk_one_hot
-	#import pdb;pdb.set_trace()
 	model = Models(nb_epoch=nb_epoch, batch_size=batch_size, class_weights=class_weight)
 	model.build_cnn_to_lstm_model(input_shape=video_sequence.shape[1:])
 	metrics = model.train_n_fold_cross_val(video_sequence, label, training_to_all_data_ratio=training_to_all_data_ratio, n=nb_cross_val, print_option=0, plot_option=0, save_option=0)
 	
-	# storing the model weights to cache folder.
-	cache_folder = Path('../cache').resolve()
-	cache_folder.mkdir(exist_ok=True)
-	print(cache_folder)
-	#import pdb; pdb.set_trace()
-	model.model.save(str(cache_folder / '804_maskRCNN_CNN_lstm_GPU_20_2.h5'))
+	cache_path.parent.mkdir(exist_ok=True)
+	model.model.save(str(cache_path))
 	print(metrics)
-	import pdb;pdb.set_trace()
+	return model
 
 def process_raw_images_to_masked_images(src_path: Path, dst_path: Path, coco_path: Path):
     ''' 
@@ -63,14 +61,15 @@ if __name__ == '__main__':
 	
 	config = Config(sys.argv[1:])
 	
-	root_folder_path = config.input_base_dir #Path('../input/synthesis_data').resolve()
-	raw_image_path = root_folder_path / 'lane-change-804'
+	raw_image_path = config.input_base_dir #Path('../input/synthesis_data').resolve()
+	root_folder_path = raw_image_path.parent
 	label_table_path = raw_image_path / "LCTable.csv"
+	cache_model_path = config.cache_model_path
 	
-	do_mask_rcnn = True
+	do_mask_rcnn = config.mask_rcnn
 
 	if do_mask_rcnn: 
-		coco_model_path = config.input_base_dir / 'pretrained_models' #Path('../pretrained_models')
+		coco_model_path = root_folder_path / 'pretrained_models' #Path('../pretrained_models')
 		masked_image_path = root_folder_path / (raw_image_path.stem + '_masked') # the path in parallel with raw_image_path
 		masked_image_path.mkdir(exist_ok=True)
 
@@ -78,9 +77,7 @@ if __name__ == '__main__':
 		raw_folders = [f for f in os.listdir(raw_image_path) if f.isnumeric() and not f.startswith('.')]
 		masked_folders = [f for f in os.listdir(masked_image_path) if f.isnumeric() and not f.startswith('.')]
 		
-		print(raw_folders,masked_folders)
 		if len(raw_folders)!=len(masked_folders):
-		#if raw_folders[-1]!=masked_folders[-1]:
 			process_raw_images_to_masked_images(raw_image_path, masked_image_path, coco_model_path)
 		
 		#load masked images
@@ -90,9 +87,21 @@ if __name__ == '__main__':
 		#load raw images
 		dataset = load_dataset(raw_image_path, label_table_path)
 	
-	# train import from core
-	# output store in maskRCNN_CNN_lstm_GPU.h5
-	# use prediction script to evaluate
-	#import pdb; pdb.set_trace()
+	# load or train model
+	if config.load_model:
+		if not cache_model_path.exists():
+			raise FileNotFoundError ("Cached model file not found.")
+		model = load_model(str(cache_model_path))
+	else:
+		model = train_cnn_to_lstm(dataset, cache_model_path)
+	
+	'''
+		determine how safe and dangerous each lane change is 
+	'''
+	true_label = np.argmax(dataset.risk_one_hot,axis=-1)
+	end = int(0.7*len(dataset.video))
+	output = model.predict_proba(dataset.video[end:])
 
-	train_cnn_to_lstm(dataset)
+	metrics = get_metrics(output,true_label[end:]) 
+	print(metrics)
+	print(' safe | dangerous \n', output)

@@ -34,7 +34,7 @@ if __name__ == '__main__':
         generator = ImageSceneGraphSequenceGenerator()
 
     if cfg.visualize:
-        cfg.visualize_scenegraphs(cfg.vis_path)
+        generator.visualize_scenegraphs(cfg.vis_path)
 
     generator.load(cfg.input_base_dir)
     if cfg.cache:

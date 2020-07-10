@@ -28,11 +28,16 @@ if __name__ == '__main__':
 
     if cfg.platform == "carla":
         from core.scene_graph import CarlaSceneGraphSequenceGenerator
-        generator = CarlaSceneGraphSequenceGenerator(visualize=cfg.visualize, vis_path=cfg.vis_path)
+        generator = CarlaSceneGraphSequenceGenerator()
     elif cfg.platform == "image":
         from core.image_scenegraph import ImageSceneGraphSequenceGenerator
-        generator = ImageSceneGraphSequenceGenerator(visualize=cfg.visualize, vis_path=cfg.vis_path)
+        generator = ImageSceneGraphSequenceGenerator()
+
+    if cfg.visualize:
+        cfg.visualize_scenegraphs(cfg.vis_path)
 
     generator.load(cfg.input_base_dir)
     if cfg.cache:
         generator.cache_dataset(str(cfg.cache_path))
+
+   

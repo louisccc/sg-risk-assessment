@@ -312,7 +312,7 @@ def get_birds_eye_warp(image_path, M):
 
 
 class ImageSceneGraphSequenceGenerator:
-    def __init__(self, cache_fname='real_dyngraph_embeddings.pkl', visualize=False, vis_path="./visualize"):
+    def __init__(self, cache_fname='real_dyngraph_embeddings.pkl'):
         # [ 
         #   {'node_embeddings':..., 'edge_indexes':..., 'edge_attrs':..., 'label':...}  
         # ]
@@ -322,8 +322,8 @@ class ImageSceneGraphSequenceGenerator:
         self.cache_filename = cache_fname
 
         # flag for turning on visualization
-        self.visualize = visualize
-        self.vis_save_path = Path(vis_path).resolve()
+        self.visualize = False
+        self.vis_save_path = Path("./visualize").resolve()
         self.vis_save_path.mkdir(exist_ok=True)
         
         # config used for parsing CARLA:
@@ -440,6 +440,11 @@ class ImageSceneGraphSequenceGenerator:
                 scenegraph.visualize(to_filename=str(self.vis_save_path / "{}_{}.png".format(folder_name, frame_number)))
         # import pdb; pdb.set_trace()
         return sequence
+    
+    def visualize_scenegraphs(self, vis_path):
+        self.visualize = True
+        self.vis_save_path = Path(vis_path).resolve()
+        self.vis_save_path.mkdir(exist_ok=True)
 
     def subsample(self, scenegraphs, number_of_frames=20): 
         '''

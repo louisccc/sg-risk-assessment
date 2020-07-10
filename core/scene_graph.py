@@ -85,14 +85,14 @@ class SceneGraph:
             lane['lane_idx'] = idx
             n = Node("lane:"+str(idx), lane, ActorType.LANE)
             self.add_node(n)
-            self.add_relation([n, Relations.partOf, self.road_node])
+            self.add_relation([n, Relations.isIn, self.road_node])
             
     #add signs as entities of the road.
     def add_sign_dict(self, signdict):
         for sign_id, signattr in signdict.items():
             n = Node(sign_id, signattr, ActorType.SIGN)
             self.add_node(n)
-            self.add_relation([n, Relations.partOf, self.road_node])
+            self.add_relation([n, Relations.isIn, self.road_node])
 
     #add the contents of a whole framedict to the graph
     def parse_json(self, framedict):

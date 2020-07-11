@@ -195,8 +195,6 @@ class CarlaSceneGraphSequenceGenerator:
 
         # flag for turning on visualization
         self.visualize = False
-        self.vis_save_path = Path("./visualize").resolve()
-        self.vis_save_path.mkdir(exist_ok=True)
         
         # config used for parsing CARLA:
         # this is the number of global classes defined in CARLA.
@@ -311,8 +309,6 @@ class CarlaSceneGraphSequenceGenerator:
 
     def visualize_scenegraphs(self, vis_path):
         self.visualize = True
-        self.vis_save_path = Path(vis_path).resolve()
-        self.vis_save_path.mkdir(exist_ok=True)
 
     def subsample(self, scenegraphs, number_of_frames=20): 
         '''

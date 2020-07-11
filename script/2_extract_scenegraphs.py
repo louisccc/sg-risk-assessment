@@ -13,7 +13,6 @@ class Config:
         self.parser.add_argument('--cache', type=lambda x: (str(x).lower() == 'true'), default=True, help="Cache processed scenegraphs.")
         self.parser.add_argument('--address', type=str, default="./image_dataset.pkl", help="Path to save cache file.")
         self.parser.add_argument('--visualize', type=lambda x: (str(x).lower() == 'true'), default=False, help="Visualize scenegraphs.")
-        self.parser.add_argument('--vis_path', type=str, default="/home/aung/NAS/louisccc/av/synthesis_data/sg_vis", help="Path to save scenegraph visualization.")
         args_parsed = self.parser.parse_args(args)
             
         for arg_name in vars(args_parsed):
@@ -34,7 +33,7 @@ if __name__ == '__main__':
         generator = ImageSceneGraphSequenceGenerator()
 
     if cfg.visualize:
-        generator.visualize_scenegraphs(cfg.vis_path)
+        generator.visualize_scenegraphs()
 
     generator.load(cfg.input_base_dir)
     if cfg.cache:

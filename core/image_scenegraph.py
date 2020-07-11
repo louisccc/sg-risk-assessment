@@ -323,8 +323,6 @@ class ImageSceneGraphSequenceGenerator:
 
         # flag for turning on visualization
         self.visualize = False
-        self.vis_save_path = Path("./visualize").resolve()
-        self.vis_save_path.mkdir(exist_ok=True)
         
         # config used for parsing CARLA:
         # this is the number of global classes defined in CARLA.
@@ -387,10 +385,20 @@ class ImageSceneGraphSequenceGenerator:
 
                 # scenegraph_dict contains node embeddings edge indexes and edge attrs.
                 scenegraphs_dict = {}
-                scenegraphs_dict['sequence'] = self.process_graph_sequences(scenegraphs, 20, folder_name=path.name)
+                subsampled_scenegraphs, frame_numbers = self.subsample(scenegraphs, 20)
+                scenegraphs_dict['sequence'] = self.process_graph_sequences(subsampled_scenegraphs, frame_numbers, folder_name=path.name)
                 scenegraphs_dict['label'] = risk_label
                 scenegraphs_dict['folder_name'] = path.name
-                
+                  
+                if self.visualize:
+                    vis_folder_name = path / "image_visualize"
+                    print("writing scenegraphs to %s"% str(vis_folder_name))
+                    # if vis_folder_name.exists():
+                    #     shutil.rmtree(vis_folder_name)
+                    for scenegraph, frame_number in zip(subsampled_scenegraphs, frame_numbers): 
+                        vis_folder_name.mkdir(exist_ok=True)
+                        scenegraph.visualize(to_filename=str(vis_folder_name / "{}.png".format(frame_number)))
+
                 self.scenegraphs_sequence.append(scenegraphs_dict)
             else:
                 raise Exception("no label.txt in %s" % path) 
@@ -416,16 +424,15 @@ class ImageSceneGraphSequenceGenerator:
 
         return outputs["instances"].pred_boxes, outputs["instances"].pred_classes, outputs["instances"].image_size
             
-    def process_graph_sequences(self, scenegraphs, number_of_frames=20, folder_name=None):
+    def process_graph_sequences(self, scenegraphs, frame_numbers, folder_name=None):
         '''
             The self.scenegraphs_sequence should be having same length after the subsampling. 
             This function will get the graph-related features (node embeddings, edge types, adjacency matrix) from scenegraphs.
             in tensor formats.
         '''
         sequence = []
-        subsampled_scenegraphs, frame_numbers = self.subsample(scenegraphs, number_of_frames)
 
-        for idx, (scenegraph, frame_number) in enumerate(zip(subsampled_scenegraphs, frame_numbers)):
+        for idx, (scenegraph, frame_number) in enumerate(zip(scenegraphs, frame_numbers)):
             sg_dict = {}
             
             node_name2idx = {node:idx for idx, node in enumerate(scenegraph.g.nodes)}
@@ -434,17 +441,14 @@ class ImageSceneGraphSequenceGenerator:
             sg_dict['edge_index'], sg_dict['edge_attr'] = self.get_edge_embeddings(scenegraph, node_name2idx)
             sg_dict['folder_name'] = folder_name
             sg_dict['frame_number'] = frame_number
+            sg_dict['node_order'] = node_name2idx
             sequence.append(sg_dict)
             
-            if self.visualize:
-                scenegraph.visualize(to_filename=str(self.vis_save_path / "{}_{}.png".format(folder_name, frame_number)))
         # import pdb; pdb.set_trace()
         return sequence
     
     def visualize_scenegraphs(self, vis_path):
         self.visualize = True
-        self.vis_save_path = Path(vis_path).resolve()
-        self.vis_save_path.mkdir(exist_ok=True)
 
     def subsample(self, scenegraphs, number_of_frames=20): 
         '''

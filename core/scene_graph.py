@@ -271,9 +271,9 @@ class CarlaSceneGraphSequenceGenerator:
 
                 if self.visualize:
                     vis_folder_name = path / "carla_visualize"
-                    if vis_folder_name.exists():
-                        shutil.rmtree(vis_folder_name)
-
+                    print("writing scenegraphs to %s"% str(vis_folder_name))
+                    # if vis_folder_name.exists():
+                    #     shutil.rmtree(vis_folder_name)
                     for scenegraph, frame_number in zip(subsampled_scenegraphs, frame_numbers): 
                         vis_folder_name.mkdir(exist_ok=True)
                         scenegraph.visualize(filename=str(vis_folder_name / "{}.png".format(frame_number)))
@@ -303,6 +303,8 @@ class CarlaSceneGraphSequenceGenerator:
             sg_dict['edge_index'], sg_dict['edge_attr'] = self.get_edge_embeddings(scenegraph, node_name2idx)
             sg_dict['folder_name'] = folder_name
             sg_dict['frame_number'] = frame_number
+            sg_dict['node_order'] = node_name2idx
+            # import pdb; pdb.set_trace()
             sequence.append(sg_dict)
 
         return sequence

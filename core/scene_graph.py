@@ -1,4 +1,5 @@
 import networkx as nx
+import shutil
 from networkx.drawing.nx_agraph import to_agraph
 import matplotlib
 matplotlib.use("Agg")
@@ -263,9 +264,19 @@ class CarlaSceneGraphSequenceGenerator:
 
                 # scenegraph_dict contains node embeddings edge indexes and edge attrs.
                 scenegraphs_dict = {}
-                scenegraphs_dict['sequence'] = self.process_graph_sequences(scenegraphs, 20, folder_name=path.name)
+                subsampled_scenegraphs, frame_numbers = self.subsample(scenegraphs, 20)
+                scenegraphs_dict['sequence'] = self.process_graph_sequences(subsampled_scenegraphs, frame_numbers, folder_name=path.name)
                 scenegraphs_dict['label'] = risk_label
                 scenegraphs_dict['folder_name'] = path.name
+
+                if self.visualize:
+                    vis_folder_name = path / "carla_visualize"
+                    if vis_folder_name.exists():
+                        shutil.rmtree(vis_folder_name)
+
+                    for scenegraph, frame_number in zip(subsampled_scenegraphs, frame_numbers): 
+                        vis_folder_name.mkdir(exist_ok=True)
+                        scenegraph.visualize(filename=str(vis_folder_name / "{}.png".format(frame_number)))
 
                 self.scenegraphs_sequence.append(scenegraphs_dict)
             else:
@@ -275,16 +286,15 @@ class CarlaSceneGraphSequenceGenerator:
         with open(str(filename), 'wb') as f:
             pkl.dump((self.scenegraphs_sequence, self.feature_list), f)
             
-    def process_graph_sequences(self, scenegraphs, number_of_frames=20, folder_name=None):
+    def process_graph_sequences(self, scenegraphs, frame_numbers, folder_name=None):
         '''
             The self.scenegraphs_sequence should be having same length after the subsampling. 
             This function will get the graph-related features (node embeddings, edge types, adjacency matrix) from scenegraphs.
             in tensor formats.
         '''
         sequence = []
-        subsampled_scenegraphs, frame_numbers = self.subsample(scenegraphs, number_of_frames)
 
-        for idx, (scenegraph, frame_number) in enumerate(zip(subsampled_scenegraphs, frame_numbers)):
+        for idx, (scenegraph, frame_number) in enumerate(zip(scenegraphs, frame_numbers)):
             sg_dict = {}
             
             node_name2idx = {node:idx for idx, node in enumerate(scenegraph.g.nodes)}
@@ -295,8 +305,6 @@ class CarlaSceneGraphSequenceGenerator:
             sg_dict['frame_number'] = frame_number
             sequence.append(sg_dict)
 
-            if self.visualize:
-                scenegraph.visualize(filename=str(self.vis_save_path / "{}_{}.png".format(folder_name, frame_number)))
         return sequence
 
     def visualize_scenegraphs(self, vis_path):

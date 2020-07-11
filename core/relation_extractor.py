@@ -331,12 +331,19 @@ class RelationExtractor:
         # use yaw and location (x, y) of actor1 to get a actor1 vector
         # then find another vector from actor1 to actor2
         # take dot product between two vectors and check the sign (positive = front, negative = rear)
-        actor1_vector = [math.cos(math.radians(actor1.attr['rotation'][0])), math.sin(math.radians(actor1.attr['rotation'][0]))]
-        actor1_to_actor2_vector = [actor2.attr['location'][0] - actor1.attr['location'][0], actor2.attr['location'][1] - actor1.attr['location'][1]]
-        dot_product = actor1_vector[0] * actor1_to_actor2_vector[0] + actor1_vector[1] * actor1_to_actor2_vector[1]
+        # actor1_vector = [math.cos(math.radians(actor1.attr['rotation'][0])), math.sin(math.radians(actor1.attr['rotation'][0]))]
+        # actor1_to_actor2_vector = [actor2.attr['location'][0] - actor1.attr['location'][0], actor2.attr['location'][1] - actor1.attr['location'][1]]
+        # dot_product = actor1_vector[0] * actor1_to_actor2_vector[0] + actor1_vector[1] * actor1_to_actor2_vector[1]
         
-        # actor2 is in front of actor1
-        if dot_product > 0:
+        x1, y1 = math.cos(math.radians(actor1.attr['rotation'][0])), math.sin(math.radians(actor1.attr['rotation'][0]))
+        x2, y2 = actor2.attr['location'][0] - actor1.attr['location'][0], actor2.attr['location'][1] - actor1.attr['location'][1]
+        inner_product = x1*x2 + y1*y2
+        length_product = math.sqrt(x1**2+y1**2) + math.sqrt(x2**2+y2**2)
+        degree = math.degrees(math.acos(inner_product / length_product))
+
+        if degree <= 60 or (degree >=300 and degree <= 360):
+        # # actor2 is in front of actor1
+        # if dot_product > 0:
             # actor2 to the left of actor1 
             if actor2.attr['lane_idx'] < actor1.attr['lane_idx']:
                 relation_list.append([actor1, Relations.frontLeft, actor2])

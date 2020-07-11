@@ -80,7 +80,7 @@ class SceneGraph:
             length_product = math.sqrt(x1**2+y1**2) + math.sqrt(x2**2+y2**2)
             degree = math.degrees(math.acos(inner_product / length_product))
             
-            if degree <= 60 or (degree >=300 and degree <= 360):
+            if degree <= 80 or (degree >=280 and degree <= 360):
                 n = Node(actor_id, attr, None)   #using the actor key as the node name and the dict as its attributes.
                 n.name = self.relation_extractor.get_actor_type(n).name.lower() + ":" + actor_id
                 n.type = self.relation_extractor.get_actor_type(n).value

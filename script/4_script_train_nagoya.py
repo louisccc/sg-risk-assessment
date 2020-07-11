@@ -1,7 +1,7 @@
 import sys
 sys.path.append('../nagoya')
 sys.path.append('../')
-from nagoya.dataset import *
+from nagoya.dataset import DataSet
 from nagoya.models import Models, load_model
 from argparse import ArgumentParser
 from pathlib import Path
@@ -56,6 +56,37 @@ def process_raw_images_to_masked_images(src_path: Path, dst_path: Path, coco_pat
     masked_image_extraction = DetectObjects(src_path, dst_path, coco_path)
     masked_image_extraction.save_masked_images()
 
+def read_risk_data(masked_image_path: Path):
+	risk_scores = []
+	all_video_clip_dirs = [f for f in input_path.iterdir() if f.is_dir() and f.stem.isnumeric()]
+	all_video_clip_dirs = sorted(all_video_clip_dirs, key=lambda f: int(f.stem))
+	for path in all_video_clip_dirs:
+		label_path = path / "label.txt"
+		if label_path.exists():
+			with open(str(path/"label.txt"), 'r') as label_f:
+				risk_label = int(label_f.read().strip().split(",")[0])
+				risk_scores.append(risk_label)
+		else:
+			raise FileNotFoundError("No label.txt in %s" % path) 
+	return risk_scores
+	
+def load_dataset(masked_image_path: Path):
+    '''
+        This step is for loading the dataset, preprocessing the video clips 
+        and neccessary scaling and normalizing. Also it reads and converts the labeling info.
+    '''
+    dataset = DataSet()
+    dataset.read_video(masked_image_path, option='fixed frame amount', number_of_frames=20, scaling='scale', scale_x=0.1, scale_y=0.1)
+
+    '''
+        order videos by risk and find top riskiest
+        #match input to risk label in LCTable 
+        data = label_risk(masked_data)
+    '''
+    dataset.risk_scores = read_risk_data(maked_image_path)
+    dataset.convert_risk_to_one_hot(risk_threshold=0.5)
+
+    return dataset
 
 if __name__ == '__main__':
 	

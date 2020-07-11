@@ -244,9 +244,9 @@ class RealSceneGraph:
         self.add_node(self.left_lane)
         self.add_node(self.right_lane)
         self.add_node(self.middle_lane)
-        self.add_relation([self.left_lane, Relations.partOf, self.road_node])
-        self.add_relation([self.right_lane, Relations.partOf, self.road_node])
-        self.add_relation([self.middle_lane, Relations.partOf, self.road_node])
+        self.add_relation([self.left_lane, Relations.isIn, self.road_node])
+        self.add_relation([self.right_lane, Relations.isIn, self.road_node])
+        self.add_relation([self.middle_lane, Relations.isIn, self.road_node])
         self.add_relation([self.ego_node, Relations.isIn, self.middle_lane])
 
     #builds isIn relation between object and lane depending on x-displacement relative to ego

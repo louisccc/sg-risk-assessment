@@ -73,7 +73,6 @@ class SceneGraph:
     def add_actor_dict(self, actordict):
         for actor_id, attr in actordict.items():
             # filter actors behind ego 
-            # import pdb; pdb.set_trace()
             x1, y1 = math.cos(math.radians(self.egoNode.attr['rotation'][0])), math.sin(math.radians(self.egoNode.attr['rotation'][0]))
             x2, y2 = attr['location'][0] - self.egoNode.attr['location'][0], attr['location'][1] - self.egoNode.attr['location'][1]
             inner_product = x1*x2 + y1*y2
@@ -85,15 +84,6 @@ class SceneGraph:
                 n.name = self.relation_extractor.get_actor_type(n).name.lower() + ":" + actor_id
                 n.type = self.relation_extractor.get_actor_type(n).value
                 self.add_node(n)
-
-            # ego_vector = [math.cos(math.radians(self.egoNode.attr['rotation'][0])), math.sin(math.radians(self.egoNode.attr['rotation'][0]))]
-            # ego_to_actor_vector = [attr['location'][0] - self.egoNode.attr['location'][0], attr['location'][1] - self.egoNode.attr['location'][1]]
-            # dot_product = ego_vector[0] * ego_to_actor_vector[0] + ego_vector[1] * ego_to_actor_vector[1] 
-            # if dot_product > 0:
-            #     n = Node(actor_id, attr, None)   #using the actor key as the node name and the dict as its attributes.
-            #     n.name = self.relation_extractor.get_actor_type(n).name.lower() + ":" + actor_id
-            #     n.type = self.relation_extractor.get_actor_type(n).value
-            #     self.add_node(n)
             
     #adds lanes and their dicts. constructs relation between each lane and the root road node.
     def add_lane_dict(self, lanedict):

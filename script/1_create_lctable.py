@@ -51,7 +51,7 @@ def create_csv(input_path):
 		else:
 			raise FileNotFoundError("No label.txt in %s" % label_path) 
 
-		df.loc[index] = [foldername, json_data['lc_dir'], risk_label, json_data['total_frames'], lc_path, json_data, gif_path]
+		df.loc[index] = [foldername, json_data['lc_dir'], risk_label, json_data['total_frames'], lc_path, json_path, gif_path]
 		
 	df.to_csv(lctable, encoding='utf-8', index=False)
 

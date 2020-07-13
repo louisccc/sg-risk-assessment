@@ -393,13 +393,29 @@ class CarlaSceneGraphSequenceGenerator:
         
         return edge_index, edge_attr
 
-
+from sklearn.utils import resample
 def build_scenegraph_dataset(cache_path, number_of_frames=20, train_to_test_ratio=0.3):
     sge = CarlaSceneGraphSequenceGenerator(cache_fname=cache_path)
     if not sge.cache_exists():
         raise Exception("Cache file do not exist. Run 1_extract_scenegraphs.py to generate the cache file.")
     else:
         sge.load_from_cache()
-       
-    train, test = train_test_split(sge.scenegraphs_sequence, test_size=train_to_test_ratio, shuffle=True)
+    # import pdb; pdb.set_trace()
+
+    class_0 = []
+    class_1 = []
+
+    for g in sge.scenegraphs_sequence:
+        if g['label'] == 0:
+            class_0.append(g)
+        elif g['label'] == 1:
+            class_1.append(g)
+    y_0 = [0]*len(class_0)
+    y_1 = [1]*len(class_1)
+
+    min_number = min(len(class_0), len(class_1))
+    modified_class_0, modified_y_0 = resample(class_0, y_0, n_samples=min_number)
+
+    # train, test = train_test_split(sge.scenegraphs_sequence, test_size=train_to_test_ratio, shuffle=True, stratify=labels)
+    train, test, train_y, test_y = train_test_split(modified_class_0+class_1, modified_y_0+y_1, test_size=train_to_test_ratio, shuffle=True, stratify=modified_y_0+y_1)
     return train, test, sge.feature_list

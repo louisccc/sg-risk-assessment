@@ -224,6 +224,11 @@ class CarlaSceneGraphSequenceGenerator:
 
         for path in tqdm(all_video_clip_dirs):
             scenegraphs = {} 
+
+            # read all frame numbers from raw_images. and store image_frames (list).
+            raw_images = list(path.glob("raw_images/*.jpg")) 
+            image_frames = [img.stem for img in raw_images]
+            
             scenegraph_txts = sorted(list(glob("%s/**/*.json" % str(path/"scene_raw"), recursive=True)))
             for txt_path in scenegraph_txts:
                 # import pdb; pdb.set_trace()
@@ -231,8 +236,9 @@ class CarlaSceneGraphSequenceGenerator:
                     try:
                         framedict = json.loads(scene_dict_f.read())
                         for frame, frame_dict in framedict.items():
-                            scenegraph = SceneGraph(frame_dict, framenum=frame)
-                            scenegraphs[frame] = scenegraph
+                            if frame in image_frames:
+                                scenegraph = SceneGraph(frame_dict, framenum=frame)
+                                scenegraphs[frame] = scenegraph
                             # scenegraph.visualize(filename="./visualize/%s_%s"%(path.name, frame))
                             
                     except Exception as e:

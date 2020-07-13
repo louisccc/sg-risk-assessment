@@ -23,8 +23,10 @@ class Config:
 
 
 def show_video(canvas, clip_folder):
-	im = Image.open(str(clip_folder / "lane_change.gif"))
-	UI(canvas, im).grid(row=0)
+    im = []
+    for img in clip_folder.glob("raw_images/*.jpg"):
+        im.append(Image.open(str(img)))
+    UI(canvas, im).grid(row=0)
 
 def anotate_task(root_folder):
     foldernames = [f for f in root_folder.iterdir() if f.stem.isnumeric()]

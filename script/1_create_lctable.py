@@ -1,5 +1,6 @@
 import pandas as pd
 import csv
+import json
 from pathlib import Path
 import sys, os,glob
 from argparse import ArgumentParser
@@ -10,11 +11,10 @@ class Config:
 
     def __init__(self, args):
         self.parser = ArgumentParser(description='The parameters for writing to LCTable.')
-        self.parser.add_argument('--input_path', type=str, default="../input/synthesis_data", help="Path to input.")
+        self.parser.add_argument('--input_path', type=str, default="../input/synthesis_data/lane-change", help="Path to input.")
         self.parser.add_argument('--src_path', type=str, default="../input/synthesis_data", help="Path to source.")
         self.parser.add_argument('--dest_path', type=str, default="../input/synthesis_data", help="Path to destination.")
         self.parser.add_argument('--risk_label', type=lambda x: (str(x).lower() == 'true'), default=False, help='Write risk label as txt file')
-        self.parser.add_argument('--data_path', type=lambda x: (str(x).lower() == 'true'), default=False, help='Edit the path to gif and risk label')
         self.parser.add_argument('--csv', type=lambda x: (str(x).lower() == 'true'), default=False, help='Create LCtable.csv')
 
         self.parser.add_argument('--task', type=str, default='createLCtable', help='Task to perform')
@@ -28,21 +28,49 @@ class Config:
         self.src_base_dir = Path(self.src_path).resolve()
         self.dest_base_dir = Path(self.dest_path).resolve()
 
-def create_csv(file_path):
-	input_path = file_path / 'lane-change-100-balanced'
+def create_csv(input_path):
 	lctable = input_path / 'LCTable.csv'	
 
-	foldernames = [f for f in sorted(os.listdir(input_path)) if f.isnumeric()]
+	foldernames = [f for f in sorted(os.listdir(input_path)) if f.isnumeric() and not f.startswith('.')]
 	foldernames = sorted(foldernames,key=int)
 
-	csvfile = open(lctable, 'w', newline='')
-	filewriter = csv.writer(csvfile)
+	column_headers = ['folder_id', 'lc_dir', 'score', 'total_frames', 'img_path', 'json_path', 'gif_path']
+	df = pd.DataFrame(columns=column_headers)
 
-	for foldername in tqdm(foldernames):
-		video_path = input_path / foldername
-		gif_path = video_path / "lane_change.gif"
-		#import pdb;pdb.set_trace()
-		filewriter.writerow([foldername,'',str(video_path),str(gif_path)])
+	for index, foldername in enumerate(tqdm(foldernames)):
+		lc_path = input_path / foldername
+		gif_path = lc_path / "lane_change.gif"
+		label_path = lc_path / "label.txt"
+		json_path = list((lc_path / "scene_raw").glob("*.json"))[0] 
+		
+		json_data = parse_json(json_path)
+
+		if label_path.exists():
+			with open(str(label_path), 'r') as label_f:
+				risk_label = int(float(label_f.read().strip().split(",")[0]))
+		else:
+			raise FileNotFoundError("No label.txt in %s" % label_path) 
+
+		df.loc[index] = [foldername, json_data['lc_dir'], risk_label, json_data['total_frames'], lc_path, json_data, gif_path]
+		
+	df.to_csv(lctable, encoding='utf-8', index=False)
+
+def parse_json(json_path):
+	data_dict = {}
+	lane_change_direction = None
+	with open(str(json_path), 'r') as json_file:
+		framedict = json.loads(json_file.read())
+		frames = list(sorted(framedict.keys(), key=int))
+		data_dict['total_frames'] = len(frames)
+		starting_lane_idx = framedict[frames[-1]]['ego']['orig_lane_idx']
+		final_lane_idx = framedict[frames[-1]]['ego']['lane_idx']
+		if final_lane_idx < starting_lane_idx:
+			data_dict['lc_dir'] = 'left'
+		elif final_lane_idx > starting_lane_idx:
+			data_dict['lc_dir'] = 'right'
+		else:
+			data_dict['lc_dir'] = 'fail'
+	return data_dict
 
 def copy_csv(file_path):
 	# copy risk label from another csv
@@ -73,26 +101,6 @@ def renumber(file_path):
 		os.rename(str(input_path)+'/'+str(foldername), str(input_path)+'/'+str(index)) 
 
 	df.to_csv(lctable,header=None,index=None)	
-
-def write_data_path(file_path):
-	input_path = file_path / 'lane-change-100-balanced'
-	lctable = input_path / 'LCTable.csv'	
-
-	df = pd.read_csv(lctable, header=None, index_col=None)
-	
-	foldernames = [f for f in sorted(os.listdir(input_path)) if f.isnumeric()]
-	foldernames = sorted(foldernames,key=int)
-
-	for index,foldername in enumerate(tqdm(foldernames)):
-		video_path = input_path / foldername
-		gif_path = video_path / "lane_change.gif"
-		#df.iloc[int(foldername),0] = int(foldername)
-
-		#video path in column 2, gif path in column 3
-		df.iloc[index,2] = video_path
-		df.iloc[index,3] = gif_path
-		
-	df.to_csv(lctable,header=None,index=None)
 
 def write_risk_label(file_path):
 	input_path = file_path / 'lane-change-804'
@@ -145,10 +153,7 @@ if __name__ == '__main__':
 	if config.task=='createLCtable':
 		if config.csv == True:
 			create_csv(config.input_base_dir)
-		#write video and gif path to table
-		if config.data_path == True:
-			write_data_path(config.input_base_dir)	
-
+			
 		#write label.txt to video folder
 		if config.risk_label == True:
 			write_risk_label(config.input_base_dir)

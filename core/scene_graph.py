@@ -236,7 +236,7 @@ class CarlaSceneGraphSequenceGenerator:
                     try:
                         framedict = json.loads(scene_dict_f.read())
                         for frame, frame_dict in framedict.items():
-                            if frame in image_frames:
+                            if int(frame) in image_frames:
                                 scenegraph = SceneGraph(frame_dict, framenum=frame)
                                 scenegraphs[frame] = scenegraph
                             # scenegraph.visualize(filename="./visualize/%s_%s"%(path.name, frame))

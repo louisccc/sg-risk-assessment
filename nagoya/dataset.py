@@ -146,22 +146,15 @@ class DataSet:
     def convert_risk_to_one_hot(self, risk_threshold=0.5):
         # sorting risk thresholds from least risky to most risky
         indexes = [i[0] for i in sorted(enumerate(self.risk_scores), key=lambda x: x[1])]
-        top_risky_threshold = int(len(indexes) * risk_threshold)
         self.risk_one_hot = np.zeros([len(indexes), 2])
 
         # assigning one hot vector [0,1] for risky and [1,0] for not risky
         # if risk threshold is 0.5, 50% risky (upper half of indexes array) 50% not risky (lower half of indexes array)
         for counter, index in enumerate(indexes[::-1]):
-            #import pdb;pdb.set_trace()
             if self.risk_scores[index] > 0:
                 self.risk_one_hot[index, :] = [0, 1]
             else:
-
-            # if counter < top_risky_threshold:
-            #     self.risk_one_hot[index, :] = [0, 1]
-            # else:
                 self.risk_one_hot[index, :] = [1, 0]
-
 
     def decode_one_hot(self):
         self.risk_binary = np.zeros([self.risk_one_hot.shape[0], 1])

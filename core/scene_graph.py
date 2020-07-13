@@ -258,7 +258,7 @@ class CarlaSceneGraphSequenceGenerator:
 
                 # scenegraph_dict contains node embeddings edge indexes and edge attrs.
                 scenegraphs_dict = {}
-                subsampled_scenegraphs, frame_numbers = self.subsample(scenegraphs, 20)
+                subsampled_scenegraphs, frame_numbers = self.subsample(scenegraphs, 1000)
                 scenegraphs_dict['sequence'] = self.process_graph_sequences(subsampled_scenegraphs, frame_numbers, folder_name=path.name)
                 scenegraphs_dict['label'] = risk_label
                 scenegraphs_dict['folder_name'] = path.name
@@ -416,6 +416,7 @@ def build_scenegraph_dataset(cache_path, number_of_frames=20, train_to_test_rati
             class_0.append(g)
         elif g['label'] == 1:
             class_1.append(g)
+        print(g['label'], len(g['sequence']), g['folder_name'])
     y_0 = [0]*len(class_0)
     y_1 = [1]*len(class_1)
 

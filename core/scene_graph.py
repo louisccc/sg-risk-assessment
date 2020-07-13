@@ -226,7 +226,7 @@ class CarlaSceneGraphSequenceGenerator:
             scenegraphs = {} 
 
             # read all frame numbers from raw_images. and store image_frames (list).
-            raw_images = list(path.glob("raw_images/*.jpg")) 
+            raw_images = list(path.glob("raw_images/*.jpg")) + list(path.glob("raw_images/*.png")) 
             image_frames = [int(img.stem) for img in raw_images]
             
             scenegraph_txts = sorted(list(glob("%s/**/*.json" % str(path/"scene_raw"), recursive=True)))

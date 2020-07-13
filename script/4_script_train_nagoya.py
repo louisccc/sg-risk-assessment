@@ -64,7 +64,7 @@ def read_risk_data(masked_image_path: Path):
 		label_path = path / "label.txt"
 		if label_path.exists():
 			with open(str(path/"label.txt"), 'r') as label_f:
-				risk_label = int(label_f.read().strip().split(",")[0])
+				risk_label = int(float(label_f.read().strip().split(",")[0]))
 				risk_scores.append(risk_label)
 		else:
 			raise FileNotFoundError("No label.txt in %s" % path) 

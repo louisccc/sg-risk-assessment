@@ -37,7 +37,7 @@ class Config:
         self.parser.add_argument('--device', type=str, default="cpu", help='The device to run on models (cuda or cpu) cpu in default.')
         self.parser.add_argument('--test_step', type=int, default=10, help='Number of epochs before testing the model.')
         self.parser.add_argument('--model', type=str, default="mrgcn", help="Model to be used intrinsically.")
-        #self.parser.add_argument('--num_layers', type=int, default=5, help="Number of layers in the neural network.") #TODO: remove if unnecessary
+        self.parser.add_argument('--num_layers', type=int, default=3, help="Number of RGCN layers in the network.")
         self.parser.add_argument('--hidden_dim', type=int, default=32, help="Hidden dimension in GIN.")
         self.parser.add_argument('--pooling_type', type=str, default="sagpool", help="Graph pooling type.")
         self.parser.add_argument('--readout_type', type=str, default="mean", help="Readout type.")

@@ -313,57 +313,35 @@ class RelationExtractor:
             return False
     
     def create_proximity_relations(self, actor1, actor2):
-        if self.euclidean_distance(actor1, actor2) <= CAR_PROXIMITY_THRESH_SUPER_NEAR:
-            return [[actor1, Relations.super_near, actor2]]
-        elif self.euclidean_distance(actor1, actor2) <= CAR_PROXIMITY_THRESH_VERY_NEAR:
-            return [[actor1, Relations.very_near, actor2]]
-        elif self.euclidean_distance(actor1, actor2) <= CAR_PROXIMITY_THRESH_NEAR:
-            return [[actor1, Relations.near, actor2]]
-        elif self.euclidean_distance(actor1, actor2) <= CAR_PROXIMITY_THRESH_VISIBLE:
-            return [[actor1, Relations.visible, actor2]]
+        # if self.euclidean_distance(actor1, actor2) <= CAR_PROXIMITY_THRESH_SUPER_NEAR:
+        #     return [[actor1, Relations.super_near, actor2]]
+        # elif self.euclidean_distance(actor1, actor2) <= CAR_PROXIMITY_THRESH_VERY_NEAR:
+        #     return [[actor1, Relations.very_near, actor2]]
+        # elif self.euclidean_distance(actor1, actor2) <= CAR_PROXIMITY_THRESH_NEAR:
+        #     return [[actor1, Relations.near, actor2]]
+        # elif self.euclidean_distance(actor1, actor2) <= CAR_PROXIMITY_THRESH_VISIBLE:
+        #     return [[actor1, Relations.visible, actor2]]
         return []
 
     #gives directional relations between actors based on their 2D absolute positions.
     #TODO: fix these relations, since the locations are based on the world coordinate system and are not relative to ego.
     def extract_directional_relation(self, actor1, actor2):
         relation_list = []
-
-        # use yaw and location (x, y) of actor1 to get a actor1 vector
-        # then find another vector from actor1 to actor2
-        # take dot product between two vectors and check the sign (positive = front, negative = rear)
-        # actor1_vector = [math.cos(math.radians(actor1.attr['rotation'][0])), math.sin(math.radians(actor1.attr['rotation'][0]))]
-        # actor1_to_actor2_vector = [actor2.attr['location'][0] - actor1.attr['location'][0], actor2.attr['location'][1] - actor1.attr['location'][1]]
-        # dot_product = actor1_vector[0] * actor1_to_actor2_vector[0] + actor1_vector[1] * actor1_to_actor2_vector[1]
-        
+      
         x1, y1 = math.cos(math.radians(actor1.attr['rotation'][0])), math.sin(math.radians(actor1.attr['rotation'][0]))
         x2, y2 = actor2.attr['location'][0] - actor1.attr['location'][0], actor2.attr['location'][1] - actor1.attr['location'][1]
         inner_product = x1*x2 + y1*y2
         length_product = math.sqrt(x1**2+y1**2) + math.sqrt(x2**2+y2**2)
         degree = math.degrees(math.acos(inner_product / length_product))
 
-        if degree <= 60 or (degree >=300 and degree <= 360):
-        # # actor2 is in front of actor1
-        # if dot_product > 0:
-            # actor2 to the left of actor1 
-            if actor2.attr['lane_idx'] < actor1.attr['lane_idx']:
-                relation_list.append([actor1, Relations.frontLeft, actor2])
-            # actor2 to the right of actor1 
-            elif actor2.attr['lane_idx'] > actor1.attr['lane_idx']:
-                relation_list.append([actor1, Relations.frontRight, actor2])
-            # actor2 in the same lane 
-            else:
-                relation_list.append([actor1, Relations.front, actor2])
-        # actor2 is behind actor1
-        else:
-            # actor2 to the left of actor1 
-            if actor2.attr['lane_idx'] < actor1.attr['lane_idx']:
-                relation_list.append([actor1, Relations.rearLeft, actor2])
-            # actor2 to the right of actor1 
-            elif actor2.attr['lane_idx'] > actor1.attr['lane_idx']:
-                relation_list.append([actor1, Relations.rearRight, actor2])
-            # actor2 in the same lane 
-            else:
-                relation_list.append([actor1, Relations.rear, actor2])
+        if degree <= 75 or (degree >=285 and degree <= 360): # actor2 is in front of actor1
+            relation_list.append([actor1, Relations.front, actor2])
+        else: # actor2 is behind actor1
+            relation_list.append([actor1, Relations.rear, actor2])
 
-        ### disable rear relations help the inference. 
+        if actor2.attr['lane_idx'] < actor1.attr['lane_idx']: # actor2 to the left of actor1 
+            relation_list.append([actor1, Relations.leftOf, actor2])
+        elif actor2.attr['lane_idx'] > actor1.attr['lane_idx']: # actor2 to the right of actor1 
+            relation_list.append([actor1, Relations.rightOf, actor2])
+
         return relation_list

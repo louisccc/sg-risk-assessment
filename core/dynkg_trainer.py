@@ -5,7 +5,6 @@ import torch
 import torch.optim as optim
 from torch.utils.tensorboard import SummaryWriter
 import numpy as np
-import scipy.sparse as sp
 import pandas as pd
 import random
 from sklearn.metrics import accuracy_score, f1_score, confusion_matrix, precision_score, recall_score, roc_auc_score, roc_curve
@@ -138,6 +137,7 @@ class DynKGTrainer:
         labels = []
         outputs = []
         acc_loss_test = 0
+        folder_names = []
         for i in range(len(testing_data)): # iterate through scenegraphs
             data, label = testing_data[i]['sequence'], testing_labels[i]
             
@@ -154,21 +154,26 @@ class DynKGTrainer:
 
             outputs.append(output.detach().cpu().numpy().tolist())
             labels.append(label)
+            folder_names.append(testing_data[i]['folder_name'])
 
 
-        return outputs, labels, acc_loss_test
+        return outputs, labels, folder_names, acc_loss_test
     
     def evaluate(self):
         metrics = {}
 
-        outputs_train, labels_train, acc_loss_train = self.inference(self.training_data, self.training_labels)
+        outputs_train, labels_train, folder_names_train, acc_loss_train = self.inference(self.training_data, self.training_labels)
         metrics['train'] = get_metrics(outputs_train, labels_train)
         metrics['train']['loss'] = acc_loss_train
 
-        outputs_test, labels_test, acc_loss_test = self.inference(self.testing_data, self.testing_labels)
+        outputs_test, labels_test, folder_names_test, acc_loss_test = self.inference(self.testing_data, self.testing_labels)
         metrics['test'] = get_metrics(outputs_test, labels_test)
         metrics['test']['loss'] = acc_loss_test
         
+        # for output, label, folder_name in zip(outputs_train, labels_train, folder_names_train):
+        #     pred = 0 if output[0] > output[1] else 1
+        #     print(output, pred, label, folder_name)
+
         print("\ntrain stat:", metrics['train']['acc'], metrics['train']['confusion'], \
               "\ntest stat:",  metrics['test']['acc'],  metrics['test']['confusion'])
 

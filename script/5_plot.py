@@ -5,6 +5,7 @@ from pathlib import Path
 class GUI():
     def __init__(self, root_dir, graph_type="carla_visualize/*.png"):
         self.root_dir = Path(root_dir).resolve()
+        self.resize = (500, 375)
         self.folder_paths =  [f for f in self.root_dir.iterdir() if f.stem.isnumeric()]
         self.folder_paths = sorted(self.folder_paths, key=lambda x : int(x.stem))
 
@@ -40,10 +41,12 @@ class GUI():
         for idx, path in enumerate(tmp_paths):
             if int(path.stem) == int(self.graph_paths[idx].stem):
                 self.image_paths.append(path)
+            else:
+                self.image_paths.append(self.graph_paths[idx])
 
     def get_image(self, path):
         image = Image.open(path)
-        image = image.resize((400, 300), Image.ANTIALIAS)
+        image = image.resize(self.resize, Image.ANTIALIAS)
         return image
 
     def load_images(self):

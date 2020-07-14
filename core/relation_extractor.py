@@ -34,10 +34,10 @@ class Relations(Enum):
     very_near = 2
     near = 3
     visible = 4
-    front = 5
-    rear = 6
-    leftOf = 7
-    rightOf = 8
+    inFrontOf = 5
+    atRearOf = 6
+    toLeftOf = 7
+    toRightOf = 8
 
 RELATION_COLORS = ["black", "red", "orange", "yellow", "green", "purple", "blue", 
                 "sienna", "pink", "pink", "pink",  "turquoise", "turquoise", "turquoise", "violet", "violet"]
@@ -255,12 +255,12 @@ class RelationExtractor:
         relation_list = []
         # actor2 is right neighbor lane of actor1
         if actor1.attr['lane_idx'] - actor2.attr['lane_idx'] == -1:
-            relation_list.append([actor2, Relations.rightOf, actor1])
-            relation_list.append([actor1, Relations.leftOf, actor2])
+            relation_list.append([actor2, Relations.toRightOf, actor1])
+            relation_list.append([actor1, Relations.toLeftOf, actor2])
         # actor2 is left neighbor lane of actor1
         elif actor1.attr['lane_idx'] - actor2.attr['lane_idx'] == 1:
-            relation_list.append([actor2, Relations.leftOf, actor1])
-            relation_list.append([actor1, Relations.rightOf, actor2])
+            relation_list.append([actor2, Relations.toLeftOf, actor1])
+            relation_list.append([actor1, Relations.toRightOf, actor2])
         # import pdb; pdb.set_trace()
         return relation_list
         
@@ -331,13 +331,13 @@ class RelationExtractor:
         degree = math.degrees(math.acos(inner_product / length_product))
 
         if degree <= 75 or (degree >=285 and degree <= 360): # actor2 is in front of actor1
-            relation_list.append([actor1, Relations.front, actor2])
+            relation_list.append([actor1, Relations.atRearOf, actor2])
         else: # actor2 is behind actor1
-            relation_list.append([actor1, Relations.rear, actor2])
+            relation_list.append([actor1, Relations.inFrontOf, actor2])
 
         if actor2.attr['lane_idx'] < actor1.attr['lane_idx']: # actor2 to the left of actor1 
-            relation_list.append([actor1, Relations.leftOf, actor2])
+            relation_list.append([actor1, Relations.toRightOf, actor2])
         elif actor2.attr['lane_idx'] > actor1.attr['lane_idx']: # actor2 to the right of actor1 
-            relation_list.append([actor1, Relations.rightOf, actor2])
+            relation_list.append([actor1, Relations.toLeftOf, actor2])
 
         return relation_list

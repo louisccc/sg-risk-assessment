@@ -230,7 +230,8 @@ class UI(Label):
             if type(self.im) == type([]):
 
                 try:
-                    self.index += 1
+                    if self.index < len(self.image_path_list) - 1:
+                        self.index += 1
                     im = self.im[self.index]
                     self.image.paste(im)
                 except IndexError:

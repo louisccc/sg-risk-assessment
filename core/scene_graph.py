@@ -303,7 +303,7 @@ class CarlaSceneGraphSequenceGenerator:
 
         return sequence
 
-    def visualize_scenegraphs(self, vis_path):
+    def visualize_scenegraphs(self):
         self.visualize = True
 
     def subsample(self, scenegraphs, number_of_frames=20): 

@@ -206,10 +206,12 @@ class UI(Label):
         if self.paused:
             delete_path_list = self.image_path_list[:self.index]
 
+            for _ in range(self.index):
+                del self.im[0]
+
             for img_path in delete_path_list:
                 img_path.unlink()
             
-            self.im = self.im[self.index:]
             self.image_path_list = self.image_path_list[self.index:]
             self.index = 0
 
@@ -218,10 +220,12 @@ class UI(Label):
         if self.paused:
             delete_path_list = self.image_path_list[self.index + 1:]
 
+            for _ in range(len(self.image_path_list) - self.index - 1):
+                del self.im[-1]
+
             for img_path in delete_path_list:
                 img_path.unlink()
             
-            self.im = self.im[:self.index + 1]
             self.image_path_list = self.image_path_list[:self.index + 1]
             self.index = 0
 
@@ -236,6 +240,7 @@ class UI(Label):
                         self.image.paste(im)
                     else:
                         self.paused = True
+                        im = self.im[-1]
                 except IndexError:
                     return # end of list
 

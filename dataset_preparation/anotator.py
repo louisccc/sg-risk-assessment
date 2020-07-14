@@ -240,6 +240,7 @@ class UI(Label):
                         self.image.paste(im)
                     else:
                         self.paused = True
+                        im = self.im[-1]
                 except IndexError:
                     return # end of list
 

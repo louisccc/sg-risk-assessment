@@ -80,10 +80,12 @@ class SceneGraph:
             degree = math.degrees(math.acos(inner_product / length_product))
             
             if degree <= 75 or (degree >=285 and degree <= 360):
-                n = Node(actor_id, attr, None)   #using the actor key as the node name and the dict as its attributes.
-                n.name = self.relation_extractor.get_actor_type(n).name.lower() + ":" + actor_id
-                n.type = self.relation_extractor.get_actor_type(n).value
-                self.add_node(n)
+                if abs(self.egoNode.attr['lane_idx'] - attr['lane_idx']) <= 1 \
+                or ("invading_lane" in self.egoNode.attr and (abs((self.egoNode.attr['lane_idx'] + self.egoNode.attr['invading_lane'] - self.egoNode.attr['orig_lane_idx']) - attr['lane_idx']) <= 1)):
+                    n = Node(actor_id, attr, None)   #using the actor key as the node name and the dict as its attributes.
+                    n.name = self.relation_extractor.get_actor_type(n).name.lower() + ":" + actor_id
+                    n.type = self.relation_extractor.get_actor_type(n).value
+                    self.add_node(n)
             
     #adds lanes and their dicts. constructs relation between each lane and the root road node.
     def add_lane_dict(self, lanedict):
@@ -196,18 +198,19 @@ class CarlaSceneGraphSequenceGenerator:
         #                      "rel_location_z", #add 3 columns for relative vector values
         #                      "distance_abs", # adding absolute distance to ego
         #                     }
-        self.feature_list = {"rel_location_x", 
-                             "rel_location_y", 
-                             "rel_location_z", #add 3 columns for relative vector values
-                             "distance_abs", # adding absolute distance to ego
-                             "velocity_abs",
-                             "rel_velocity_x", 
-                             "rel_velocity_y", 
-                             "rel_velocity_z",
-                             "rel_yaw", 
-                             "rel_roll",
-                             "rel_pitch",
-                            }
+        # self.feature_list = {"rel_location_x", 
+        #                      "rel_location_y", 
+        #                      "rel_location_z", #add 3 columns for relative vector values
+        #                      "distance_abs", # adding absolute distance to ego
+        #                      "velocity_abs",
+        #                      "rel_velocity_x", 
+        #                      "rel_velocity_y", 
+        #                      "rel_velocity_z",
+        #                      "rel_yaw", 
+        #                      "rel_roll",
+        #                      "rel_pitch",
+        #                     }
+        self.feature_list = set()
         # create 1hot class labels columns.
         for i in range(self.num_classes):
             self.feature_list.add("type_"+str(i))
@@ -242,8 +245,10 @@ class CarlaSceneGraphSequenceGenerator:
                             # scenegraph.visualize(filename="./visualize/%s_%s"%(path.name, frame))
                             
                     except Exception as e:
+                        import traceback
                         print("We have problem parsing the dict.json in %s"%txt_path)
                         print(e)
+                        traceback.print_exc()
                 
             label_path = (path/"label.txt").resolve()
 
@@ -353,24 +358,24 @@ class CarlaSceneGraphSequenceGenerator:
         def get_embedding(node, row):
             #subtract each vector from corresponding vector of ego to find delta
             
-            if "location" in node.attr:
-                ego_x, ego_y = rotate_coords(ego_attrs["location"][0], ego_attrs["location"][1])
-                node_x, node_y = rotate_coords(node.attr["location"][0], node.attr["location"][1])
-                row["rel_location_x"] = node_x - ego_x
-                row["rel_location_y"] = node_y - ego_y
-                row["rel_location_z"] = node.attr["location"][2] - ego_attrs["location"][2] #no axis rotation needed for Z
-                row["distance_abs"] = math.sqrt(row["rel_location_x"]**2 + row["rel_location_y"]**2 + row["rel_location_z"]**2)
-            if "velocity" in node.attr:
-                egov_x, egov_y = rotate_coords(ego_attrs['velocity'][0], ego_attrs['velocity'][1])
-                nodev_x, nodev_y = rotate_coords(node.attr['velocity'][0], node.attr['velocity'][1])
-                row['rel_velocity_x'] = nodev_x - egov_x
-                row['rel_velocity_y'] = nodev_y - egov_y
-                row["rel_velocity_z"] = node.attr["velocity"][2] - ego_attrs["velocity"][2] #no axis rotation needed for Z
-                row["velocity_abs"] = node.attr['velocity_abs']
-            if "rotation" in node.attr:
-                row['rel_yaw'] = math.radians(node.attr['rotation'][0]) - ego_yaw #store rotation in radians
-                row["rel_roll"] =  math.radians(node.attr["rotation"][1] - ego_attrs["rotation"][1])
-                row["rel_pitch"] =  math.radians(node.attr["rotation"][2] - ego_attrs["rotation"][2])
+            # if "location" in node.attr:
+            #     ego_x, ego_y = rotate_coords(ego_attrs["location"][0], ego_attrs["location"][1])
+            #     node_x, node_y = rotate_coords(node.attr["location"][0], node.attr["location"][1])
+            #     row["rel_location_x"] = node_x - ego_x
+            #     row["rel_location_y"] = node_y - ego_y
+            #     row["rel_location_z"] = node.attr["location"][2] - ego_attrs["location"][2] #no axis rotation needed for Z
+            #     row["distance_abs"] = math.sqrt(row["rel_location_x"]**2 + row["rel_location_y"]**2 + row["rel_location_z"]**2)
+            # if "velocity" in node.attr:
+            #     egov_x, egov_y = rotate_coords(ego_attrs['velocity'][0], ego_attrs['velocity'][1])
+            #     nodev_x, nodev_y = rotate_coords(node.attr['velocity'][0], node.attr['velocity'][1])
+            #     row['rel_velocity_x'] = nodev_x - egov_x
+            #     row['rel_velocity_y'] = nodev_y - egov_y
+            #     row["rel_velocity_z"] = node.attr["velocity"][2] - ego_attrs["velocity"][2] #no axis rotation needed for Z
+            #     row["velocity_abs"] = node.attr['velocity_abs']
+            # if "rotation" in node.attr:
+            #     row['rel_yaw'] = math.radians(node.attr['rotation'][0]) - ego_yaw #store rotation in radians
+            #     row["rel_roll"] =  math.radians(node.attr["rotation"][1] - ego_attrs["rotation"][1])
+            #     row["rel_pitch"] =  math.radians(node.attr["rotation"][2] - ego_attrs["rotation"][2])
             row['type_'+str(node.type)] = 1 #assign 1hot class label
             return row
         

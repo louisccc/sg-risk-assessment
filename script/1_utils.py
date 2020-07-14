@@ -50,18 +50,18 @@ def create_csv(input_path):
 				risk_label = int(float(label_f.read().strip().split(",")[0]))
 		else:
 			raise FileNotFoundError("No label.txt in %s" % label_path) 
-
-		df.loc[index] = [foldername, json_data['lc_dir'], risk_label, json_data['total_frames'], lc_path, json_path, gif_path]
+		
+		images =  list(lc_path.glob("raw_images/*.jpg")) + list(lc_path.glob("raw_images/*.png")) 
+		total_frames = len(images)
+		df.loc[index] = [foldername, json_data['lc_dir'], risk_label, total_frames, lc_path, json_path, gif_path]
 		
 	df.to_csv(lctable, encoding='utf-8', index=False)
 
 def parse_json(json_path):
 	data_dict = {}
-	lane_change_direction = None
 	with open(str(json_path), 'r') as json_file:
 		framedict = json.loads(json_file.read())
 		frames = list(sorted(framedict.keys(), key=int))
-		data_dict['total_frames'] = len(frames)
 		starting_lane_idx = framedict[frames[-1]]['ego']['orig_lane_idx']
 		final_lane_idx = framedict[frames[-1]]['ego']['lane_idx']
 		if final_lane_idx < starting_lane_idx:

@@ -146,6 +146,16 @@ def merge_dataset(src_path, dest_path):
 		        shutil.copy2(src, dst)
 
 	
+def clean(input_path):
+	foldernames = [f for f in os.listdir(input_path) if f.isnumeric()]
+	foldernames = sorted(foldernames,key=int)
+
+	for index, foldername in enumerate(tqdm(foldernames)):
+		carla_visualization = input_path / foldername / "carla_visualize"
+		obj_detection_result = input_path / foldername / "obj_det_results"
+
+		shutil.rmtree(carla_visualization)
+		shutil.rmtree(obj_detection_result)
 
 if __name__ == '__main__':
 	config = Config(sys.argv[1:])
@@ -167,3 +177,6 @@ if __name__ == '__main__':
 
 	elif config.task=='renumber':
 		renumber(config.input_base_dir)
+
+	elif config.task=='clean':
+		clean(config.input_base_dir)

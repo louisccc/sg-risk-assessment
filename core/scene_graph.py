@@ -326,7 +326,6 @@ class CarlaSceneGraphSequenceGenerator:
                 sequence.append(scenegraph)
                 frame_numbers.append(timeframe)
                 acc_number+=1
-    
         return sequence, frame_numbers
         
     def get_node_embeddings(self, scenegraph):
@@ -416,7 +415,7 @@ def build_scenegraph_dataset(cache_path, number_of_frames=20, train_to_test_rati
             class_0.append(g)
         elif g['label'] == 1:
             class_1.append(g)
-        print(g['label'], len(g['sequence']), g['folder_name'])
+        
     y_0 = [0]*len(class_0)
     y_1 = [1]*len(class_1)
 
@@ -425,4 +424,6 @@ def build_scenegraph_dataset(cache_path, number_of_frames=20, train_to_test_rati
 
     # train, test = train_test_split(sge.scenegraphs_sequence, test_size=train_to_test_ratio, shuffle=True, stratify=labels)
     train, test, train_y, test_y = train_test_split(modified_class_0+class_1, modified_y_0+y_1, test_size=train_to_test_ratio, shuffle=True, stratify=modified_y_0+y_1)
+    for train_item in train: 
+        print(train_item['label'], len(train_item['sequence']), train_item['folder_name'])
     return train, test, sge.feature_list

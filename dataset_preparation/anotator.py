@@ -232,8 +232,10 @@ class UI(Label):
                 try:
                     if self.index < len(self.image_path_list) - 1:
                         self.index += 1
-                    im = self.im[self.index]
-                    self.image.paste(im)
+                        im = self.im[self.index]
+                        self.image.paste(im)
+                    else:
+                        self.paused = True
                 except IndexError:
                     return # end of list
 

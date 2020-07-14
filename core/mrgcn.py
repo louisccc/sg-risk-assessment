@@ -24,9 +24,9 @@ class MRGCN(nn.Module):
 
         self.dropout = config.dropout
         self.conv = []
-        self.conv[0] = RGCNConv(self.num_features, self.hidden_dim, self.num_relations, num_bases=30)
+        self.conv.append(RGCNConv(self.num_features, self.hidden_dim, self.num_relations, num_bases=30).to(config.device))
         for i in range(1, self.num_layers):
-            self.conv[i] = RGCNConv(self.hidden_dim,   self.hidden_dim, self.num_relations, num_bases=30)
+            self.conv.append(RGCNConv(self.hidden_dim, self.hidden_dim, self.num_relations, num_bases=30).to(config.device))
 
         if self.pooling_type == "sagpool":
             self.pool1 = SAGPooling(self.hidden_dim, ratio=0.5)

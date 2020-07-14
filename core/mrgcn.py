@@ -15,7 +15,7 @@ class MRGCN(nn.Module):
         self.num_features = config.num_features
         self.num_relations = config.num_relations
         self.num_classes  = config.nclass
-        #self.num_layers = config.num_layers #TODO: remove if unnecessary
+        self.num_layers = config.num_layers #defines number of RGCN conv layers.
         self.hidden_dim = config.hidden_dim
 
         self.pooling_type = config.pooling_type
@@ -23,12 +23,10 @@ class MRGCN(nn.Module):
         self.temporal_type = config.temporal_type
 
         self.dropout = config.dropout
-
-        self.conv1 = RGCNConv(self.num_features, self.hidden_dim, self.num_relations, num_bases=30)
-        self.conv2 = RGCNConv(self.hidden_dim,   self.hidden_dim, self.num_relations, num_bases=30)
-        self.conv3 = RGCNConv(self.hidden_dim,   self.hidden_dim, self.num_relations, num_bases=30)
-        self.conv4 = RGCNConv(self.hidden_dim,   self.hidden_dim, self.num_relations, num_bases=30)
-        self.conv5 = RGCNConv(self.hidden_dim,   self.hidden_dim, self.num_relations, num_bases=30)
+        self.conv = []
+        self.conv[0] = RGCNConv(self.num_features, self.hidden_dim, self.num_relations, num_bases=30)
+        for i in range(1, self.num_layers):
+            self.conv[i] = RGCNConv(self.hidden_dim,   self.hidden_dim, self.num_relations, num_bases=30)
 
         if self.pooling_type == "sagpool":
             self.pool1 = SAGPooling(self.hidden_dim, ratio=0.5)
@@ -51,17 +49,9 @@ class MRGCN(nn.Module):
         attn_weights = dict()
         
         x = self.bn1(x)
-        x = F.relu(self.conv1(x, edge_index, edge_attr))
-        x = F.dropout(x, self.dropout, training=self.training)
-        x = F.relu(self.conv2(x, edge_index, edge_attr))
-        x = F.dropout(x, self.dropout, training=self.training)
-        x = F.relu(self.conv3(x, edge_index, edge_attr))
-        x = F.dropout(x, self.dropout, training=self.training)
-        x = F.relu(self.conv4(x, edge_index, edge_attr))
-        x = F.dropout(x, self.dropout, training=self.training)
-        x = F.relu(self.conv5(x, edge_index, edge_attr))
-        x = F.dropout(x, self.dropout, training=self.training)
-
+        for i in range(self.num_layers):
+            x = F.relu(self.conv[i](x, edge_index, edge_attr))
+            x = F.dropout(x, self.dropout, training=self.training)
 
         if self.pooling_type == "sagpool":
             x, edge_index, _, batch, attn_weights['pool_perm'], attn_weights['pool_score'] = self.pool1(x, edge_index, edge_attr=edge_attr, batch=batch)

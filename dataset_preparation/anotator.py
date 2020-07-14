@@ -24,9 +24,10 @@ class Config:
 
 def show_video(canvas, clip_folder):
     im = []
-    for img in clip_folder.glob("raw_images/*.jpg"):
+    image_list = list(clip_folder.glob("raw_images/*.jpg"))
+    for img in image_list:
         im.append(Image.open(str(img)))
-    UI(canvas, im).grid(row=0)
+    UI(canvas, im, image_list).grid(row=0)
 
 def anotate_task(root_folder):
     foldernames = [f for f in root_folder.iterdir() if f.stem.isnumeric()]
@@ -138,25 +139,34 @@ class AppletDisplay:
 
 class UI(Label):
 
-    def __init__(self, master, im):
+    def __init__(self, master, im, image_path_list):
         if type(im) == type([]):
             # list of images
-            self.im = im[1:]
+            self.im = im
             im = self.im[0]
+            self.image_path_list = image_path_list
+            self.index = 0
         else:
             # sequence
             self.im = im
 
         if im.mode == "1":
-            self.image = ImageTk.BitmapImage(im, foreground="white")
+            self.image = ImageTk.BitmapImage(self.im[0], foreground="white")
         else:
-            self.image = ImageTk.PhotoImage(im)
+            self.image = ImageTk.PhotoImage(self.im[0])
 
         # APPLET SUPPORT (very crude, and not 100% safe)
         global animation_display
         animation_display = AppletDisplay(self)
 
         Label.__init__(self, master, image=self.image, bg="black", bd=0)
+        self.grid(row=0, columnspan=4)
+        Button(master, text='Prev Frame', command=self.previousFrame).grid(row=1, column=0)
+        Button(master, text='Pause', command=self.pause).grid(row=1, column=1)
+        Button(master, text='Resume', command=self.resume).grid(row=1, column=2)
+        Button(master, text='Next Frame', command=self.nextFrame).grid(row=1, column=3)
+        Button(master, text="Del Before", command=self.deleteBefore).grid(row=2, column=1)
+        Button(master, text="Del After", command=self.deleteAfter).grid(row=2, column=2)
 
         self.update()
 
@@ -164,33 +174,82 @@ class UI(Label):
             duration = im.info["duration"]
         except KeyError:
             duration = 100
+        self.paused = False
         self.after(duration, self.next)
+    
+    def pause(self):
+        self.paused = True
 
-    def next(self):
-
-        if type(self.im) == type([]):
-
-            try:
-                im = self.im[0]
-                del self.im[0]
-                self.image.paste(im)
-            except IndexError:
-                return # end of list
-
-        else:
-
-            try:
-                im = self.im
-                im.seek(im.tell() + 1)
-                self.image.paste(im)
-            except EOFError:
-                return # end of file
-
+    def resume(self):
+        self.paused = False
         try:
+            im = self.im[self.index]
             duration = im.info["duration"]
         except KeyError:
             duration = 100
         self.after(duration, self.next)
+
+    def previousFrame(self):
+        if self.paused and self.index > 0:
+            self.index -= 1
+            im = self.im[self.index]
+            self.image.paste(im)
+    
+    def nextFrame(self):
+        if self.paused and (self.index < len(self.image_path_list) - 1):
+            self.index += 1
+            im = self.im[self.index]
+            self.image.paste(im)
+    
+    def deleteBefore(self):
+        # delete every images before current index
+        if self.paused:
+            delete_path_list = self.image_path_list[:self.index]
+
+            for img_path in delete_path_list:
+                img_path.unlink()
+            
+            self.im = self.im[self.index:]
+            self.image_path_list = self.image_path_list[self.index:]
+            self.index = 0
+
+    def deleteAfter(self):
+        # delete every images after current index
+        if self.paused:
+            delete_path_list = self.image_path_list[self.index + 1:]
+
+            for img_path in delete_path_list:
+                img_path.unlink()
+            
+            self.im = self.im[:self.index + 1]
+            self.image_path_list = self.image_path_list[:self.index + 1]
+            self.index = 0
+
+    def next(self):
+        if not self.paused:
+            if type(self.im) == type([]):
+
+                try:
+                    self.index += 1
+                    im = self.im[self.index]
+                    self.image.paste(im)
+                except IndexError:
+                    return # end of list
+
+            else:
+
+                try:
+                    im = self.im
+                    im.seek(im.tell() + 1)
+                    self.image.paste(im)
+                except EOFError:
+                    return # end of file
+
+            try:
+                duration = im.info["duration"]
+            except KeyError:
+                duration = 100
+            self.after(duration, self.next)
 
         self.update_idletasks()
 

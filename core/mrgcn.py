@@ -42,7 +42,6 @@ class MRGCN(nn.Module):
         self.fc2 = Linear(self.hidden_dim, self.num_classes)
         self.bn1 = torch.nn.BatchNorm1d(self.num_features)
         self.bn2 = torch.nn.BatchNorm1d(self.hidden_dim)
-        self.bn3 = torch.nn.BatchNorm1d(self.hidden_dim)
 
 
     def forward(self, x, edge_index, edge_attr, batch=None):
@@ -50,7 +49,7 @@ class MRGCN(nn.Module):
         
         x = self.bn1(x)
         for i in range(self.num_layers):
-            x = F.relu(self.conv[i](x, edge_index, edge_attr))
+            x = F.leaky_relu(self.conv[i](x, edge_index, edge_attr))
             x = F.dropout(x, self.dropout, training=self.training)
 
         if self.pooling_type == "sagpool":
@@ -74,21 +73,21 @@ class MRGCN(nn.Module):
         # x = F.normalize(x, dim=-1, p=1)
         x = self.bn2(x)
         if self.temporal_type == "mean":
-            x = F.relu(x.mean(axis=0))
+            x = F.leaky_relu(x.mean(axis=0))
         elif self.temporal_type == "lstm_last":
             x_predicted, (h, c) = self.lstm(x.unsqueeze(0))
-            x = F.relu(self.fc3(h.flatten()))
+            x = F.leaky_relu(self.fc3(h.flatten()))
         elif self.temporal_type == "lstm_sum":
             x_predicted, (h, c) = self.lstm(x.unsqueeze(0))
-            x = F.relu(self.fc3(x_predicted.sum(dim=1).flatten()))
+            x = F.leaky_relu(self.fc3(x_predicted.sum(dim=1).flatten()))
         elif self.temporal_type == "lstm_attn":
             x_predicted, (h, c) = self.lstm(x.unsqueeze(0))
             x, attn_weights['lstm_attn_weights'] = self.attn(h.view(1,1,-1), x_predicted)
-            x = F.relu(self.fc3(x.flatten()))
+            x = F.leaky_relu(self.fc3(x.flatten()))
         else:
             pass
         
-        x = F.relu(self.fc1(x))
+        x = F.leaky_relu(self.fc1(x))
         x = F.dropout(x, p=self.dropout, training=self.training)
         x = self.fc2(x)
         

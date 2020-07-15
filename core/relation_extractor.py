@@ -38,7 +38,6 @@ class Relations(Enum):
     atRearOf = 6
     toLeftOf = 7
     toRightOf = 8
-    negotiate = 9
 
 RELATION_COLORS = ["black", "red", "orange", "yellow", "green", "purple", "blue", 
                 "sienna", "pink", "pink", "pink",  "turquoise", "turquoise", "turquoise", "violet", "violet"]
@@ -86,27 +85,18 @@ class RelationExtractor:
 
     def extract_relations_car_car(self, actor1, actor2):
         relation_list = []
-
-        # consider the proximity relations with neighboring lanes.
-        if self.euclidean_distance(actor1, actor2) <= CAR_PROXIMITY_THRESH_VERY_NEAR:
+        if actor1.name.startswith("ego:") or actor2.name.startswith("ego:"):
             relation_list += self.create_proximity_relations(actor1, actor2)
             relation_list += self.create_proximity_relations(actor2, actor1)
             relation_list += self.extract_directional_relation(actor1, actor2)
             relation_list += self.extract_directional_relation(actor2, actor1)
-
-        if actor1.name.startswith("ego:"):
-            if "invading_lane" in actor1.attr and (abs((actor1.attr['lane_idx'] + actor1.attr['invading_lane'] - actor1.attr['orig_lane_idx']) - actor2.attr['lane_idx']) <= 1):
-                if abs((actor1.attr['lane_idx'] + actor1.attr['invading_lane'] - actor1.attr['orig_lane_idx'])- actor2.attr['lane_idx']) == 0:
-                    if(self.euclidean_distance(actor1, actor2) <= CAR_PROXIMITY_THRESH_VERY_NEAR):
-                        relation_list += [[actor1, Relations.negotiate, actor2]]
-                        relation_list += [[actor2, Relations.negotiate, actor1]]
-
-        if actor2.name.startswith("ego:"):
-            if "invading_lane" in actor2.attr and (abs((actor2.attr['lane_idx'] + actor2.attr['invading_lane'] - actor2.attr['orig_lane_idx']) - actor1.attr['lane_idx']) <= 1):
-                if abs((actor2.attr['lane_idx'] + actor2.attr['invading_lane'] - actor2.attr['orig_lane_idx'])- actor1.attr['lane_idx']) == 0:
-                    if(self.euclidean_distance(actor1, actor2) <= CAR_PROXIMITY_THRESH_VERY_NEAR):
-                        relation_list += [[actor1, Relations.negotiate, actor2]]
-                        relation_list += [[actor2, Relations.negotiate, actor1]]
+        else:
+            # consider the proximity relations with neighboring lanes.
+            if self.euclidean_distance(actor1, actor2) <= CAR_PROXIMITY_THRESH_VERY_NEAR:
+                relation_list += self.create_proximity_relations(actor1, actor2)
+                relation_list += self.create_proximity_relations(actor2, actor1)
+                relation_list += self.extract_directional_relation(actor1, actor2)
+                relation_list += self.extract_directional_relation(actor2, actor1)
 
         return relation_list
             
@@ -340,11 +330,10 @@ class RelationExtractor:
             return [[actor1, Relations.visible, actor2]]
         return []
 
-    #gives directional relations between actors based on their 2D absolute positions.
-    #TODO: fix these relations, since the locations are based on the world coordinate system and are not relative to ego.
+
     def extract_directional_relation(self, actor1, actor2):
         relation_list = []
-      
+        # gives directional relations between actors based on their 2D absolute positions.      
         x1, y1 = math.cos(math.radians(actor1.attr['rotation'][0])), math.sin(math.radians(actor1.attr['rotation'][0]))
         x2, y2 = actor2.attr['location'][0] - actor1.attr['location'][0], actor2.attr['location'][1] - actor1.attr['location'][1]
         inner_product = x1*x2 + y1*y2

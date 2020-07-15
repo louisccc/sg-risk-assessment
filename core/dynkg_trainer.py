@@ -77,7 +77,8 @@ class DynKGTrainer:
         self.config.num_relations = max([r.value for r in Relations])+1
         self.model = MRGCN(self.config).to(self.config.device)
 
-        self.optimizer = optim.Adam(self.model.parameters(), lr=self.config.learning_rate, weight_decay=self.config.weight_decay)
+        self.optimizer = optim.Adam(self.model.parameters(), lr=self.config.learning_rate)
+        #, weight_decay=self.config.weight_decay)
         if self.class_weights.shape[0] < 2:
             self.loss_func = nn.CrossEntropyLoss()
         else:    
@@ -111,6 +112,7 @@ class DynKGTrainer:
                     outputs = torch.cat([outputs, output.view(-1, 2)], dim=0)
                     labels  = torch.cat([labels, torch.LongTensor([label]).to(self.config.device)], dim=0)
                 
+
                 loss_train = self.loss_func(outputs, labels)
                 loss_train.backward()
                 acc_loss_train += loss_train.detach().cpu().item() * len(data_list)
@@ -141,24 +143,25 @@ class DynKGTrainer:
         outputs = []
         acc_loss_test = 0
         folder_names = []
-        for i in range(len(testing_data)): # iterate through scenegraphs
-            data, label = testing_data[i]['sequence'], testing_labels[i]
-            
-            data_list = [Data(x=g['node_features'], edge_index=g['edge_index'], edge_attr=g['edge_attr']) for g in data]
+        with torch.no_grad():
+            for i in range(len(testing_data)): # iterate through scenegraphs
+                data, label = testing_data[i]['sequence'], testing_labels[i]
+                
+                data_list = [Data(x=g['node_features'], edge_index=g['edge_index'], edge_attr=g['edge_attr']) for g in data]
 
-            self.test_loader = DataLoader(data_list, batch_size=len(data_list))
-            sequence = next(iter(self.test_loader)).to(self.config.device)
+                self.test_loader = DataLoader(data_list, batch_size=len(data_list))
+                sequence = next(iter(self.test_loader)).to(self.config.device)
 
-            self.model.eval()
-            output = self.model.forward(sequence.x, sequence.edge_index, sequence.edge_attr, sequence.batch)
-            
-            loss_test = self.loss_func(output.view(-1, 2), torch.LongTensor([label]).to(self.config.device))
-            acc_loss_test += loss_test.detach().cpu().item()
+                # self.model.eval()
+                output = self.model.forward(sequence.x, sequence.edge_index, sequence.edge_attr, sequence.batch)
+                
+                loss_test = self.loss_func(output.view(-1, 2), torch.LongTensor([label]).to(self.config.device))
+                
+                acc_loss_test += loss_test.detach().cpu().item()
 
-            outputs.append(output.detach().cpu().numpy().tolist())
-            labels.append(label)
-            folder_names.append(testing_data[i]['folder_name'])
-
+                outputs.append(output.detach().cpu().numpy().tolist())
+                labels.append(label)
+                folder_names.append(testing_data[i]['folder_name'])
 
         return outputs, labels, folder_names, acc_loss_test
     

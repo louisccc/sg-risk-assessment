@@ -33,7 +33,11 @@ class GUI():
         Button(self.canvas, text='Prev Frame', command=self.prevFrame).grid(row=1, column=1)
         Button(self.canvas, text='Next Frame', command=self.nextFrame).grid(row=1, column=2)
         Button(self.canvas, text='Next Clip', command=self.nextClip).grid(row=1, column=3)
-    
+        
+        self.entry = Entry(self.canvas)
+        self.entry.grid(row=2, column=1)
+        Button(self.canvas, text='Jump', command=self.jump2Idx).grid(row=2, column=2)
+
     def load_paths(self):
         self.graph_paths = list(self.folder_paths[self.lane_change_index].glob(self.graph_type))
         tmp_paths = list(self.folder_paths[self.lane_change_index].glob("raw_images/*.jpg")) + list(self.folder_paths[0].glob("raw_images/*.png")) 
@@ -73,6 +77,15 @@ class GUI():
         if self.lane_change_index < len(self.folder_paths) - 1:
             self.lane_change_index += 1
             self.update_clip()
+
+    def jump2Idx(self):
+        jmp_idx = int(eval(self.entry.get()))
+        if (0 <= jmp_idx < len(self.folder_paths)):
+            self.lane_change_index = jmp_idx
+            self.update_clip()
+        else:
+            print("Error: Invalid index!")
+        self.entry.delete(0, END)
 
     def prevFrame(self):
         if self.frame_index > 0:

@@ -163,7 +163,7 @@ class LaneChangeRecorder:
                     
                     metadata_dict={"wetness":weather.wetness,"wind_intensity":weather.wind_intensity,"precipitation_deposits":weather.precipitation_deposits,
                     "precipitation": weather.precipitation,"cloudiness": weather.cloudiness,"fog_density": weather.fog_density,"fog_distance": weather.fog_distance,
-                    "sun_altitude_angle": weather.sun_altitude_angle,"sun_azimuth_angle": weather.sun_azimuth_angle}
+                    "sun_altitude_angle": weather.sun_altitude_angle,"sun_azimuth_angle": weather.sun_azimuth_angle, "lane_change_direction": self.lane_change_direction}
                     
                     file.write(json.dumps(metadata_dict))
 

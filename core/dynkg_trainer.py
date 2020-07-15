@@ -165,7 +165,7 @@ class DynKGTrainer:
 
         return outputs, labels, folder_names, acc_loss_test
     
-    def evaluate(self, current_epoch):
+    def evaluate(self, current_epoch=None):
         metrics = {}
 
         outputs_train, labels_train, folder_names_train, acc_loss_train = self.inference(self.training_data, self.training_labels)
@@ -186,7 +186,9 @@ class DynKGTrainer:
         #automatically save the model with the lowest validation loss
         if acc_loss_test < self.best_val_loss:
             self.best_val_loss = acc_loss_test
-            self.best_epoch = current_epoch
+            self.best_epoch = current_epoch if current_epoch != None else self.config.epochs
+            with open("best_stats.txt",'w+') as f:
+                f.write("best val loss: " + str(self.best_val_loss) + " in epoch: " + str(self.best_epoch))
             self.save_model()
 
         return outputs_test, labels_test, metrics

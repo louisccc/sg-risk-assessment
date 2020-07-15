@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torchnlp.nn import Attention
 from torch.nn import Linear, LSTM
-from torch_geometric.nn import RGCNConv, SAGPooling, TopKPooling
+from torch_geometric.nn import RGCNConv, SAGPooling, TopKPooling, FastRGCNConv
 from torch_geometric.nn import global_add_pool, global_mean_pool, global_max_pool, global_sort_pool
 
 
@@ -24,9 +24,9 @@ class MRGCN(nn.Module):
 
         self.dropout = config.dropout
         self.conv = []
-        self.conv.append(RGCNConv(self.num_features, self.hidden_dim, self.num_relations, num_bases=30).to(config.device))
+        self.conv.append(FastRGCNConv(self.num_features, self.hidden_dim, self.num_relations).to(config.device))
         for i in range(1, self.num_layers):
-            self.conv.append(RGCNConv(self.hidden_dim, self.hidden_dim, self.num_relations, num_bases=30).to(config.device))
+            self.conv.append(FastRGCNConv(self.hidden_dim, self.hidden_dim, self.num_relations).to(config.device))
 
         if self.pooling_type == "sagpool":
             self.pool1 = SAGPooling(self.hidden_dim, ratio=0.5)

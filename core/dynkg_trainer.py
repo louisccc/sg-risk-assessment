@@ -152,7 +152,7 @@ class DynKGTrainer:
                 self.test_loader = DataLoader(data_list, batch_size=len(data_list))
                 sequence = next(iter(self.test_loader)).to(self.config.device)
 
-                # self.model.eval()
+                self.model.eval()
                 output = self.model.forward(sequence.x, sequence.edge_index, sequence.edge_attr, sequence.batch)
                 
                 loss_test = self.loss_func(output.view(-1, 2), torch.LongTensor([label]).to(self.config.device))

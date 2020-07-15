@@ -6,9 +6,9 @@ MOTO_NAMES = ["Harley-Davidson", "Kawasaki", "Yamaha"]
 BICYCLE_NAMES = ["Gazelle", "Diamondback", "Bh"]
 CAR_NAMES = ["Ford", "Bmw", "Toyota", "Nissan", "Mini", "Tesla", "Seat", "Lincoln", "Audi", "Carlamotors", "Citroen", "Mercedes-Benz", "Chevrolet", "Volkswagen", "Jeep", "Nissan", "Dodge", "Mustang"]
 
-CAR_PROXIMITY_THRESH_SUPER_NEAR = 12 # max number of feet between a car and another entity to build proximity relation
-CAR_PROXIMITY_THRESH_VERY_NEAR = 20
-CAR_PROXIMITY_THRESH_NEAR = 30
+CAR_PROXIMITY_THRESH_SUPER_NEAR = 8 # max number of feet between a car and another entity to build proximity relation
+CAR_PROXIMITY_THRESH_VERY_NEAR = 15
+CAR_PROXIMITY_THRESH_NEAR = 25
 CAR_PROXIMITY_THRESH_VISIBLE = 40
 MOTO_PROXIMITY_THRESH = 50
 BICYCLE_PROXIMITY_THRESH = 50
@@ -87,33 +87,19 @@ class RelationExtractor:
     def extract_relations_car_car(self, actor1, actor2):
         relation_list = []
 
-        if abs(actor1.attr['lane_idx'] - actor2.attr['lane_idx']) <= 1:
-            # consider the proximity relations with neighboring lanes.
-            if(self.euclidean_distance(actor1, actor2) <= CAR_PROXIMITY_THRESH_VERY_NEAR):
-                relation_list += self.create_proximity_relations(actor1, actor2)
-                relation_list += self.create_proximity_relations(actor2, actor1)
-                relation_list += self.extract_directional_relation(actor1, actor2)
-                relation_list += self.extract_directional_relation(actor2, actor1)
+        # consider the proximity relations with neighboring lanes.
+        if self.euclidean_distance(actor1, actor2) <= CAR_PROXIMITY_THRESH_VERY_NEAR:
+            relation_list += self.create_proximity_relations(actor1, actor2)
+            relation_list += self.create_proximity_relations(actor2, actor1)
+            relation_list += self.extract_directional_relation(actor1, actor2)
+            relation_list += self.extract_directional_relation(actor2, actor1)
 
-        # 0 -> 1, 2
         if actor1.name.startswith("ego:"):
             if "invading_lane" in actor1.attr and (abs((actor1.attr['lane_idx'] + actor1.attr['invading_lane'] - actor1.attr['orig_lane_idx']) - actor2.attr['lane_idx']) <= 1):
                 if abs((actor1.attr['lane_idx'] + actor1.attr['invading_lane'] - actor1.attr['orig_lane_idx'])- actor2.attr['lane_idx']) == 0:
                     if(self.euclidean_distance(actor1, actor2) <= CAR_PROXIMITY_THRESH_VERY_NEAR):
                         relation_list += [[actor1, Relations.negotiate, actor2]]
                         relation_list += [[actor2, Relations.negotiate, actor1]]
-                
-                else:
-                    if(self.euclidean_distance(actor1, actor2) <= CAR_PROXIMITY_THRESH_VERY_NEAR):
-                        relation_list += self.create_proximity_relations(actor1, actor2)
-                        relation_list += self.create_proximity_relations(actor2, actor1)
-                        relation_list += self.extract_directional_relation(actor1, actor2)
-                        relation_list += self.extract_directional_relation(actor2, actor1)
-
-                    # relation_list += self.extract_directional_relation(actor1, actor2)
-                    # relation_list += self.extract_directional_relation(actor2, actor1)
-                    # relation_list += self.create_proximity_relations(actor1, actor2)
-                    # relation_list += self.create_proximity_relations(actor2, actor1)
 
         if actor2.name.startswith("ego:"):
             if "invading_lane" in actor2.attr and (abs((actor2.attr['lane_idx'] + actor2.attr['invading_lane'] - actor2.attr['orig_lane_idx']) - actor1.attr['lane_idx']) <= 1):
@@ -121,23 +107,6 @@ class RelationExtractor:
                     if(self.euclidean_distance(actor1, actor2) <= CAR_PROXIMITY_THRESH_VERY_NEAR):
                         relation_list += [[actor1, Relations.negotiate, actor2]]
                         relation_list += [[actor2, Relations.negotiate, actor1]]
-                
-                else:
-                    if(self.euclidean_distance(actor1, actor2) <= CAR_PROXIMITY_THRESH_VERY_NEAR):
-                        relation_list += self.create_proximity_relations(actor1, actor2)
-                        relation_list += self.create_proximity_relations(actor2, actor1)
-                        relation_list += self.extract_directional_relation(actor1, actor2)
-                        relation_list += self.extract_directional_relation(actor2, actor1)
-                    # relation_list += self.extract_directional_relation(actor1, actor2)
-                    # relation_list += self.extract_directional_relation(actor2, actor1)
-                    # relation_list += self.create_proximity_relations(actor1, actor2)
-                    # relation_list += self.create_proximity_relations(actor2, actor1)
-
-        # if abs(actor1.attr['lane_idx'] - actor2.attr['lane_idx']) <= 1:
-        #     # consider the directional relations with neighboring lanes.
-        #     if(self.euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_NEAR):
-        #         relation_list += self.extract_directional_relation(actor1, actor2)
-        #         relation_list += self.extract_directional_relation(actor2, actor1)
 
         return relation_list
             
@@ -346,14 +315,17 @@ class RelationExtractor:
     def in_lane(self, actor1, actor2):
         if 'lane_idx' in actor1.attr.keys():
             # import pdb; pdb.set_trace()
+            # calculate the distance bewteen actor1 and actor2
+            # if it is below 3.5 then they have is in relation.
+                # if actor1 is ego: if actor2 is not equal to the ego_lane's index then it's invading relation.
             if actor1.attr['lane_idx'] == actor2.attr['lane_idx']:
                 return True
             if "invading_lane" in actor1.attr:
-                if actor1.attr['lane_idx'] + (actor1.attr['invading_lane'] - actor1.attr['orig_lane_idx']) == actor2.attr['lane_idx']:
+                if actor1.attr['invading_lane'] == actor2.attr['lane_idx']:
                     return True
-                # if "orig_lane_idx" in actor1.attr:
-                #     if actor1.attr['orig_lane_idx'] == actor2.attr['lane_idx']:
-                #         return True
+                if "orig_lane_idx" in actor1.attr:
+                    if actor1.attr['orig_lane_idx'] == actor2.attr['lane_idx']:
+                        return True
         else:
             return False
     

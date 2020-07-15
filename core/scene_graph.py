@@ -224,24 +224,43 @@ class CarlaSceneGraphSequenceGenerator:
 
     def load(self, input_path):
         all_video_clip_dirs = [x for x in input_path.iterdir() if x.is_dir()]
-
+        all_video_clip_dirs = sorted(all_video_clip_dirs, key=lambda x: int(x.stem))
         for path in tqdm(all_video_clip_dirs):
             scenegraphs = {} 
 
             # read all frame numbers from raw_images. and store image_frames (list).
             raw_images = list(path.glob("raw_images/*.jpg")) + list(path.glob("raw_images/*.png")) 
-            image_frames = [int(img.stem) for img in raw_images]
-            
+
             scenegraph_txts = sorted(list(glob("%s/**/*.json" % str(path/"scene_raw"), recursive=True)))
             for txt_path in scenegraph_txts:
                 # import pdb; pdb.set_trace()
                 with open(txt_path, 'r') as scene_dict_f:
                     try:
                         framedict = json.loads(scene_dict_f.read())
+                        image_frames = [int(img.stem) for img in raw_images if str(int(img.stem)) in framedict]
+                        image_frames = sorted(image_frames)
+                        # import pdb; pdb.set_trace()
+                        #### filling the gap between lane change where some of ego node might miss the invading lane information. ####
+                        start_frame_number = 0; end_frame_number = 0; invading_lane_idx = None
+                        
+                        for idx, frame_number in enumerate(image_frames):
+                            if "invading_lane" in framedict[str(frame_number)]['ego']:
+                                start_frame_number = idx
+                                invading_lane_idx = framedict[str(frame_number)]['ego']['invading_lane']
+                                break
+
+                        for frame_number in image_frames[::-1]:
+                            if "invading_lane" in framedict[str(frame_number)]['ego']:
+                                end_frame_number = image_frames.index(frame_number)
+                                break
+                    
+                        for idx in range(start_frame_number, end_frame_number):
+                            framedict[str(image_frames[idx])]['ego']['invading_lane'] = invading_lane_idx
+                        
                         for frame, frame_dict in framedict.items():
-                            if int(frame) in image_frames:
+                            if int(frame) in image_frames: # 000111 111
                                 scenegraph = SceneGraph(frame_dict, framenum=frame)
-                                scenegraphs[frame] = scenegraph
+                                scenegraphs[int(frame)] = scenegraph
                             # scenegraph.visualize(filename="./visualize/%s_%s"%(path.name, frame))
                             
                     except Exception as e:
@@ -249,7 +268,7 @@ class CarlaSceneGraphSequenceGenerator:
                         print("We have problem parsing the dict.json in %s"%txt_path)
                         print(e)
                         traceback.print_exc()
-                
+            
             label_path = (path/"label.txt").resolve()
 
             if label_path.exists():

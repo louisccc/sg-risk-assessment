@@ -163,7 +163,7 @@ class LaneChangeRecorder:
                     
                     metadata_dict={"wetness":weather.wetness,"wind_intensity":weather.wind_intensity,"precipitation_deposits":weather.precipitation_deposits,
                     "precipitation": weather.precipitation,"cloudiness": weather.cloudiness,"fog_density": weather.fog_density,"fog_distance": weather.fog_distance,
-                    "sun_altitude_angle": weather.sun_altitude_angle,"sun_azimuth_angle": weather.sun_azimuth_angle}
+                    "sun_altitude_angle": weather.sun_altitude_angle,"sun_azimuth_angle": weather.sun_azimuth_angle, "lane_change_direction": self.lane_change_direction}
                     
                     file.write(json.dumps(metadata_dict))
 
@@ -213,6 +213,9 @@ class DataExtractor(object):
                 
         def build_dict_lane_single(lane_waypoint):
             return {
+                'location_x': lane_waypoint.transform.location.x,
+                'location_y': lane_waypoint.transform.location.y,
+                'location_z': lane_waypoint.transform.location.z,
                 'lane_id': lane_waypoint.lane_id,
                 'road_id': lane_waypoint.road_id, 
                 'lane_type': lane_waypoint.lane_type.name, 

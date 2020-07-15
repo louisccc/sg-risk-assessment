@@ -230,8 +230,6 @@ class CarlaSceneGraphSequenceGenerator:
 
             # read all frame numbers from raw_images. and store image_frames (list).
             raw_images = list(path.glob("raw_images/*.jpg")) + list(path.glob("raw_images/*.png")) 
-            image_frames = [int(img.stem) for img in raw_images]
-            image_frames = sorted(image_frames)
 
             scenegraph_txts = sorted(list(glob("%s/**/*.json" % str(path/"scene_raw"), recursive=True)))
             for txt_path in scenegraph_txts:
@@ -239,23 +237,25 @@ class CarlaSceneGraphSequenceGenerator:
                 with open(txt_path, 'r') as scene_dict_f:
                     try:
                         framedict = json.loads(scene_dict_f.read())
+                        image_frames = [int(img.stem) for img in raw_images if str(int(img.stem)) in framedict]
+                        image_frames = sorted(image_frames)
                         # import pdb; pdb.set_trace()
                         #### filling the gap between lane change where some of ego node might miss the invading lane information. ####
                         start_frame_number = 0; end_frame_number = 0; invading_lane_idx = None
                         
-                        for frame_number in image_frames:
-                            if "invading_lane" in framedict[frame_number]['ego']:
-                                start_frame_number = frame_number
-                                invading_lane_idx = framedict[frame_number]['ego']['invading_lane']
+                        for idx, frame_number in enumerate(image_frames):
+                            if "invading_lane" in framedict[str(frame_number)]['ego']:
+                                start_frame_number = idx
+                                invading_lane_idx = framedict[str(frame_number)]['ego']['invading_lane']
                                 break
 
                         for frame_number in image_frames[::-1]:
-                            if "invading_lane" in framedict[frame_number]['ego']:
-                                end_frame_number = frame_number
+                            if "invading_lane" in framedict[str(frame_number)]['ego']:
+                                end_frame_number = image_frames.index(frame_number)
                                 break
                     
-                        for frame_number in range(start_frame_number, end_frame_number):
-                            framedict[frame_number]['ego']['invading_lane'] = invading_lane_idx
+                        for idx in range(start_frame_number, end_frame_number):
+                            framedict[str(image_frames[idx])]['ego']['invading_lane'] = invading_lane_idx
                         
                         for frame, frame_dict in framedict.items():
                             if int(frame) in image_frames: # 000111 111

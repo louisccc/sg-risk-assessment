@@ -88,7 +88,7 @@ class MRGCN(nn.Module):
             pass
         
         x = F.leaky_relu(self.fc1(x))
-        x = F.dropout(x, p=self.dropout, training=self.training)
+        # x = F.dropout(x, p=self.dropout, training=self.training)
         x = self.fc2(x)
         
         return F.log_softmax(x, dim=-1)

@@ -180,8 +180,8 @@ class DynKGTrainer:
         #     pred = 0 if output[0] > output[1] else 1
         #     print(output, pred, label, folder_name)
 
-        print("\ntrain loss: " + str(acc_loss_train) + ", acc:", metrics['train']['acc'], metrics['train']['confusion'], \
-              "\ntest loss: " +  str(acc_loss_test) + ", acc:",  metrics['test']['acc'],  metrics['test']['confusion'])
+        print("\ntrain loss: " + str(acc_loss_train) + ", acc:", metrics['train']['acc'], metrics['train']['confusion'], metrics['train']['auc'], \
+              "\ntest loss: " +  str(acc_loss_test) + ", acc:",  metrics['test']['acc'],  metrics['test']['confusion'], metrics['test']['auc'])
 
         #automatically save the model with the lowest validation loss
         if acc_loss_test < self.best_val_loss:

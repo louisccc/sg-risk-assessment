@@ -69,6 +69,9 @@ class DynKGTrainer:
 
         self.summary_writer = SummaryWriter()
 
+        self.best_val_loss = 99999
+        self.best_epoch = 0
+
     def build_model(self):
         self.config.num_features = len(self.feature_list)
         self.config.num_relations = max([r.value for r in Relations])+1
@@ -116,7 +119,7 @@ class DynKGTrainer:
             tqdm_bar.set_description('Epoch: {:04d}, loss_train: {:.4f}'.format(epoch_idx, acc_loss_train))
             
             if epoch_idx % self.config.test_step == 0:
-                _, _, metrics = self.evaluate()
+                _, _, metrics = self.evaluate(epoch_idx)
                 self.summary_writer.add_scalar('Acc_Loss/train', metrics['train']['loss'], epoch_idx)
                 self.summary_writer.add_scalar('Acc_Loss/train_acc', metrics['train']['acc'], epoch_idx)
                 self.summary_writer.add_scalar('F1/train', metrics['train']['f1'], epoch_idx)
@@ -159,7 +162,7 @@ class DynKGTrainer:
 
         return outputs, labels, folder_names, acc_loss_test
     
-    def evaluate(self):
+    def evaluate(self, current_epoch):
         metrics = {}
 
         outputs_train, labels_train, folder_names_train, acc_loss_train = self.inference(self.training_data, self.training_labels)
@@ -177,13 +180,19 @@ class DynKGTrainer:
         print("\ntrain stat:", metrics['train']['acc'], metrics['train']['confusion'], \
               "\ntest stat:",  metrics['test']['acc'],  metrics['test']['confusion'])
 
+        #automatically save the model with the lowest validation loss
+        if acc_loss_test < self.best_val_loss:
+            self.best_val_loss = acc_loss_test
+            self.best_epoch = current_epoch
+            self.save_model()
+
         return outputs_test, labels_test, metrics
 
     def save_model(self):
         """Function to save the model."""
         saved_path = Path("./model").resolve()
         saved_path.mkdir(parents=True, exist_ok=True)
-        torch.save(self.model.state_dict(), str(saved_path / 'model.vec.pt'))
+        torch.save(self.model.state_dict(), str(saved_path / 'model_best_val_loss_.vec.pt'))
 
     def load_model(self):
         """Function to load the model."""

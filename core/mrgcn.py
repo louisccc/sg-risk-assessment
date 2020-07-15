@@ -40,14 +40,11 @@ class MRGCN(nn.Module):
 
         self.fc1 = Linear(self.hidden_dim, self.hidden_dim)
         self.fc2 = Linear(self.hidden_dim, self.num_classes)
-        self.bn1 = torch.nn.BatchNorm1d(self.num_features)
-        self.bn2 = torch.nn.BatchNorm1d(self.hidden_dim)
 
 
     def forward(self, x, edge_index, edge_attr, batch=None):
         attn_weights = dict()
         
-        x = self.bn1(x)
         for i in range(self.num_layers):
             x = F.leaky_relu(self.conv[i](x, edge_index, edge_attr))
             x = F.dropout(x, self.dropout, training=self.training)
@@ -71,7 +68,6 @@ class MRGCN(nn.Module):
             pass
 
         # x = F.normalize(x, dim=-1, p=1)
-        x = self.bn2(x)
         if self.temporal_type == "mean":
             x = F.leaky_relu(x.mean(axis=0))
         elif self.temporal_type == "lstm_last":

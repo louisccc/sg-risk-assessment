@@ -346,14 +346,17 @@ class RelationExtractor:
     def in_lane(self, actor1, actor2):
         if 'lane_idx' in actor1.attr.keys():
             # import pdb; pdb.set_trace()
+            # calculate the distance bewteen actor1 and actor2
+            # if it is below 3.5 then they have is in relation.
+                # if actor1 is ego: if actor2 is not equal to the ego_lane's index then it's invading relation.
             if actor1.attr['lane_idx'] == actor2.attr['lane_idx']:
                 return True
             if "invading_lane" in actor1.attr:
-                if actor1.attr['lane_idx'] + (actor1.attr['invading_lane'] - actor1.attr['orig_lane_idx']) == actor2.attr['lane_idx']:
+                if actor1.attr['invading_lane'] == actor2.attr['lane_idx']:
                     return True
-                # if "orig_lane_idx" in actor1.attr:
-                #     if actor1.attr['orig_lane_idx'] == actor2.attr['lane_idx']:
-                #         return True
+                if "orig_lane_idx" in actor1.attr:
+                    if actor1.attr['orig_lane_idx'] == actor2.attr['lane_idx']:
+                        return True
         else:
             return False
     

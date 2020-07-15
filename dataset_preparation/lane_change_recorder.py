@@ -213,6 +213,9 @@ class DataExtractor(object):
                 
         def build_dict_lane_single(lane_waypoint):
             return {
+                'location_x': lane_waypoint.transform.location.x,
+                'location_y': lane_waypoint.transform.location.y,
+                'location_z': lane_waypoint.transform.location.z,
                 'lane_id': lane_waypoint.lane_id,
                 'road_id': lane_waypoint.road_id, 
                 'lane_type': lane_waypoint.lane_type.name, 

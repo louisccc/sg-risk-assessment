@@ -11,6 +11,8 @@ import networkx as nx
 from networkx.drawing.nx_agraph import to_agraph
 import itertools
 import math
+import matplotlib
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from pathlib import Path
 from tqdm import tqdm

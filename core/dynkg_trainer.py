@@ -60,7 +60,7 @@ class DynKGTrainer:
         torch.manual_seed(self.config.seed)
 
         # load carla cheating scene graph txts into memory 
-        self.training_data, self.testing_data, self.feature_list = build_scenegraph_dataset(self.config.cache_path)
+        self.training_data, self.testing_data, self.feature_list = build_scenegraph_dataset(self.config.cache_path, downsample=False)
         self.training_labels = [data['label'] for data in self.training_data]
         self.testing_labels = [data['label'] for data in self.testing_data]
         self.class_weights = torch.from_numpy(compute_class_weight('balanced', np.unique(self.training_labels), self.training_labels))
@@ -71,6 +71,8 @@ class DynKGTrainer:
 
         self.best_val_loss = 99999
         self.best_epoch = 0
+        self.best_val_acc = 0
+        self.best_val_confusion = []
 
     def build_model(self):
         self.config.num_features = len(self.feature_list)
@@ -183,12 +185,20 @@ class DynKGTrainer:
         print("\ntrain loss: " + str(acc_loss_train) + ", acc:", metrics['train']['acc'], metrics['train']['confusion'], metrics['train']['auc'], \
               "\ntest loss: " +  str(acc_loss_test) + ", acc:",  metrics['test']['acc'],  metrics['test']['confusion'], metrics['test']['auc'])
 
-        #automatically save the model with the lowest validation loss
+        #automatically save the model and metrics with the lowest validation loss
         if acc_loss_test < self.best_val_loss:
             self.best_val_loss = acc_loss_test
             self.best_epoch = current_epoch if current_epoch != None else self.config.epochs
             with open("best_stats.txt",'w+') as f:
-                f.write("best val loss: " + str(self.best_val_loss) + " in epoch: " + str(self.best_epoch))
+                f.write("val loss: " + str(self.best_val_loss) + \
+                    "\nepoch: " + str(self.best_epoch) + \
+                    "\nval acc: " + str(metrics['test']['acc']) + \
+                    "\nval conf: " + str(metrics['test']['confusion']) + \
+                    "\nval auc: " + str(metrics['test']['auc']) + \
+                    "\ntrain loss: " + str(acc_loss_train) + \
+                    "\ntrain acc: " + str(metrics['train']['acc']) + \
+                    "\ntrain conf: " + str(metrics['train']['confusion']) + \
+                    "\ntrain auc: " + str(metrics['train']['auc']))
             self.save_model()
 
         return outputs_test, labels_test, metrics

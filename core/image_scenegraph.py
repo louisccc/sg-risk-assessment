@@ -202,27 +202,20 @@ class RealSceneGraph:
 
         # actor2 is in front of actor1
         if actor2.attr['location_y'] < actor1.attr['location_y']:
-            if abs(actor2.attr['location_x'] - actor1.attr['location_x']) <= CENTER_LANE_THRESHOLD:
-                relation_list.append([actor1, Relations.front, actor2])
-            # actor2 to the left of actor1 
-            elif actor2.attr['location_x'] < actor1.attr['location_x']:
-                relation_list.append([actor1, Relations.frontLeft, actor2])
-            # actor2 to the right of actor1 
-            elif actor2.attr['location_x'] > actor1.attr['location_x']:
-                relation_list.append([actor1, Relations.frontRight, actor2])
-                
+            relation_list.append([actor2, Relations.inFrontOf, actor1])
         # actor2 is behind actor1
         else:
-            # actor2 is directly behind of actor1
-            if  abs(actor2.attr['location_x'] - actor1.attr['location_x']) <= CENTER_LANE_THRESHOLD:
-                relation_list.append([actor1, Relations.rear, actor2])
-            # actor2 to the left of actor1 
-            elif actor2.attr['location_x'] < actor1.attr['location_x']:
-                relation_list.append([actor1, Relations.rearLeft, actor2])
-             # actor2 to the left of actor1 
-            elif actor2.attr['location_x'] > actor1.attr['location_x']:
-                relation_list.append([actor1, Relations.rearRight, actor2])
-
+            # actor2 is behind actor1
+            relation_list.append([actor2, Relations.atRearOf, actor1])
+        
+        if abs(actor2.attr['location_x'] - actor1.attr['location_x']) <= CENTER_LANE_THRESHOLD:
+                pass
+        # actor2 to the left of actor1 
+        elif actor2.attr['location_x'] < actor1.attr['location_x']:
+            relation_list.append([actor2, Relations.toLeftOf, actor1])
+        # actor2 to the right of actor1 
+        elif actor2.attr['location_x'] > actor1.attr['location_x']:
+            relation_list.append([actor2, Relations.toRightOf, actor1])
         ### disable rear relations help the inference. 
         return relation_list
 
@@ -448,7 +441,7 @@ class ImageSceneGraphSequenceGenerator:
         # import pdb; pdb.set_trace()
         return sequence
     
-    def visualize_scenegraphs(self, vis_path):
+    def visualize_scenegraphs(self):
         self.visualize = True
 
     def subsample(self, scenegraphs, number_of_frames=20): 

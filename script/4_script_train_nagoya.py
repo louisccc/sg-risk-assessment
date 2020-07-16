@@ -1,27 +1,32 @@
-import sys
-sys.path.append('../nagoya')
-sys.path.append('../')
-from nagoya.dataset import DataSet
-from nagoya.models import Models, load_model
+import os, sys
 from argparse import ArgumentParser
 from pathlib import Path
 import skimage.io as io
+import matplotlib
+matplotlib.use("Agg")
 
+sys.path.append('../nagoya')
+sys.path.append('../')
+from nagoya.dataset import DataSet
+from nagoya.models import Models
+from nagoya.Mask_RCNN.mask_rcnn.detect_objects import DetectObjects
 io.use_plugin('pil')
+
+
 class Config:
 
-    def __init__(self, args):
-        self.parser = ArgumentParser(description='The parameters for creating gifs of input videos.')
-        self.parser.add_argument('--input_path', type=str, default="../input/synthesis_data", help="Path to data directory.")
+	def __init__(self, args):
+		self.parser = ArgumentParser(description='The parameters for creating gifs of input videos.')
+		self.parser.add_argument('--input_path', type=str, default="../input/synthesis_data", help="Path to data directory.")
 		self.parser.add_argument('--load_model', type=lambda x: (str(x).lower() == 'true'), default=False, help='Load model from cache.')
 		self.parser.add_argument('--model_path', type=str, default="../cache/RCNN_CNN_lstm_GPU_20_2.h5", help="Path to cached model file.")
 		self.parser.add_argument('--mask_rcnn', type=lambda x: (str(x).lower() == 'true'), default=True, help='Create masked imgages.')
 		args_parsed = self.parser.parse_args(args)
-        
-        for arg_name in vars(args_parsed):
-            self.__dict__[arg_name] = getattr(args_parsed, arg_name)
+		
+		for arg_name in vars(args_parsed):
+			self.__dict__[arg_name] = getattr(args_parsed, arg_name)
 
-        self.input_base_dir = Path(self.input_path).resolve()
+		self.input_base_dir = Path(self.input_path).resolve()
 		self.cache_model_path = Path(self.model_path).resolve()
 
 
@@ -122,7 +127,7 @@ if __name__ == '__main__':
 	if config.load_model:
 		if not cache_model_path.exists():
 			raise FileNotFoundError ("Cached model file not found.")
-		model = load_model(str(cache_model_path))
+		# model = load_model(str(cache_model_path))
 	else:
 		model = train_cnn_to_lstm(dataset, cache_model_path)
 	

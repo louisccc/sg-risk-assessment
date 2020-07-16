@@ -75,7 +75,7 @@ class DetectObjects:
             print('Processing Folder %s' % str(CURRENT_IMAGE_DIR))
             CURRENT_OUTPUT_DIR.mkdir(exist_ok=True)
 
-            image_file_names = sorted(os.listdir(CURRENT_IMAGE_DIR))
+            image_file_names = sorted([f for f in os.listdir(CURRENT_IMAGE_DIR) if f.endswith('.png') or f.endswith('.jpg')])
             
             for image_file_name in image_file_names:
                 if image_file_name.startswith('.'):

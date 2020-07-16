@@ -20,6 +20,7 @@ import torch.nn.functional as F
 from pathlib import Path 
 from tqdm import tqdm 
 from .relation_extractor import Relations, ActorType, RelationExtractor, RELATION_COLORS
+from sklearn.utils import resample
 
 LANE_THRESHOLD = 6 #feet. if object's center is more than this distance away from ego's center, build left or right lane relation
 CENTER_LANE_THRESHOLD = 9 #feet. if object's center is within this distance of ego's center, build middle lane relation
@@ -375,8 +376,7 @@ class CarlaSceneGraphSequenceGenerator:
             return new_x, new_y
             
         def get_embedding(node, row):
-            #subtract each vector from corresponding vector of ego to find delta
-            
+            #subtract each vector from corresponding vector of ego to find delta         
             if "location" in node.attr:
                 ego_x, ego_y = rotate_coords(ego_attrs["location"][0], ego_attrs["location"][1])
                 node_x, node_y = rotate_coords(node.attr["location"][0], node.attr["location"][1])
@@ -384,17 +384,7 @@ class CarlaSceneGraphSequenceGenerator:
                 row["rel_location_y"] = node_y - ego_y
                 row["rel_location_z"] = node.attr["location"][2] - ego_attrs["location"][2] #no axis rotation needed for Z
                 row["distance_abs"] = math.sqrt(row["rel_location_x"]**2 + row["rel_location_y"]**2 + row["rel_location_z"]**2)
-            # if "velocity" in node.attr:
-            #     egov_x, egov_y = rotate_coords(ego_attrs['velocity'][0], ego_attrs['velocity'][1])
-            #     nodev_x, nodev_y = rotate_coords(node.attr['velocity'][0], node.attr['velocity'][1])
-            #     row['rel_velocity_x'] = nodev_x - egov_x
-            #     row['rel_velocity_y'] = nodev_y - egov_y
-            #     row["rel_velocity_z"] = node.attr["velocity"][2] - ego_attrs["velocity"][2] #no axis rotation needed for Z
-            #     row["velocity_abs"] = node.attr['velocity_abs']
-            # if "rotation" in node.attr:
-            #     row['rel_yaw'] = math.radians(node.attr['rotation'][0]) - ego_yaw #store rotation in radians
-            #     row["rel_roll"] =  math.radians(node.attr["rotation"][1] - ego_attrs["rotation"][1])
-            #     row["rel_pitch"] =  math.radians(node.attr["rotation"][2] - ego_attrs["rotation"][2])
+
             row['type_'+str(node.type)] = 1 #assign 1hot class label
             return row
         
@@ -422,7 +412,7 @@ class CarlaSceneGraphSequenceGenerator:
         
         return edge_index, edge_attr
 
-from sklearn.utils import resample
+
 def build_scenegraph_dataset(cache_path, number_of_frames=20, train_to_test_ratio=0.3, downsample=False):
     sge = CarlaSceneGraphSequenceGenerator(cache_fname=cache_path)
     if not sge.cache_exists():
@@ -448,8 +438,7 @@ def build_scenegraph_dataset(cache_path, number_of_frames=20, train_to_test_rati
         modified_class_0, modified_y_0 = resample(class_0, y_0, n_samples=min_number)
     else:
         modified_class_0, modified_y_0 = class_0, y_0
-        
-    # train, test = train_test_split(sge.scenegraphs_sequence, test_size=train_to_test_ratio, shuffle=True, stratify=labels)
+
     train, test, train_y, test_y = train_test_split(modified_class_0+class_1, modified_y_0+y_1, test_size=train_to_test_ratio, shuffle=True, stratify=modified_y_0+y_1)
 
     # for train_item in train: 

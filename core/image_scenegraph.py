@@ -16,6 +16,7 @@ from pathlib import Path
 from tqdm import tqdm
 from collections import defaultdict
 import pickle as pkl
+from sklearn.model_selection import train_test_split
 
 import torch
 import pandas as pd
@@ -385,7 +386,7 @@ class ImageSceneGraphSequenceGenerator:
 
                 # scenegraph_dict contains node embeddings edge indexes and edge attrs.
                 scenegraphs_dict = {}
-                subsampled_scenegraphs, frame_numbers = self.subsample(scenegraphs, 20)
+                subsampled_scenegraphs, frame_numbers = self.subsample(scenegraphs, 1000)
                 scenegraphs_dict['sequence'] = self.process_graph_sequences(subsampled_scenegraphs, frame_numbers, folder_name=path.name)
                 scenegraphs_dict['label'] = risk_label
                 scenegraphs_dict['folder_name'] = path.name
@@ -516,6 +517,40 @@ class ImageSceneGraphSequenceGenerator:
         edge_attr  = torch.LongTensor(edge_attr)
         
         return edge_index, edge_attr
+
+from sklearn.utils import resample
+def build_scenegraph_dataset(cache_path, number_of_frames=20, train_to_test_ratio=0.3, downsample=False):
+    sge = ImageSceneGraphSequenceGenerator(cache_fname=cache_path)
+    if not sge.cache_exists():
+        raise Exception("Cache file do not exist. Run 1_extract_scenegraphs.py to generate the cache file.")
+    else:
+        sge.load_from_cache()
+
+
+    class_0 = []
+    class_1 = []
+
+    for g in sge.scenegraphs_sequence:
+        if g['label'] == 0:
+            class_0.append(g)
+        elif g['label'] == 1:
+            class_1.append(g)
+        
+    y_0 = [0]*len(class_0)
+    y_1 = [1]*len(class_1)
+
+    min_number = min(len(class_0), len(class_1))
+    if downsample:
+        modified_class_0, modified_y_0 = resample(class_0, y_0, n_samples=min_number)
+    else:
+        modified_class_0, modified_y_0 = class_0, y_0
+        
+    # train, test = train_test_split(sge.scenegraphs_sequence, test_size=train_to_test_ratio, shuffle=True, stratify=labels)
+    train, test, train_y, test_y = train_test_split(modified_class_0+class_1, modified_y_0+y_1, test_size=train_to_test_ratio, shuffle=True, stratify=modified_y_0+y_1)
+
+    # for train_item in train: 
+    #     print(train_item['label'], len(train_item['sequence']), train_item['folder_name'])
+    return train, test, sge.feature_list
 
 if __name__ == "__main__":
 

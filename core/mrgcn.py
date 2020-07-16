@@ -67,7 +67,6 @@ class MRGCN(nn.Module):
         else:
             pass
 
-        # x = F.normalize(x, dim=-1, p=1)
         if self.temporal_type == "mean":
             x = F.leaky_relu(x.mean(axis=0))
         elif self.temporal_type == "lstm_last":
@@ -84,7 +83,7 @@ class MRGCN(nn.Module):
             pass
         
         x = F.leaky_relu(self.fc1(x))
-        # x = F.dropout(x, p=self.dropout, training=self.training)
+        x = F.dropout(x, p=self.dropout, training=self.training)
         x = self.fc2(x)
         
         return F.log_softmax(x, dim=-1)

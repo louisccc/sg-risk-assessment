@@ -29,9 +29,9 @@ class MRGCN(nn.Module):
             self.conv.append(FastRGCNConv(self.hidden_dim, self.hidden_dim, self.num_relations).to(config.device))
 
         if self.pooling_type == "sagpool":
-            self.pool1 = SAGPooling(self.hidden_dim, ratio=0.5)
+            self.pool1 = SAGPooling(self.hidden_dim, ratio=config.pooling_ratio)
         elif self.pooling_type == "topk":
-            self.pool1 = TopKPooling(self.hidden_dim, ratio=0.5)
+            self.pool1 = TopKPooling(self.hidden_dim, ratio=config.pooling_ratio)
 
         if "lstm" in self.temporal_type:
             self.lstm = LSTM(self.hidden_dim, self.hidden_dim, batch_first=True, bidirectional=True)

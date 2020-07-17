@@ -40,6 +40,7 @@ class Config:
         self.parser.add_argument('--num_layers', type=int, default=3, help="Number of RGCN layers in the network.")
         self.parser.add_argument('--hidden_dim', type=int, default=32, help="Hidden dimension in GIN.")
         self.parser.add_argument('--pooling_type', type=str, default="sagpool", help="Graph pooling type.")
+        self.parser.add_argument('--pooling_ratio', type=float, default=0.5, help="Graph pooling ratio.")        
         self.parser.add_argument('--readout_type', type=str, default="mean", help="Readout type.")
         self.parser.add_argument('--temporal_type', type=str, default="lstm_last", help="Temporal type.")
 

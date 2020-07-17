@@ -22,12 +22,12 @@ class Config:
         self.input_base_dir = Path(self.input_path).resolve()
 
 
-def show_video(canvas, clip_folder):
+def show_video(canvas, clip_folder, root, title):
     im = []
     image_list = list(clip_folder.glob("raw_images/*.jpg"))
     for img in image_list:
         im.append(Image.open(str(img)))
-    UI(canvas, im, image_list).grid(row=0)
+    UI(canvas, im, image_list, root, title).grid(row=0)
 
 def anotate_task(root_folder):
     foldernames = [f for f in root_folder.iterdir() if f.stem.isnumeric()]
@@ -55,8 +55,9 @@ def anotate_task(root_folder):
         
         prev_avg_score, num_of_scores = read_score(foldernames[idx] / "label.txt")
         
-        root.title("Lane Change {} Evaluation: Clip {} / {}, curr:({}, {})".format(foldernames[idx].stem, idx, len(foldernames), prev_avg_score, num_of_scores))
-        show_video(clip_canvas, foldernames[idx])
+        title = "Lane Change {} Evaluation: Clip {} / {}, curr:({}, {})".format(foldernames[idx].stem, idx, len(foldernames), prev_avg_score, num_of_scores)
+        root.title(title)
+        show_video(clip_canvas, foldernames[idx], root, title)
     
     def prevClip():
         print("Loading next clip...")
@@ -67,15 +68,18 @@ def anotate_task(root_folder):
 
             prev_avg_score, num_of_scores = read_score(foldernames[idx] / "label.txt")
 
-            root.title("Lane Change {} Evaluation: Clip {} / {}, curr:({}, {})".format(foldernames[idx].stem, idx, len(foldernames), prev_avg_score, num_of_scores))
-            show_video(clip_canvas, foldernames[idx])
+            title = "Lane Change {} Evaluation: Clip {} / {}, curr:({}, {})".format(foldernames[idx].stem, idx, len(foldernames), prev_avg_score, num_of_scores)
+            root.title(title)
+            show_video(clip_canvas, foldernames[idx], root, title)
 
     def replayClip():
         clip_canvas.delete('all')
 
         prev_avg_score, num_of_scores = read_score(foldernames[idx] / "label.txt")
-        root.title("Lane Change {} Evaluation: Clip {} / {}, curr:({}, {})".format(foldernames[idx].stem, idx, len(foldernames), prev_avg_score, num_of_scores))
-        show_video(clip_canvas, foldernames[idx])
+        
+        title = "Lane Change {} Evaluation: Clip {} / {}, curr:({}, {})".format(foldernames[idx].stem, idx, len(foldernames), prev_avg_score, num_of_scores)
+        root.title(title)
+        show_video(clip_canvas, foldernames[idx], root, title)
 
     def jump2Idx():
         jmp_idx = int(eval(entry.get()))
@@ -139,7 +143,9 @@ class AppletDisplay:
 
 class UI(Label):
 
-    def __init__(self, master, im, image_path_list):
+    def __init__(self, master, im, image_path_list, root, title):
+        self.root = root
+        self.title = title
         if type(im) == type([]):
             # list of images
             self.im = im
@@ -177,6 +183,11 @@ class UI(Label):
         self.paused = False
         self.after(duration, self.next)
     
+    def update_title(self):
+        new_title = self.title + ", Frame: {} / {}".format(self.index, len(self.image_path_list) - 1)
+        self.root.title(new_title)
+        pass
+
     def pause(self):
         self.paused = True
 
@@ -194,12 +205,14 @@ class UI(Label):
             self.index -= 1
             im = self.im[self.index]
             self.image.paste(im)
+            self.update_title()
     
     def nextFrame(self):
         if self.paused and (self.index < len(self.image_path_list) - 1):
             self.index += 1
             im = self.im[self.index]
             self.image.paste(im)
+            self.update_title()
     
     def deleteBefore(self):
         # delete every images before current index
@@ -207,6 +220,7 @@ class UI(Label):
             delete_path_list = self.image_path_list[:self.index]
 
             for _ in range(self.index):
+                self.im[0].close()
                 del self.im[0]
 
             for img_path in delete_path_list:
@@ -214,6 +228,7 @@ class UI(Label):
             
             self.image_path_list = self.image_path_list[self.index:]
             self.index = 0
+            self.update_title()
 
     def deleteAfter(self):
         # delete every images after current index
@@ -221,6 +236,7 @@ class UI(Label):
             delete_path_list = self.image_path_list[self.index + 1:]
 
             for _ in range(len(self.image_path_list) - self.index - 1):
+                self.im[-1].close()
                 del self.im[-1]
 
             for img_path in delete_path_list:
@@ -228,6 +244,7 @@ class UI(Label):
             
             self.image_path_list = self.image_path_list[:self.index + 1]
             self.index = 0
+            self.update_title()
 
     def next(self):
         if not self.paused:
@@ -257,6 +274,7 @@ class UI(Label):
                 duration = im.info["duration"]
             except KeyError:
                 duration = 100
+            self.update_title()
             self.after(duration, self.next)
 
         self.update_idletasks()

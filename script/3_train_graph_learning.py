@@ -22,7 +22,7 @@ def train_dynamic_kg(args, iterations=1):
         metrics.append(metric)
 
     # Store the prediction results. 
-    store_path = trainer.config.input_base_dir
+    store_path = trainer.config.cache_path.parent
     outputs_pd = pd.DataFrame(outputs)
     labels_pd  = pd.DataFrame(labels)
     

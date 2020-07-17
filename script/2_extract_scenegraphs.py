@@ -26,10 +26,10 @@ if __name__ == '__main__':
     generator = None
 
     if cfg.platform == "carla":
-        from core.scene_graph import CarlaSceneGraphSequenceGenerator
+        from core.carla_seq_generator import CarlaSceneGraphSequenceGenerator
         generator = CarlaSceneGraphSequenceGenerator()
     elif cfg.platform == "image":
-        from core.image_scenegraph import ImageSceneGraphSequenceGenerator
+        from core.real_seq_generator import ImageSceneGraphSequenceGenerator
         generator = ImageSceneGraphSequenceGenerator()
 
     if cfg.visualize:

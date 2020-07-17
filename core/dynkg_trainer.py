@@ -11,7 +11,6 @@ from sklearn.metrics import accuracy_score, f1_score, confusion_matrix, precisio
 from sklearn import preprocessing
 from matplotlib import pyplot as plt
 
-from core.scene_graph import build_scenegraph_dataset
 from core.relation_extractor import Relations
 from argparse import ArgumentParser
 from pathlib import Path
@@ -21,6 +20,9 @@ from torch_geometric.data import Data, DataLoader, DataListLoader
 from sklearn.utils.class_weight import compute_class_weight
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
+from sklearn.utils import resample
+import pickle as pkl
+from sklearn.model_selection import train_test_split
 
 class Config:
     '''Argument Parser for script to train scenegraphs.'''
@@ -51,6 +53,31 @@ class Config:
 
         self.cache_path = Path(self.cache_path).resolve()
 
+def build_scenegraph_dataset(cache_path, number_of_frames=20, train_to_test_ratio=0.3, downsample=False):
+    dataset_file = open(cache_path, "rb")
+    scenegraphs_sequence, feature_list = pkl.load(dataset_file)
+
+    class_0 = []
+    class_1 = []
+
+    for g in scenegraphs_sequence:
+        if g['label'] == 0:
+            class_0.append(g)
+        elif g['label'] == 1:
+            class_1.append(g)
+        
+    y_0 = [0]*len(class_0)
+    y_1 = [1]*len(class_1)
+
+    min_number = min(len(class_0), len(class_1))
+    if downsample:
+        modified_class_0, modified_y_0 = resample(class_0, y_0, n_samples=min_number)
+    else:
+        modified_class_0, modified_y_0 = class_0, y_0
+        
+    train, test, train_y, test_y = train_test_split(modified_class_0+class_1, modified_y_0+y_1, test_size=train_to_test_ratio, shuffle=True, stratify=modified_y_0+y_1)
+
+    return train, test, feature_list
 
 class DynKGTrainer:
 
@@ -60,7 +87,9 @@ class DynKGTrainer:
         np.random.seed(self.config.seed)
         torch.manual_seed(self.config.seed)
 
-        # load carla cheating scene graph txts into memory 
+        if not self.config.cache_path.exists():
+            raise Exception("The cache file does not exist.")    
+
         self.training_data, self.testing_data, self.feature_list = build_scenegraph_dataset(self.config.cache_path, downsample=False)
         self.training_labels = [data['label'] for data in self.training_data]
         self.testing_labels = [data['label'] for data in self.testing_data]

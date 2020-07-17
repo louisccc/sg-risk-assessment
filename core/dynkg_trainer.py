@@ -55,7 +55,7 @@ class DynKGTrainer:
 
     def __init__(self, args):
         self.config = Config(args)
-
+        self.args = args
         np.random.seed(self.config.seed)
         torch.manual_seed(self.config.seed)
 
@@ -189,16 +189,18 @@ class DynKGTrainer:
         if acc_loss_test < self.best_val_loss:
             self.best_val_loss = acc_loss_test
             self.best_epoch = current_epoch if current_epoch != None else self.config.epochs
-            with open("best_stats.txt",'w+') as f:
+            
+            with open("best_stats.txt",'a') as f:
+                f.write(str(self.args))
                 f.write("val loss: " + str(self.best_val_loss) + \
-                    "\nepoch: " + str(self.best_epoch) + \
-                    "\nval acc: " + str(metrics['test']['acc']) + \
-                    "\nval conf: " + str(metrics['test']['confusion']) + \
-                    "\nval auc: " + str(metrics['test']['auc']) + \
-                    "\ntrain loss: " + str(acc_loss_train) + \
-                    "\ntrain acc: " + str(metrics['train']['acc']) + \
-                    "\ntrain conf: " + str(metrics['train']['confusion']) + \
-                    "\ntrain auc: " + str(metrics['train']['auc']))
+                    ". epoch: " + str(self.best_epoch) + \
+                    ". val acc: " + str(metrics['test']['acc']) + \
+                    ". val conf: " + str(metrics['test']['confusion']) + \
+                    ". val auc: " + str(metrics['test']['auc']) + \
+                    ". train loss: " + str(acc_loss_train) + \
+                    ". train acc: " + str(metrics['train']['acc']) + \
+                    ". train conf: " + str(metrics['train']['confusion']) + \
+                    ". train auc: " + str(metrics['train']['auc']) + "\n\n\n")
             self.save_model()
 
         return outputs_test, labels_test, metrics

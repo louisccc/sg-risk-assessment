@@ -30,6 +30,8 @@ class Config:
         self.parser = ArgumentParser(description='The parameters for training the scene graph using GCN.')
         self.parser.add_argument('--cache_path', type=str, default="../script/image_dataset.pkl", help="Path to the cache file.")
         self.parser.add_argument('--model_path', type=str, default="./model/model.vec.pt", help="Path to the cached model file.")
+        self.parser.add_argument('--split_ratio', type=float, default=0.3, help="Train to test dataset split ratio.")
+        self.parser.add_argument('--downsample', type=lambda x: (str(x).lower() == 'true'), default=False, help='Flag to downsample dataset.')
         self.parser.add_argument('--learning_rate', default=0.0001, type=float, help='The initial learning rate for GCN.')
         self.parser.add_argument('--seed', type=int, default=random.randint(0,2**32), help='Random seed.')
         self.parser.add_argument('--epochs', type=int, default=200, help='Number of epochs to train.')
@@ -91,7 +93,7 @@ class DynKGTrainer:
         if not self.config.cache_path.exists():
             raise Exception("The cache file does not exist.")    
 
-        self.training_data, self.testing_data, self.feature_list = build_scenegraph_dataset(self.config.cache_path, downsample=False)
+        self.training_data, self.testing_data, self.feature_list = build_scenegraph_dataset(self.config.cache_path, config.split_ratio, downsample=config.downsample)
         self.training_labels = [data['label'] for data in self.training_data]
         self.testing_labels = [data['label'] for data in self.testing_data]
         self.class_weights = torch.from_numpy(compute_class_weight('balanced', np.unique(self.training_labels), self.training_labels))

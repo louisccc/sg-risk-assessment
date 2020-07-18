@@ -94,7 +94,7 @@ class DynKGTrainer:
         if not self.config.cache_path.exists():
             raise Exception("The cache file does not exist.")    
 
-        self.training_data, self.testing_data, self.feature_list = build_scenegraph_dataset(self.config.cache_path, config.split_ratio, downsample=config.downsample)
+        self.training_data, self.testing_data, self.feature_list = build_scenegraph_dataset(self.config.cache_path, self.config.split_ratio, downsample=self.config.downsample)
         self.training_labels = [data['label'] for data in self.training_data]
         self.testing_labels = [data['label'] for data in self.testing_data]
         self.class_weights = torch.from_numpy(compute_class_weight('balanced', np.unique(self.training_labels), self.training_labels))

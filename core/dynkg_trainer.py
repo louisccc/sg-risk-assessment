@@ -29,7 +29,8 @@ class Config:
     def __init__(self, args):
         self.parser = ArgumentParser(description='The parameters for training the scene graph using GCN.')
         self.parser.add_argument('--cache_path', type=str, default="../script/image_dataset.pkl", help="Path to the cache file.")
-        self.parser.add_argument('--model_path', type=str, default="./model/model.vec.pt", help="Path to the cached model file.")
+        self.parser.add_argument('--model_load_path', type=str, default="./model/model.vec.pt", help="Path to load cached model file.")
+        self.parser.add_argument('--model_save_path', type=str, default="./model/model_best_val_loss_.vec.pt", help="Path to save model file.")
         self.parser.add_argument('--split_ratio', type=float, default=0.3, help="Train to test dataset split ratio.")
         self.parser.add_argument('--downsample', type=lambda x: (str(x).lower() == 'true'), default=False, help='Flag to downsample dataset.')
         self.parser.add_argument('--learning_rate', default=0.0001, type=float, help='The initial learning rate for GCN.')
@@ -240,15 +241,15 @@ class DynKGTrainer:
 
     def save_model(self):
         """Function to save the model."""
-        saved_path = Path("./model").resolve()
+        saved_path = Path(self.config.model_load_path).resolve()
         saved_path.mkdir(parents=True, exist_ok=True)
-        torch.save(self.model.state_dict(), str(saved_path / 'model_best_val_loss_.vec.pt'))
+        torch.save(self.model.state_dict(), str(saved_path))
 
     def load_model(self):
         """Function to load the model."""
-        saved_path = Path("./model").resolve()
+        saved_path = Path(self.config.model_save_path).resolve()
         if saved_path.exists():
-            self.model.load_state_dict(torch.load(str(saved_path / 'model.vec.pt')))
+            self.model.load_state_dict(torch.load(str(saved_path)))
             self.model.eval()
 
 def get_metrics(outputs, labels):

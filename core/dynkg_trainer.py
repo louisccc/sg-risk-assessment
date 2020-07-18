@@ -241,13 +241,13 @@ class DynKGTrainer:
 
     def save_model(self):
         """Function to save the model."""
-        saved_path = Path(self.config.model_load_path).resolve()
-        saved_path.mkdir(parents=True, exist_ok=True)
+        saved_path = Path(self.config.model_save_path).resolve()
+        os.makedirs(os.path.dirname(saved_path), exist_ok=True)
         torch.save(self.model.state_dict(), str(saved_path))
 
     def load_model(self):
         """Function to load the model."""
-        saved_path = Path(self.config.model_save_path).resolve()
+        saved_path = Path(self.config.model_load_path).resolve()
         if saved_path.exists():
             self.model.load_state_dict(torch.load(str(saved_path)))
             self.model.eval()

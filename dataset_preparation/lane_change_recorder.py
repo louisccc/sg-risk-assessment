@@ -169,7 +169,7 @@ class LaneChangeRecorder:
 
                 self.extractor.export_data()
                 # create gifs
-                self.convert_gif(self.new_path)
+                # self.convert_gif(self.new_path)
                 self.lane_changing = False
                 print('set set_autopilot back to true')
                 self.client.apply_batch_sync([carla.command.SetAutopilot(self.ego, True)], True)

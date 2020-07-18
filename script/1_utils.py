@@ -157,9 +157,9 @@ def clean(input_path):
 		if gif.exists():
 			gif.unlink()
 		if carla_visualization.exists():
-			shutil.rmtree(carla_visualization)
+			shutil.rmtree(carla_visualization, ignore_errors=True)
 		if obj_detection_result.exists():
-			shutil.rmtree(obj_detection_result)
+			shutil.rmtree(obj_detection_result, ignore_errors=True)
 
 if __name__ == '__main__':
 	config = Config(sys.argv[1:])

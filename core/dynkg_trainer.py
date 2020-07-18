@@ -53,7 +53,7 @@ class Config:
 
         self.cache_path = Path(self.cache_path).resolve()
 
-def build_scenegraph_dataset(cache_path, number_of_frames=20, train_to_test_ratio=0.3, downsample=False):
+def build_scenegraph_dataset(cache_path, train_to_test_ratio=0.3, downsample=False):
     dataset_file = open(cache_path, "rb")
     scenegraphs_sequence, feature_list = pkl.load(dataset_file)
 

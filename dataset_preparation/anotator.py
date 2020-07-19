@@ -44,6 +44,11 @@ def anotate_task(root_folder):
                 if len(label_data) == 2:
                     prev_avg_score, num_of_scores = float(label_data[0]), int(label_data[1])
         return prev_avg_score+3, num_of_scores
+    
+    def clear_canvas():
+        for widget in clip_canvas.winfo_children():
+            widget.destroy()
+        clip_canvas.grid_forget()
 
     def nextClip():
         print("Loading next clip...")
@@ -51,7 +56,7 @@ def anotate_task(root_folder):
         idx += 1
         if (idx >= len(foldernames)):
             root.destroy()
-        clip_canvas.delete('all')
+        clear_canvas()
         
         prev_avg_score, num_of_scores = read_score(foldernames[idx] / "label.txt")
         
@@ -64,7 +69,7 @@ def anotate_task(root_folder):
         nonlocal idx
         if (idx > 0):
             idx -= 1
-            clip_canvas.delete('all')
+            clear_canvas()
 
             prev_avg_score, num_of_scores = read_score(foldernames[idx] / "label.txt")
 
@@ -73,8 +78,7 @@ def anotate_task(root_folder):
             show_video(clip_canvas, foldernames[idx], root, title)
 
     def replayClip():
-        clip_canvas.delete('all')
-
+        clear_canvas()
         prev_avg_score, num_of_scores = read_score(foldernames[idx] / "label.txt")
         
         title = "Lane Change {} Evaluation: Clip {} / {}, curr:({}, {})".format(foldernames[idx].stem, idx, len(foldernames), prev_avg_score, num_of_scores)

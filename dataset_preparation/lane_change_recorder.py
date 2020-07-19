@@ -41,7 +41,9 @@ class LaneChangeRecorder:
                 carla.WeatherParameters.CloudySunset, carla.WeatherParameters.WetSunset, 
                 carla.WeatherParameters.WetCloudySunset, carla.WeatherParameters.SoftRainSunset, 
                 carla.WeatherParameters.MidRainSunset, carla.WeatherParameters.HardRainSunset]
-       
+
+        self.recording_count = 0
+
     def set_vehicles_list(self, vehicles_list):
         self.vehicles_list = vehicles_list
 
@@ -175,6 +177,9 @@ class LaneChangeRecorder:
                 self.client.apply_batch_sync([carla.command.SetAutopilot(self.ego, True)], True)
                 print("Cleaning up sensors...")
                 self.tick_count = 0
+                self.recording_count += 1
+        
+        return self.recording_count >= 10
 
 class DataExtractor(object):
 

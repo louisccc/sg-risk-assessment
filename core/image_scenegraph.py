@@ -81,7 +81,7 @@ class RealSceneGraph:
         #TODO: map lane lines to warped_img. assign locations to lanes
         #TODO: map vehicles to lanes using locations. add relations to graph
 
-        cv2.imwrite( "./warped.jpg", cv2.cvtColor(warped_img, cv2.COLOR_BGR2RGB)) #plot warped image
+        # cv2.imwrite( "./warped.jpg", cv2.cvtColor(warped_img, cv2.COLOR_BGR2RGB)) #plot warped image
         ### TODO: Arnav's part lane/road detection
 
         for idx, (box, label) in enumerate(zip(boxes, labels)):

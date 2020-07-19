@@ -10,6 +10,7 @@ sys.path.append('../')
 from nagoya.dataset import DataSet
 from nagoya.models import Models
 from nagoya.Mask_RCNN.mask_rcnn.detect_objects import DetectObjects
+from core.dynkg_trainer import get_metrics
 io.use_plugin('pil')
 
 
@@ -63,7 +64,7 @@ def process_raw_images_to_masked_images(src_path: Path, dst_path: Path, coco_pat
 
 def read_risk_data(masked_image_path: Path):
 	risk_scores = []
-	all_video_clip_dirs = [f for f in input_path.iterdir() if f.is_dir() and f.stem.isnumeric()]
+	all_video_clip_dirs = [f for f in masked_image_path.iterdir() if f.is_dir() and f.stem.isnumeric()]
 	all_video_clip_dirs = sorted(all_video_clip_dirs, key=lambda f: int(f.stem))
 	for path in all_video_clip_dirs:
 		label_path = path / "label.txt"
@@ -75,23 +76,28 @@ def read_risk_data(masked_image_path: Path):
 			raise FileNotFoundError("No label.txt in %s" % path) 
 	return risk_scores
 	
-def load_dataset(masked_image_path: Path):
-    '''
-        This step is for loading the dataset, preprocessing the video clips 
-        and neccessary scaling and normalizing. Also it reads and converts the labeling info.
-    '''
-    dataset = DataSet()
-    dataset.read_video(masked_image_path, option='fixed frame amount', number_of_frames=20, scaling='scale', scale_x=0.1, scale_y=0.1)
+def load_dataset(raw_image_path: Path, masked_image_path: Path, dataset_type: str):
+	'''
+		This step is for loading the dataset, preprocessing the video clips 
+		and neccessary scaling and normalizing. Also it reads and converts the labeling info.
+	'''
+	if dataset_type == "masked":
+		image_path = masked_image_path
+	else:
+		image_path = raw_image_path
 
-    '''
-        order videos by risk and find top riskiest
-        #match input to risk label in LCTable 
-        data = label_risk(masked_data)
-    '''
-    dataset.risk_scores = read_risk_data(maked_image_path)
-    dataset.convert_risk_to_one_hot(risk_threshold=0.5)
+	dataset = DataSet()
+	dataset.read_video(image_path, option='all frames', number_of_frames=20, scaling='scale', scale_x=0.1, scale_y=0.1)
 
-    return dataset
+	'''
+		order videos by risk and find top riskiest
+		#match input to risk label in LCTable 
+		data = label_risk(masked_data)
+	'''
+	dataset.risk_scores = read_risk_data(raw_image_path)
+	dataset.convert_risk_to_one_hot(risk_threshold=0.5)
+
+	return dataset
 
 if __name__ == '__main__':
 	
@@ -115,13 +121,13 @@ if __name__ == '__main__':
 		
 		if len(raw_folders)!=len(masked_folders):
 			process_raw_images_to_masked_images(raw_image_path, masked_image_path, coco_model_path)
-		
+
 		#load masked images
-		dataset = load_dataset(masked_image_path, label_table_path)
+		dataset = load_dataset(raw_image_path, masked_image_path, dataset_type="masked")
 
 	else:
 		#load raw images
-		dataset = load_dataset(raw_image_path, label_table_path)
+		dataset = load_dataset(raw_image_path, masked_image_path, dataset_type="raw")
 	
 	# load or train model
 	if config.load_model:

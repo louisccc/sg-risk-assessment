@@ -12,7 +12,7 @@ from keras.optimizers import Adam
 from keras.applications import ResNet50
 import tensorflow as tf
 import keras.backend as K
-
+from sklearn.model_selection import train_test_split
 
 from sklearn.metrics import roc_auc_score, f1_score
 import matplotlib.pyplot as plt
@@ -108,22 +108,50 @@ class Models:
         rand_indexes = list(range(0, nb_samples))
         # get the initial random model weights
         w_save = self.model.get_weights()
+        
+        class_0 = []
+        class_1 = []
+
+        for idx, l in enumerate(label):
+            # [0,1] = risky, [1,0] = safe
+            if (l == [0., 1.]).all():
+                class_0.append(Data[idx])
+            elif (l == [1., 0.]).all():
+                class_1.append(Data[idx])
+
+        class_0 = np.array(class_0)
+        class_1 = np.array(class_1)
+        
+        y_0 = [[0., 1.]] * len(class_0)
+        y_1 = [[1., 0.]] * len(class_1)
+        
+        y_0 = np.array(y_0, dtype=np.float64)
+        y_1 = np.array(y_1, dtype=np.float64)
+        # min_number = min(len(class_0), len(class_1))
+        # if downsample:
+        #     modified_class_0, modified_y_0 = resample(class_0, y_0, n_samples=min_number)
+        # else:
+        #     modified_class_0, modified_y_0 = class_0, y_0
+            
+        # train, test, train_y, test_y = train_test_split(modified_class_0+class_1, modified_y_0+y_1, test_size=train_to_test_ratio, shuffle=True, stratify=modified_y_0+y_1)
 
         for i in tqdm(range(n)):
 
-            # randomize how we split the videos
-            random.shuffle(rand_indexes)
-            # take
-            #int(nb_samples * training_to_all_data_ratio) * 0.05
+            # # randomize how we split the videos
+            # random.shuffle(rand_indexes)
+            # # take
+            # #int(nb_samples * training_to_all_data_ratio) * 0.05
             
-            # split videos into train and test i.e. first 2 videos for train last 2 for test
-            # then train model
-            X_train = Data[rand_indexes[0:int(nb_samples * training_to_all_data_ratio)], :]
-            y_train = label[rand_indexes[0:int(nb_samples * training_to_all_data_ratio)], :]
-            X_test = Data[rand_indexes[int(nb_samples * training_to_all_data_ratio):], :]
-            y_test = label[rand_indexes[int(nb_samples * training_to_all_data_ratio):], :]
-            # if both classes in testing set?
-            
+            # # split videos into train and test i.e. first 2 videos for train last 2 for test
+            # # then train model
+            # X_train = Data[rand_indexes[0:int(nb_samples * training_to_all_data_ratio)], :]
+            # y_train = label[rand_indexes[0:int(nb_samples * training_to_all_data_ratio)], :]
+            # X_test = Data[rand_indexes[int(nb_samples * training_to_all_data_ratio):], :]
+            # y_test = label[rand_indexes[int(nb_samples * training_to_all_data_ratio):], :]
+            # # if both classes in testing set?
+
+            X_train, X_test, y_train, y_test = train_test_split(np.concatenate([class_0, class_1], axis=0), np.concatenate([y_0, y_1], axis=0), test_size=1-training_to_all_data_ratio, shuffle=True, stratify=np.concatenate([y_0, y_1], axis=0))
+
             # Model weights from the previous training session must be resetted to the initial random values
             self.model.set_weights(w_save)
             self.history = []

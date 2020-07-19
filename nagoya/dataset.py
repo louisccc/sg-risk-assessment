@@ -33,7 +33,6 @@ class DataSet:
                    scaling='no scaling', scale_x=0.1, scale_y=0.1):
 
         foldernames = [f for f in sorted(os.listdir(data_dir),key=int) if f.isnumeric() and not f.startswith('.')]
-        #import pdb;pdb.set_trace()
         self.read_image_data(str(data_dir/foldernames[0]), scaling=scaling, scale_x=scale_x, scale_y=scale_y)
 
         if len(self.image_seq) == 0:
@@ -98,34 +97,6 @@ class DataSet:
                     elif option == 'all frames':
                         self.video_features[int(foldername), 0:len(self.image_seq), :] = self.image_seq
 
-    def read_features(self, feature_path, feature_size=2048, option='fixed frame amount', number_of_frames=20,
-                      max_number_of_frames=500):
-
-        foldernames = [f for f in os.listdir(feature_path) if f.isnumeric() and not f.startswith('.')]
-        int_foldernames = [int(f) for f in os.listdir(feature_path) if f.isnumeric() and not f.startswith('.')]
-        if option == 'fixed frame amount':
-            self.video_features = np.zeros([max(int_foldernames), number_of_frames, feature_size])
-        elif option == 'all frames':
-            self.video_features = np.zeros([max(int_foldernames), max_number_of_frames, feature_size])
-            # shape: (n_vidoes, n_frames, im_height, im_width, channel)
-
-        for foldername in tqdm(foldernames):
-            if foldername.isnumeric:
-                filenames = sorted(os.listdir(feature_path + '/' + foldername))
-                index = 0
-
-                for counter, filename in enumerate(filenames):
-                    feature_file = feature_path + '/' + foldername + '/' + filename
-                    # todo convert this to a wrapper
-                    if option == 'fixed frame amount':
-                        modulo = int(len(filenames) / number_of_frames)
-                        if counter % modulo == 0 and index < number_of_frames:
-                            self.video_features[int(foldername)-1, index, :] = np.loadtxt(feature_file, delimiter=',')
-                            index += 1
-
-                    elif option == 'all frames':
-                        self.video_features[int(foldername) - 1, counter, :] = np.loadtxt(feature_file, delimiter=',')
-
     def read_image_data(self, data_dir, scaling='no scaling', scale_x=0.1, scale_y=0.1):
 
         if scaling == 'scale':
@@ -134,31 +105,16 @@ class DataSet:
         else:
             self.image_seq = self.load_images_from_folder(data_dir)
 
-    def read_can_data(self, data_dir):
-        # todo
-        self.can_seq = []
-
-    def read_risk_data(self, file_path):
-        df = pd.read_csv(file_path, header=None, usecols=[6], names=['risk_score'])
-        #import pdb; pdb.set_trace()
-        self.risk_scores = df['risk_score'].tolist()
-
     def convert_risk_to_one_hot(self, risk_threshold=0.5):
         # sorting risk thresholds from least risky to most risky
         indexes = [i[0] for i in sorted(enumerate(self.risk_scores), key=lambda x: x[1])]
         self.risk_one_hot = np.zeros([len(indexes), 2])
 
-        # assigning one hot vector [0,1] for risky and [1,0] for not risky
-        # if risk threshold is 0.5, 50% risky (upper half of indexes array) 50% not risky (lower half of indexes array)
         for counter, index in enumerate(indexes[::-1]):
             if self.risk_scores[index] > 0:
                 self.risk_one_hot[index, :] = [0, 1]
             else:
                 self.risk_one_hot[index, :] = [1, 0]
-
-    def decode_one_hot(self):
-        self.risk_binary = np.zeros([self.risk_one_hot.shape[0], 1])
-        self.risk_binary[:, 0] = np.argmax(self.risk_one_hot, axis=1)
 
     def save(self, filename='dataset.pickle', save_dir='saved data/'):
         with open(save_dir + filename, 'wb') as output:
@@ -236,21 +192,3 @@ def raw2masked(image_path, masked_image_path):
     '''
     masked_image_extraction = DetectObjects(image_path, masked_image_path)
     masked_image_extraction.save_masked_images()
-
-def load_dataset(masked_image_path: Path, label_table_path: Path):
-    '''
-        This step is for loading the dataset, preprocessing the video clips 
-        and neccessary scaling and normalizing. Also it reads and converts the labeling info.
-    '''
-    dataset = DataSet()
-    dataset.read_video(masked_image_path, option='fixed frame amount', number_of_frames=20, scaling='scale', scale_x=0.1, scale_y=0.1)
-
-    '''
-        order videos by risk and find top riskiest
-        #match input to risk label in LCTable 
-        data = label_risk(masked_data)
-    '''
-    dataset.read_risk_data(str(label_table_path))
-    dataset.convert_risk_to_one_hot(risk_threshold=0.5)
-
-    return dataset

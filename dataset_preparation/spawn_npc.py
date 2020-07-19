@@ -104,7 +104,7 @@ def main():
 
     # Town 5: Squared-grid town with cross junctions and a bridge. 
     # It has multiple lanes per direction. Useful to perform lane changes.
-    world = client.load_world('Town05')
+    world = client.load_world('Town04')
     CarlaDataProvider.set_world(world)
     
     # set number of vehicles randomly

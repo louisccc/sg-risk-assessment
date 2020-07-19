@@ -55,19 +55,19 @@ class CarlaWorld():
 
         # Town 5: Squared-grid town with cross junctions and a bridge. 
         # It has multiple lanes per direction. Useful to perform lane changes.
-        self.world = client.load_world('Town05')
+        self.world = self.client.load_world('Town05')
         CarlaDataProvider.set_world(self.world)
         
         # set number of vehicles randomly
-        self.number_of_vehicles = random.randrange(max(2, args.number_of_vehicles / 2), args.number_of_vehicles)
+        self.number_of_vehicles = random.randrange(max(2, self.args.number_of_vehicles / 2), self.args.number_of_vehicles)
         # set number of pedestrians randomly 
-        self.number_of_walkers = random.randrange(1, args.number_of_walkers)
+        self.number_of_walkers = random.randrange(1, self.args.number_of_walkers)
 
         self.lanechangerecorder = None
 
     def run(self):
 
-        traffic_manager = client.get_trafficmanager(self.args.tm_port)
+        traffic_manager = self.client.get_trafficmanager(self.args.tm_port)
         traffic_manager.set_global_distance_to_leading_vehicle(2.0)
         self.world = self.client.get_world()
 
@@ -126,11 +126,11 @@ class CarlaWorld():
             blueprint.set_attribute('role_name', 'autopilot')
             batch.append(SpawnActor(blueprint, transform).then(SetAutopilot(FutureActor, True)))
 
-        for response in client.apply_batch_sync(batch, self.synchronous_master):
+        for response in self.client.apply_batch_sync(batch, self.synchronous_master):
             if response.error:
                 logging.error(response.error)
             else:
-                self.vehicle_list.append(response.actor_id)
+                self.vehicles_list.append(response.actor_id)
 
         # -------------
         # Spawn Walkers
@@ -166,7 +166,7 @@ class CarlaWorld():
                 print("Walker has no speed")
                 walker_speed.append(0.0)
             batch.append(SpawnActor(walker_bp, spawn_point))
-        results = client.apply_batch_sync(batch, True)
+        results = self.client.apply_batch_sync(batch, True)
         walker_speed2 = []
         for i in range(len(results)):
             if results[i].error:
@@ -180,7 +180,7 @@ class CarlaWorld():
         walker_controller_bp = self.world.get_blueprint_library().find('controller.ai.walker')
         for i in range(len(self.walkers_list)):
             batch.append(SpawnActor(walker_controller_bp, carla.Transform(), self.walkers_list[i]["id"]))
-        results = client.apply_batch_sync(batch, True)
+        results = self.client.apply_batch_sync(batch, True)
         for i in range(len(results)):
             if results[i].error:
                 logging.error(results[i].error)
@@ -193,7 +193,7 @@ class CarlaWorld():
         self.all_actors = self.world.get_actors(self.all_id)
 
         # wait for a tick to ensure client receives the last transform of the walkers we have just created
-        if not args.sync or not self.synchronous_master:
+        if not self.args.sync or not self.synchronous_master:
             self.world.wait_for_tick()
         else:
             self.world.tick()
@@ -209,25 +209,25 @@ class CarlaWorld():
             # max speed
             self.all_actors[i].set_max_speed(float(walker_speed[int(i/2)]))
 
-        print('spawned %d vehicles and %d walkers, press Ctrl+C to exit.' % (len(self.vehicle_list), len(self.walkers_list)))
+        print('spawned %d vehicles and %d walkers, press Ctrl+C to exit.' % (len(self.vehicles_list), len(self.walkers_list)))
 
         # change global vehicle behavior
-        for v in self.vehicle_list:
+        for v in self.vehicles_list:
             # disable auto lane change
             traffic_manager.auto_lane_change(self.world.get_actor(v), False)
             traffic_manager.vehicle_percentage_speed_difference(self.world.get_actor(v), random.uniform(-20, 30))
             traffic_manager.distance_to_leading_vehicle(self.world.get_actor(v), random.uniform(0.5, 50))
 
         # if you want to trigger the recorder, run this file in synchronous mode
-        self.lanechangerecorder = LaneChangeRecorder(traffic_manager, self.world, client)
-        self.lanechangerecorder.set_vehicles_list(self.vehicle_list)
+        self.lanechangerecorder = LaneChangeRecorder(traffic_manager, self.world, self.client)
+        self.lanechangerecorder.set_vehicles_list(self.vehicles_list)
 
         while True:
 
             timestamp = None
             reset = False
 
-            if args.sync and self.synchronous_master:
+            if self.args.sync and self.synchronous_master:
                 self.world.tick()
             else:
                 self.world.wait_for_tick()
@@ -251,8 +251,8 @@ class CarlaWorld():
             settings.fixed_delta_seconds = None
             self.world.apply_settings(settings)
 
-        print('\ndestroying %d vehicles' % len(self.vehicle_list))
-        self.client.apply_batch([carla.command.DestroyActor(x) for x in self.vehicle_list])
+        print('\ndestroying %d vehicles' % len(self.vehicles_list))
+        self.client.apply_batch([carla.command.DestroyActor(x) for x in self.vehicles_list])
         
         if self.lanechangerecorder:
             self.lanechangerecorder.destroy_sensors()
@@ -274,9 +274,9 @@ class CarlaWorld():
     def reload(self):
         self.world = self.client.reload_world()
         # set number of vehicles randomly
-        self.number_of_vehicles = random.randrange(max(2, args.number_of_vehicles / 2), args.number_of_vehicles)
+        self.number_of_vehicles = random.randrange(max(2, self.args.number_of_vehicles / 2), self.args.number_of_vehicles)
         # set number of pedestrians randomly 
-        self.number_of_walkers = random.randrange(1, args.number_of_walkers)
+        self.number_of_walkers = random.randrange(1, self.args.number_of_walkers)
 
 def main():
     argparser = argparse.ArgumentParser(

@@ -213,10 +213,6 @@ class DynKGTrainer:
         outputs_test, labels_test, folder_names_test, acc_loss_test = self.inference(self.testing_data, self.testing_labels)
         metrics['test'] = get_metrics(outputs_test, labels_test)
         metrics['test']['loss'] = acc_loss_test
-        
-        # for output, label, folder_name in zip(outputs_train, labels_train, folder_names_train):
-        #     pred = 0 if output[0] > output[1] else 1
-        #     print(output, pred, label, folder_name)
 
         print("\ntrain loss: " + str(acc_loss_train) + ", acc:", metrics['train']['acc'], metrics['train']['confusion'], metrics['train']['auc'], \
               "\ntest loss: " +  str(acc_loss_test) + ", acc:",  metrics['test']['acc'],  metrics['test']['confusion'], metrics['test']['auc'])
@@ -225,19 +221,31 @@ class DynKGTrainer:
         if acc_loss_test < self.best_val_loss:
             self.best_val_loss = acc_loss_test
             self.best_epoch = current_epoch if current_epoch != None else self.config.epochs
+
+            best_metrics = {}
+            best_metrics['args'] = str(self.args)
+            best_metrics['epoch'] = self.best_epoch
+            best_metrics['val loss'] = acc_loss_test
+            best_metrics['val acc'] = metrics['test']['acc']
+            best_metrics['val conf'] = metrics['test']['confusion']
+            best_metrics['val auc'] = metrics['test']['auc']
+            best_metrics['val precision'] = metrics['test']['precision']
+            best_metrics['val recall'] = metrics['test']['recall']
+            best_metrics['train loss'] = acc_loss_train
+            best_metrics['train acc'] = metrics['train']['acc']
+            best_metrics['train conf'] = metrics['train']['confusion'] 
+            best_metrics['train auc'] = metrics['train']['auc']
+            best_metrics['train precision'] = metrics['train']['precision']
+            best_metrics['train recall'] = metrics['train']['recall']
             
-            with open("best_stats.txt",'a') as f:
-                f.write(str(self.args))
-                f.write("val loss: " + str(self.best_val_loss) + \
-                    ". epoch: " + str(self.best_epoch) + \
-                    ". val acc: " + str(metrics['test']['acc']) + \
-                    ". val conf: " + str(metrics['test']['confusion']) + \
-                    ". val auc: " + str(metrics['test']['auc']) + \
-                    ". train loss: " + str(acc_loss_train) + \
-                    ". train acc: " + str(metrics['train']['acc']) + \
-                    ". train conf: " + str(metrics['train']['confusion']) + \
-                    ". train auc: " + str(metrics['train']['auc']) + "\n\n\n")
-            self.save_model()
+            current_stats = pd.DataFrame(best_metrics, index=[0])
+
+            if not os.path.exists("best_stats.csv"):
+                current_stats.to_csv("best_stats.csv", mode='w+', header=True)
+            else:
+                best_stats = current_stats.to_csv("best_stats.csv", mode='a', header=False)
+            
+            #self.save_model()
 
         return outputs_test, labels_test, metrics
 

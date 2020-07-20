@@ -65,12 +65,12 @@ class SceneGraph:
             degree = math.degrees(math.acos(inner_product / length_product))
             
             if degree <= 80 or (degree >=280 and degree <= 360):
-                if abs(self.egoNode.attr['lane_idx'] - attr['lane_idx']) <= 1 \
-                or ("invading_lane" in self.egoNode.attr and (2*self.egoNode.attr['invading_lane'] - self.egoNode.attr['orig_lane_idx']) == attr['lane_idx']):
-                    n = Node(actor_id, attr, None)   #using the actor key as the node name and the dict as its attributes.
-                    n.name = self.relation_extractor.get_actor_type(n).name.lower() + ":" + actor_id
-                    n.type = self.relation_extractor.get_actor_type(n).value
-                    self.add_node(n)
+                # if abs(self.egoNode.attr['lane_idx'] - attr['lane_idx']) <= 1 \
+                # or ("invading_lane" in self.egoNode.attr and (2*self.egoNode.attr['invading_lane'] - self.egoNode.attr['orig_lane_idx']) == attr['lane_idx']):
+                n = Node(actor_id, attr, None)   #using the actor key as the node name and the dict as its attributes.
+                n.name = self.relation_extractor.get_actor_type(n).name.lower() + ":" + actor_id
+                n.type = self.relation_extractor.get_actor_type(n).value
+                self.add_node(n)
             
     #adds lanes and their dicts. constructs relation between each lane and the root road node.
     def add_lane_dict(self, lanedict):

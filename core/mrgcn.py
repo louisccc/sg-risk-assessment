@@ -72,8 +72,9 @@ class MRGCN(nn.Module):
         self.num_classes  = config.nclass
         self.num_layers = config.num_layers #defines number of RGCN conv layers.
         self.hidden_dim = config.hidden_dim
-        self.hidden_dim2 = 20
-        self.hidden_dim1 = 50
+        self.layer_spec = None if config.layer_spec == None else list(map(int, config.layer_spec.split(',')))
+        self.lstm_dim1 = config.lstm_input_dim
+        self.lstm_dim2 = config.lstm_output_dim
 
         self.pooling_type = config.pooling_type
         self.readout_type = config.readout_type
@@ -81,27 +82,38 @@ class MRGCN(nn.Module):
 
         self.dropout = config.dropout
         self.conv = []
-        self.conv.append(FastRGCNConv(self.num_features, self.hidden_dim, self.num_relations).to(config.device))
+        total_dim = 0
 
-        dim = self.hidden_dim
-        tot_dim = dim
-        for i in range(1, self.num_layers):
-            self.conv.append(FastRGCNConv(dim, dim * 2, self.num_relations).to(config.device))
-            dim = dim * 2
-            tot_dim += dim
+        if self.layer_spec == None:
+            self.conv.append(FastRGCNConv(self.num_features, self.hidden_dim, self.num_relations).to(config.device))
+            total_dim += self.hidden_dim
+            for i in range(1, self.num_layers):
+                self.conv.append(FastRGCNConv(self.hidden_dim, self.hidden_dim, self.num_relations).to(config.device))
+                total_dim += self.hidden_dim
+        
+        else:
+            print("using layer specification and ignoring hidden_dim parameter.")
+            print("layer_spec: " + str(self.layer_spec))
+            self.conv.append(FastRGCNConv(self.num_features, self.layer_spec[0], self.num_relations).to(config.device))
+            total_dim += self.layer_spec[0]
+            for i in range(1, self.num_layers):
+                self.conv.append(FastRGCNConv(self.layer_spec[i-1], self.layer_spec[i], self.num_relations).to(config.device))
+                total_dim += self.layer_spec[i]
+
+            self.hidden_dim = self.layer_spec[-1] #setting the hidden dims of all later layers with last layer size of layer spec.
 
         if self.pooling_type == "sagpool":
-            self.pool1 = RGCNSAGPooling(tot_dim, self.num_relations, ratio=config.pooling_ratio)
+            self.pool1 = RGCNSAGPooling(total_dim, self.num_relations, ratio=config.pooling_ratio)
         elif self.pooling_type == "topk":
-            self.pool1 = TopKPooling(tot_dim, ratio=config.pooling_ratio)
+            self.pool1 = TopKPooling(total_dim, ratio=config.pooling_ratio)
 
-        self.fc1 = Linear(tot_dim, self.hidden_dim1)
+        self.fc1 = Linear(total_dim, self.lstm_dim1)
         
         if "lstm" in self.temporal_type:
-            self.lstm = LSTM(self.hidden_dim1, self.hidden_dim2, batch_first=True)
-            self.attn = Attention(self.hidden_dim2)
+            self.lstm = LSTM(self.lstm_dim1, self.lstm_dim2, batch_first=True)
+            self.attn = Attention(self.lstm_dim2)
         
-        self.fc2 = Linear(self.hidden_dim2, self.num_classes)
+        self.fc2 = Linear(self.lstm_dim2, self.num_classes)
 
 
     def forward(self, x, edge_index, edge_attr, batch=None):

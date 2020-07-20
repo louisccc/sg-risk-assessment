@@ -44,11 +44,14 @@ class Config:
         self.parser.add_argument('--test_step', type=int, default=10, help='Number of epochs before testing the model.')
         self.parser.add_argument('--model', type=str, default="mrgcn", help="Model to be used intrinsically.")
         self.parser.add_argument('--num_layers', type=int, default=3, help="Number of RGCN layers in the network.")
-        self.parser.add_argument('--hidden_dim', type=int, default=32, help="Hidden dimension in GIN.")
+        self.parser.add_argument('--hidden_dim', type=int, default=32, help="Hidden dimension in RGCN.")
+        self.parser.add_argument('--layer_spec', type=str, default=None, help="manually specify the size of each layer in format l1,l2,l3 (no spaces)")
         self.parser.add_argument('--pooling_type', type=str, default="sagpool", help="Graph pooling type.")
         self.parser.add_argument('--pooling_ratio', type=float, default=0.5, help="Graph pooling ratio.")        
         self.parser.add_argument('--readout_type', type=str, default="mean", help="Readout type.")
-        self.parser.add_argument('--temporal_type', type=str, default="lstm_last", help="Temporal type.")
+        self.parser.add_argument('--temporal_type', type=str, default="lstm_attn", help="Temporal type.")
+        self.parser.add_argument('--lstm_input_dim', type=int, default=50, help="LSTM input dimensions.")
+        self.parser.add_argument('--lstm_output_dim', type=int, default=20, help="LSTM output dimensions.")
 
         args_parsed = self.parser.parse_args(args)
         
@@ -57,7 +60,7 @@ class Config:
 
         self.cache_path = Path(self.cache_path).resolve()
 
-def build_scenegraph_dataset(cache_path, train_to_test_ratio=0.3, downsample=False):
+def build_scenegraph_dataset(cache_path, train_to_test_ratio=0.3, downsample=False, seed=0):
     dataset_file = open(cache_path, "rb")
     scenegraphs_sequence, feature_list = pkl.load(dataset_file)
 
@@ -79,7 +82,7 @@ def build_scenegraph_dataset(cache_path, train_to_test_ratio=0.3, downsample=Fal
     else:
         modified_class_0, modified_y_0 = class_0, y_0
         
-    train, test, train_y, test_y = train_test_split(modified_class_0+class_1, modified_y_0+y_1, test_size=train_to_test_ratio, shuffle=True, stratify=modified_y_0+y_1)
+    train, test, train_y, test_y = train_test_split(modified_class_0+class_1, modified_y_0+y_1, test_size=train_to_test_ratio, shuffle=True, stratify=modified_y_0+y_1, random_state=seed)
 
     return train, test, feature_list
 
@@ -94,7 +97,7 @@ class DynKGTrainer:
         if not self.config.cache_path.exists():
             raise Exception("The cache file does not exist.")    
 
-        self.training_data, self.testing_data, self.feature_list = build_scenegraph_dataset(self.config.cache_path, self.config.split_ratio, downsample=self.config.downsample)
+        self.training_data, self.testing_data, self.feature_list = build_scenegraph_dataset(self.config.cache_path, self.config.split_ratio, downsample=self.config.downsample, seed=self.config.seed)
         self.training_labels = [data['label'] for data in self.training_data]
         self.testing_labels = [data['label'] for data in self.testing_data]
         self.class_weights = torch.from_numpy(compute_class_weight('balanced', np.unique(self.training_labels), self.training_labels))

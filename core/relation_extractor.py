@@ -6,10 +6,11 @@ MOTO_NAMES = ["Harley-Davidson", "Kawasaki", "Yamaha"]
 BICYCLE_NAMES = ["Gazelle", "Diamondback", "Bh"]
 CAR_NAMES = ["Ford", "Bmw", "Toyota", "Nissan", "Mini", "Tesla", "Seat", "Lincoln", "Audi", "Carlamotors", "Citroen", "Mercedes-Benz", "Chevrolet", "Volkswagen", "Jeep", "Nissan", "Dodge", "Mustang"]
 
-CAR_PROXIMITY_THRESH_SUPER_NEAR = 8 # max number of feet between a car and another entity to build proximity relation
-CAR_PROXIMITY_THRESH_VERY_NEAR = 15
-CAR_PROXIMITY_THRESH_NEAR = 25
-CAR_PROXIMITY_THRESH_VISIBLE = 40
+CAR_PROXIMITY_THRESH_NEAR_COLL = 4
+CAR_PROXIMITY_THRESH_SUPER_NEAR = 7 # max number of feet between a car and another entity to build proximity relation
+CAR_PROXIMITY_THRESH_VERY_NEAR = 10
+CAR_PROXIMITY_THRESH_NEAR = 16
+CAR_PROXIMITY_THRESH_VISIBLE = 25
 MOTO_PROXIMITY_THRESH = 50
 BICYCLE_PROXIMITY_THRESH = 50
 PED_PROXIMITY_THRESH = 50
@@ -30,14 +31,15 @@ ACTOR_NAMES=['car','moto','bicycle','ped','lane','light','sign', 'road']
 
 class Relations(Enum):
     isIn = 0
-    super_near = 1
-    very_near = 2
-    near = 3
-    visible = 4
-    inFrontOf = 5
-    atRearOf = 6
-    toLeftOf = 7
-    toRightOf = 8
+    near_coll = 1
+    super_near = 2
+    very_near = 3
+    near = 4
+    visible = 5
+    inFrontOf = 6
+    atRearOf = 7
+    toLeftOf = 8
+    toRightOf = 9
 
 RELATION_COLORS = ["black", "red", "orange", "yellow", "green", "purple", "blue", 
                 "sienna", "pink", "pink", "pink",  "turquoise", "turquoise", "turquoise", "violet", "violet"]
@@ -85,18 +87,18 @@ class RelationExtractor:
 
     def extract_relations_car_car(self, actor1, actor2):
         relation_list = []
-        if actor1.name.startswith("ego:") or actor2.name.startswith("ego:"):
-            relation_list += self.create_proximity_relations(actor1, actor2)
-            relation_list += self.create_proximity_relations(actor2, actor1)
-            relation_list += self.extract_directional_relation(actor1, actor2)
-            relation_list += self.extract_directional_relation(actor2, actor1)
-        else:
-            # consider the proximity relations with neighboring lanes.
-            if self.euclidean_distance(actor1, actor2) <= CAR_PROXIMITY_THRESH_VERY_NEAR:
-                relation_list += self.create_proximity_relations(actor1, actor2)
-                relation_list += self.create_proximity_relations(actor2, actor1)
-                relation_list += self.extract_directional_relation(actor1, actor2)
-                relation_list += self.extract_directional_relation(actor2, actor1)
+        # if actor1.name.startswith("ego:") or actor2.name.startswith("ego:"):
+        #     relation_list += self.create_proximity_relations(actor1, actor2)
+        #     relation_list += self.create_proximity_relations(actor2, actor1)
+        #     relation_list += self.extract_directional_relation(actor1, actor2)
+        #     relation_list += self.extract_directional_relation(actor2, actor1)
+        # else:
+        #     # consider the proximity relations with neighboring lanes.
+        # if self.euclidean_distance(actor1, actor2) <= CAR_PROXIMITY_THRESH_VERY_NEAR:
+        relation_list += self.create_proximity_relations(actor1, actor2)
+        relation_list += self.create_proximity_relations(actor2, actor1)
+        relation_list += self.extract_directional_relation(actor1, actor2)
+        relation_list += self.extract_directional_relation(actor2, actor1)
 
         return relation_list
             
@@ -175,6 +177,7 @@ class RelationExtractor:
         relation_list = []
         if(self.in_lane(actor1,actor2)):
             relation_list.append([actor1, Relations.isIn, actor2])
+            # relation_list.append([actor2, Relations.isIn, actor1])
         return relation_list 
         
     def extract_relations_moto_light(self, actor1, actor2):
@@ -320,6 +323,8 @@ class RelationExtractor:
             return False
     
     def create_proximity_relations(self, actor1, actor2):
+        if self.euclidean_distance(actor1, actor2) <= CAR_PROXIMITY_THRESH_NEAR_COLL:
+            return [[actor1, Relations.near_coll, actor2]]
         if self.euclidean_distance(actor1, actor2) <= CAR_PROXIMITY_THRESH_SUPER_NEAR:
             return [[actor1, Relations.super_near, actor2]]
         elif self.euclidean_distance(actor1, actor2) <= CAR_PROXIMITY_THRESH_VERY_NEAR:
@@ -340,7 +345,7 @@ class RelationExtractor:
         length_product = math.sqrt(x1**2+y1**2) + math.sqrt(x2**2+y2**2)
         degree = math.degrees(math.acos(inner_product / length_product))
 
-        if degree <= 75 or (degree >=285 and degree <= 360): # actor2 is in front of actor1
+        if degree <= 80 or (degree >=280 and degree <= 360): # actor2 is in front of actor1
             relation_list.append([actor1, Relations.atRearOf, actor2])
         else: # actor2 is behind actor1
             relation_list.append([actor1, Relations.inFrontOf, actor2])

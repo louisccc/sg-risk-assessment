@@ -20,11 +20,14 @@ class Config:
 	def __init__(self, args):
 		self.parser = ArgumentParser(description='The parameters for creating gifs of input videos.')
 		self.parser.add_argument('--input_path', type=str, default="../input/synthesis_data", help="Path to data directory.")
-		self.parser.add_argument('--pkl_path', type=str, default="/home/louisccc/NAS/louisccc/av/nagoya_pkl_data/dataset.pickle", help="Path to pickled dataset.")
+		self.parser.add_argument('--pkl_path', type=str, default="/home/louisccc/NAS/louisccc/av/nagoya_pkl_data/all_frames_dataset.pkl", help="Path to pickled dataset.")
 		self.parser.add_argument('--load_pkl', type=lambda x: (str(x).lower() == 'true'), default=False, help='Load model from cache.')
 		self.parser.add_argument('--load_model', type=lambda x: (str(x).lower() == 'true'), default=False, help='Load model from cache.')
 		self.parser.add_argument('--model_path', type=str, default="../cache/RCNN_CNN_lstm_GPU_20_2.h5", help="Path to cached model file.")
 		self.parser.add_argument('--mask_rcnn', type=lambda x: (str(x).lower() == 'true'), default=True, help='Create masked imgages.')
+		self.parser.add_argument('--seed', type=int, default=0, help="Seed for splitting the dataset.")
+		self.parser.add_argument('--downsample', type=lambda x: (str(x).lower() == 'true'), default=False, help='Downsample dataset.')
+
 		args_parsed = self.parser.parse_args(args)
 		
 		for arg_name in vars(args_parsed):
@@ -34,7 +37,7 @@ class Config:
 		self.cache_model_path = Path(self.model_path).resolve()
 
 
-def train_cnn_to_lstm(dataset, cache_path):
+def train_cnn_to_lstm(dataset, cache_path, seed, downsample):
 	'''
 		This step is for training the CNN to LSTM model. (train from scratch architecture.)
 	'''
@@ -50,7 +53,7 @@ def train_cnn_to_lstm(dataset, cache_path):
 	label = dataset.risk_one_hot
 	model = Models(nb_epoch=nb_epoch, batch_size=batch_size, class_weights=class_weight)
 	model.build_cnn_to_lstm_model(input_shape=video_sequence.shape[1:])
-	metrics = model.train_n_fold_cross_val(video_sequence, label, training_to_all_data_ratio=training_to_all_data_ratio, n=nb_cross_val, print_option=0, plot_option=0, save_option=0)
+	metrics = model.train_n_fold_cross_val(video_sequence, label, training_to_all_data_ratio=training_to_all_data_ratio, n=nb_cross_val, print_option=0, plot_option=0, save_option=0, seed=seed, downsample=downsample)
 	
 	cache_path.parent.mkdir(exist_ok=True)
 	model.model.save(str(cache_path))
@@ -90,8 +93,8 @@ def load_dataset(raw_image_path: Path, masked_image_path: Path, dataset_type: st
 		image_path = raw_image_path
 
 	dataset = DataSet()
-	dataset.read_video(image_path, option='all frames', number_of_frames=20, scaling='scale', scale_x=0.05, scale_y=0.05)
-	# dataset.read_video(image_path, option='fixed frame amount', number_of_frames=10, scaling='scale', scale_x=0.05, scale_y=0.05)
+	# dataset.read_video(image_path, option='all frames', number_of_frames=20, scaling='scale', scale_x=0.05, scale_y=0.05)
+	dataset.read_video(image_path, option='fixed frame amount', number_of_frames=7, scaling='scale', scale_x=0.05, scale_y=0.05)
 
 	'''
 		order videos by risk and find top riskiest
@@ -102,15 +105,15 @@ def load_dataset(raw_image_path: Path, masked_image_path: Path, dataset_type: st
 	dataset.convert_risk_to_one_hot(risk_threshold=0.5)
 	save_dir = Path("/home/louisccc/NAS/louisccc/av/nagoya_pkl_data/").resolve()
 	save_dir.mkdir(exist_ok=True)
-	dataset.save(save_dir=str(save_dir))
+	dataset.save(save_dir=str(save_dir), filename='/7_frames_dataset.pkl')
+	print("Saved pickled dataset")
 	return dataset
 
 def load_pickle(pkl_path: Path):
 	'''
 		Read dataset from pickle file.
 	'''
-	dataset = DataSet()
-	dataset.loader(str(pkl_path))
+	dataset = DataSet().loader(str(pkl_path))
 	return dataset
 
 if __name__ == '__main__':
@@ -152,15 +155,4 @@ if __name__ == '__main__':
 			raise FileNotFoundError ("Cached model file not found.")
 		# model = load_model(str(cache_model_path))
 	else:
-		model = train_cnn_to_lstm(dataset, cache_model_path)
-	
-	'''
-		determine how safe and dangerous each lane change is 
-	'''
-	true_label = np.argmax(dataset.risk_one_hot,axis=-1)
-	end = int(0.7*len(dataset.video))
-	output = model.predict_proba(dataset.video[end:])
-
-	metrics = get_metrics(output,true_label[end:]) 
-	print(metrics)
-	print(' safe | dangerous \n', output)
+		model = train_cnn_to_lstm(dataset, cache_model_path, config.seed, config.downsample)

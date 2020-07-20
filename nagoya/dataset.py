@@ -63,6 +63,8 @@ class DataSet:
         # length of image sequence must be greater than or equal to number_of_frames
         # if number of frames is less than entire length of image sequence, takes every nth frame (n being modulo)
         modulo = int(len(self.image_seq) / number_of_frames)
+        if modulo == 0:
+            modulo = 1
         for counter, img in enumerate(self.image_seq):
             if counter % modulo == 0 and index < number_of_frames:
                 images.append(img)

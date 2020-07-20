@@ -93,7 +93,7 @@ class Models:
         self.model.fit(X_train, y_train,
                        batch_size=self.batch_size,
                        nb_epoch=self.nb_epoch,
-                    #    validation_data=(X_test, y_test), 
+                       validation_data=(X_test, y_test), 
                        class_weight=self.class_weights, verbose=verbose
                     #    , callbacks=[self.history]
                        )
@@ -104,7 +104,7 @@ class Models:
             print(self.last_Mpercent_epoch_val_loss)
 
     def train_n_fold_cross_val(self, Data, label, training_to_all_data_ratio=0.9, n=10, print_option=0, plot_option=0,
-                               save_option=0, save_path='results/test1.png', epoch_resolution=100, verbose=2):
+                               save_option=0, save_path='results/test1.png', epoch_resolution=100, verbose=2, seed=0, downsample=False):
 
         nb_samples = Data.shape[0]
         # get the initial random model weights
@@ -128,10 +128,14 @@ class Models:
         
         y_0 = np.array(y_0, dtype=np.float64)
         y_1 = np.array(y_1, dtype=np.float64)
-    
+
+        min_number = min(len(class_0), len(class_1))
+        if downsample:
+            class_0, y_0 = resample(class_0, y_0, n_samples=min_number)
+
         for i in tqdm(range(n)):
 
-            X_train, X_test, y_train, y_test = train_test_split(np.concatenate([class_0, class_1], axis=0), np.concatenate([y_0, y_1], axis=0), test_size=1-training_to_all_data_ratio, shuffle=True, stratify=np.concatenate([y_0, y_1], axis=0))
+            X_train, X_test, y_train, y_test = train_test_split(np.concatenate([class_0, class_1], axis=0), np.concatenate([y_0, y_1], axis=0), test_size=1-training_to_all_data_ratio, shuffle=True, stratify=np.concatenate([y_0, y_1], axis=0), random_state=seed)
 
             # Model weights from the previous training session must be resetted to the initial random values
             self.model.set_weights(w_save)

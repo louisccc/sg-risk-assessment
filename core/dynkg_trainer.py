@@ -57,7 +57,7 @@ class Config:
 
         self.cache_path = Path(self.cache_path).resolve()
 
-def build_scenegraph_dataset(cache_path, train_to_test_ratio=0.3, downsample=False):
+def build_scenegraph_dataset(cache_path, train_to_test_ratio=0.3, downsample=False, seed=0):
     dataset_file = open(cache_path, "rb")
     scenegraphs_sequence, feature_list = pkl.load(dataset_file)
 
@@ -79,7 +79,7 @@ def build_scenegraph_dataset(cache_path, train_to_test_ratio=0.3, downsample=Fal
     else:
         modified_class_0, modified_y_0 = class_0, y_0
         
-    train, test, train_y, test_y = train_test_split(modified_class_0+class_1, modified_y_0+y_1, test_size=train_to_test_ratio, shuffle=True, stratify=modified_y_0+y_1)
+    train, test, train_y, test_y = train_test_split(modified_class_0+class_1, modified_y_0+y_1, test_size=train_to_test_ratio, shuffle=True, stratify=modified_y_0+y_1, random_state=seed)
 
     return train, test, feature_list
 
@@ -94,7 +94,7 @@ class DynKGTrainer:
         if not self.config.cache_path.exists():
             raise Exception("The cache file does not exist.")    
 
-        self.training_data, self.testing_data, self.feature_list = build_scenegraph_dataset(self.config.cache_path, self.config.split_ratio, downsample=self.config.downsample)
+        self.training_data, self.testing_data, self.feature_list = build_scenegraph_dataset(self.config.cache_path, self.config.split_ratio, downsample=self.config.downsample, seed=self.config.seed)
         self.training_labels = [data['label'] for data in self.training_data]
         self.testing_labels = [data['label'] for data in self.testing_data]
         self.class_weights = torch.from_numpy(compute_class_weight('balanced', np.unique(self.training_labels), self.training_labels))

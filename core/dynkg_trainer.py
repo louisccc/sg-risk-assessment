@@ -29,7 +29,7 @@ class Config:
     def __init__(self, args):
         self.parser = ArgumentParser(description='The parameters for training the scene graph using GCN.')
         self.parser.add_argument('--cache_path', type=str, default="../script/image_dataset.pkl", help="Path to the cache file.")
-        self.parser.add_argument('--model_load_path', type=str, default="./model/model.vec.pt", help="Path to load cached model file.")
+        self.parser.add_argument('--model_load_path', type=str, default="./model/model_best_val_loss_.vec.pt", help="Path to load cached model file.")
         self.parser.add_argument('--model_save_path', type=str, default="./model/model_best_val_loss_.vec.pt", help="Path to save model file.")
         self.parser.add_argument('--split_ratio', type=float, default=0.3, help="Train to test dataset split ratio.")
         self.parser.add_argument('--downsample', type=lambda x: (str(x).lower() == 'true'), default=False, help='Flag to downsample dataset.')
@@ -113,8 +113,7 @@ class DynKGTrainer:
         self.config.num_relations = max([r.value for r in Relations])+1
         self.model = MRGCN(self.config).to(self.config.device)
 
-        self.optimizer = optim.Adam(self.model.parameters(), lr=self.config.learning_rate)
-        #, weight_decay=self.config.weight_decay)
+        self.optimizer = optim.Adam(self.model.parameters(), lr=self.config.learning_rate, weight_decay=self.config.weight_decay)
         if self.class_weights.shape[0] < 2:
             self.loss_func = nn.CrossEntropyLoss()
         else:    

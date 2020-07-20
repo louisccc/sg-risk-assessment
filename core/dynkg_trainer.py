@@ -44,11 +44,14 @@ class Config:
         self.parser.add_argument('--test_step', type=int, default=10, help='Number of epochs before testing the model.')
         self.parser.add_argument('--model', type=str, default="mrgcn", help="Model to be used intrinsically.")
         self.parser.add_argument('--num_layers', type=int, default=3, help="Number of RGCN layers in the network.")
-        self.parser.add_argument('--hidden_dim', type=int, default=32, help="Hidden dimension in GIN.")
+        self.parser.add_argument('--hidden_dim', type=int, default=32, help="Hidden dimension in RGCN.")
+        self.parser.add_argument('--layer_spec', type=str, default=None, help="manually specify the size of each layer in format l1,l2,l3 (no spaces)")
         self.parser.add_argument('--pooling_type', type=str, default="sagpool", help="Graph pooling type.")
         self.parser.add_argument('--pooling_ratio', type=float, default=0.5, help="Graph pooling ratio.")        
         self.parser.add_argument('--readout_type', type=str, default="mean", help="Readout type.")
-        self.parser.add_argument('--temporal_type', type=str, default="lstm_last", help="Temporal type.")
+        self.parser.add_argument('--temporal_type', type=str, default="lstm_attn", help="Temporal type.")
+        self.parser.add_argument('--lstm_input_dim', type=int, default=50, help="LSTM input dimensions.")
+        self.parser.add_argument('--lstm_output_dim', type=int, default=20, help="LSTM output dimensions.")
 
         args_parsed = self.parser.parse_args(args)
         

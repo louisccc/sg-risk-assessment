@@ -340,7 +340,7 @@ class RelationExtractor:
         length_product = math.sqrt(x1**2+y1**2) + math.sqrt(x2**2+y2**2)
         degree = math.degrees(math.acos(inner_product / length_product))
 
-        if degree <= 75 or (degree >=285 and degree <= 360): # actor2 is in front of actor1
+        if degree <= 80 or (degree >=280 and degree <= 360): # actor2 is in front of actor1
             relation_list.append([actor1, Relations.atRearOf, actor2])
         else: # actor2 is behind actor1
             relation_list.append([actor1, Relations.inFrontOf, actor2])

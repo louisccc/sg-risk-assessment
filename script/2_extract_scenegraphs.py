@@ -13,6 +13,8 @@ class Config:
         self.parser.add_argument('--cache', type=lambda x: (str(x).lower() == 'true'), default=True, help="Cache processed scenegraphs.")
         self.parser.add_argument('--address', type=str, default="./image_dataset.pkl", help="Path to save cache file.")
         self.parser.add_argument('--visualize', type=lambda x: (str(x).lower() == 'true'), default=False, help="Visualize scenegraphs.")
+        self.parser.add_argument('--framenum', type=int, default=10, help='Number of frames to extract from each video clip.')
+
         args_parsed = self.parser.parse_args(args)
             
         for arg_name in vars(args_parsed):
@@ -27,7 +29,7 @@ if __name__ == '__main__':
 
     if cfg.platform == "carla":
         from core.carla_seq_generator import CarlaSceneGraphSequenceGenerator
-        generator = CarlaSceneGraphSequenceGenerator()
+        generator = CarlaSceneGraphSequenceGenerator(cfg.framenum)
     elif cfg.platform == "image":
         from core.real_seq_generator import ImageSceneGraphSequenceGenerator
         generator = ImageSceneGraphSequenceGenerator()

@@ -17,7 +17,7 @@ from core.scene_graph import SceneGraph
 
 
 class CarlaSceneGraphSequenceGenerator:
-    def __init__(self, cache_fname='dyngraph_embeddings.pkl'):
+    def __init__(self, framenum, cache_fname='dyngraph_embeddings.pkl'):
         # [ 
         #   {'node_embeddings':..., 'edge_indexes':..., 'edge_attrs':..., 'label':...}  
         # ]
@@ -39,6 +39,7 @@ class CarlaSceneGraphSequenceGenerator:
                              "rel_location_z", #add 3 columns for relative vector values
                              "distance_abs", # adding absolute distance to ego
                             }
+        self.framenum = framenum
         # create 1hot class labels columns.
         for i in range(self.num_classes):
             self.feature_list.add("type_"+str(i))
@@ -108,7 +109,7 @@ class CarlaSceneGraphSequenceGenerator:
 
                 # scenegraph_dict contains node embeddings edge indexes and edge attrs.
                 scenegraphs_dict = {}
-                subsampled_scenegraphs, frame_numbers = self.subsample(scenegraphs, 1000)
+                subsampled_scenegraphs, frame_numbers = self.subsample(scenegraphs, self.framenum)
                 scenegraphs_dict['sequence'] = self.process_graph_sequences(subsampled_scenegraphs, frame_numbers, folder_name=path.name)
                 scenegraphs_dict['label'] = risk_label
                 scenegraphs_dict['folder_name'] = path.name

@@ -21,10 +21,10 @@ H_OFFSET = CARLA_IMAGE_H - CROPPED_H #offset from top of image to start of ROI
 Y_SCALE = 0.55 #18 pixels = length of lane line (10 feet)
 X_SCALE = 0.54 #22 pixels = width of lane (12 feet)
 
-CAR_PROXIMITY_THRESH_SUPER_NEAR = 50 # max number of feet between a car and another entity to build proximity relation
-CAR_PROXIMITY_THRESH_VERY_NEAR = 150
-CAR_PROXIMITY_THRESH_NEAR = 300
-CAR_PROXIMITY_THRESH_VISIBLE = 500
+CAR_PROXIMITY_THRESH_SUPER_NEAR = 5 # max number of feet between a car and another entity to build proximity relation
+CAR_PROXIMITY_THRESH_VERY_NEAR = 10
+CAR_PROXIMITY_THRESH_NEAR = 16
+CAR_PROXIMITY_THRESH_VISIBLE = 25
 
 LANE_THRESHOLD = 6 #feet. if object's center is more than this distance away from ego's center, build left or right lane relation
 CENTER_LANE_THRESHOLD = 9 #feet. if object's center is within this distance of ego's center, build middle lane relation

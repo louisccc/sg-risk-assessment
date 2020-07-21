@@ -161,3 +161,51 @@ class MRGCN(nn.Module):
             pass
                 
         return F.log_softmax(self.fc2(x), dim=-1)
+
+    
+#implementation of MRGCN using a GIN style readout.
+class MRGIN(MRGCN):
+    def __init__(self, config):
+        super(MRGIN, self).__init__(config)
+        print("pooling parameters ignored as MRGIN doesnt support pooling.")
+
+
+    def forward(self, x, edge_index, edge_attr, batch=None):
+        attn_weights = dict()
+        outputs = []
+
+        #readout performed after each layer and concatenated
+        for i in range(self.num_layers):
+            x = self.activation(self.conv[i](x, edge_index, edge_attr))
+            if self.readout_type == "add":
+                r = global_add_pool(x, batch)
+            elif self.readout_type == "mean":
+                r = global_mean_pool(x, batch)
+            elif self.readout_type == "max":
+                r = global_max_pool(x, batch)
+            elif self.readout_type == "sort":
+                r = global_sort_pool(x, batch, k=100)
+            else:
+                pass
+            outputs.append(r)
+
+        x = torch.cat(outputs, dim=-1)
+        x = F.dropout(x, self.dropout, training=self.training)
+        x = self.activation(self.fc1(x))
+
+        if self.temporal_type == "mean":
+            x = F.leaky_relu(x.mean(axis=0))
+        elif self.temporal_type == "lstm_last":
+            x_predicted, (h, c) = self.lstm(x.unsqueeze(0))
+            x = h.flatten()
+        elif self.temporal_type == "lstm_sum":
+            x_predicted, (h, c) = self.lstm(x.unsqueeze(0))
+            x = x_predicted.sum(dim=1).flatten()
+        elif self.temporal_type == "lstm_attn":
+            x_predicted, (h, c) = self.lstm(x.unsqueeze(0))
+            x, attn_weights['lstm_attn_weights'] = self.attn(h.view(1,1,-1), x_predicted)
+            x = x.flatten()
+        else:
+            pass
+                
+        return F.log_softmax(self.fc2(x), dim=-1)

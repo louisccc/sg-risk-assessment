@@ -43,7 +43,7 @@ class Config:
         self.parser.add_argument('--batch_size', type=int, default=32, help='Number of graphs in a batch.')
         self.parser.add_argument('--device', type=str, default="cpu", help='The device to run on models (cuda or cpu) cpu in default.')
         self.parser.add_argument('--test_step', type=int, default=10, help='Number of epochs before testing the model.')
-        self.parser.add_argument('--model', type=str, default="mrgcn", help="Model to be used intrinsically.")
+        self.parser.add_argument('--model', type=str, default="mrgcn", help="Model to be used intrinsically. options: [mrgcn, mrgin]")
         self.parser.add_argument('--conv_type', type=str, default="FastRGCNConv", help="type of RGCNConv to use [RGCNConv, FastRGCNConv].")
         self.parser.add_argument('--num_layers', type=int, default=3, help="Number of RGCN layers in the network.")
         self.parser.add_argument('--hidden_dim', type=int, default=32, help="Hidden dimension in RGCN.")
@@ -116,7 +116,12 @@ class DynKGTrainer:
     def build_model(self):
         self.config.num_features = len(self.feature_list)
         self.config.num_relations = max([r.value for r in Relations])+1
-        self.model = MRGCN(self.config).to(self.config.device)
+        if self.config.model == "mrgcn":
+            self.model = MRGCN(self.config).to(self.config.device)
+        elif self.config.model == "mrgin":
+            self.model = MRGIN(self.config).to(self.config.device)
+        else:
+            raise Exception("model selection is invalid: " + self.config.model)
 
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.config.learning_rate, weight_decay=self.config.weight_decay)
         if self.class_weights.shape[0] < 2:

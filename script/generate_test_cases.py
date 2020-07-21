@@ -12,6 +12,7 @@ hidden_dims = [
     "32,64,128,256",
     "256,128,64,32"
     ]
+activations = ['relu','leaky_relu']
 learning_rates = ["0.0001", "0.00005","0.00002"]
 readouts = ["mean","add"]
 pooling_types = ["None", "sagpool", "topk"]
@@ -30,47 +31,50 @@ for dims in hidden_dims:
         conv = "FastRGCNConv"
     for batch_size in batch_sizes:
         for lr in learning_rates:
-            for readout in readouts:
-                for temporal_type in temporal_types:
-                    for dropout in dropouts:
-                        for pool_type in pooling_types:
-                            if not pool_type == "None":
-                                for pooling_ratio in pooling_ratios:
+            for activation in activations:
+                for readout in readouts:
+                    for temporal_type in temporal_types:
+                        for dropout in dropouts:
+                            for pool_type in pooling_types:
+                                if not pool_type == "None":
+                                    for pooling_ratio in pooling_ratios:
+                                        lines.append(command + \
+                                            " --device cuda "+ \
+                                            " --cache_path before.pkl " + \
+                                            " --seed 0"+ \
+                                            " --epochs 500 "+ \
+                                            " --layer_spec " + dims + \
+                                            " --layers " + layers + \
+                                            " --conv_type " + conv + \
+                                            " --batch_size " + batch_size + \
+                                            " --learning_rate " + lr + \
+                                            " --activation " + activation + \
+                                            " --readout_type " + readout + \
+                                            " --temporal_type " + temporal_type + \
+                                            " --dropout " + dropout + \
+                                            " --pooling_type " + pool_type + \
+                                            " --pooling_ratio " + pooling_ratio + \
+                                            " --lstm_input_dim 50 " + \
+                                            " --lstm_output_dim 20 \n")
+                                else:
                                     lines.append(command + \
-                                        " --device cuda "+ \
-                                        " --cache_path before.pkl " + \
-                                        " --seed 0"+ \
-                                        " --epochs 500 "+ \
-                                        " --layer_spec " + dims + \
-                                        " --layers " + layers + \
-                                        " --conv_type " + conv + \
-                                        " --batch_size " + batch_size + \
-                                        " --learning_rate " + lr + \
-                                        " --readout_type " + readout + \
-                                        " --temporal_type " + temporal_type + \
-                                        " --dropout " + dropout + \
-                                        " --pooling_type " + pool_type + \
-                                        " --pooling_ratio " + pooling_ratio + \
-                                        " --lstm_input_dim 50 " + \
-                                        " --lstm_output_dim 20 \n")
-                            else:
-                                lines.append(command + \
-                                        " --device cuda "+ \
-                                        " --cache_path before.pkl " + \
-                                        " --seed 0 "+ \
-                                        " --epochs 500 "+ \
-                                        " --layer_spec " + dims + \
-                                        " --layers " + layers + \
-                                        " --conv_type " + conv + \
-                                        " --batch_size " + batch_size + \
-                                        " --learning_rate " + lr + \
-                                        " --readout_type " + readout + \
-                                        " --temporal_type " + temporal_type + \
-                                        " --dropout" + dropout + \
-                                        " --pooling_type None " + \
-                                        " --pooling_ratio 1.0 " + \
-                                        " --lstm_input_dim 50 " + \
-                                        " --lstm_output_dim 20 \n")
+                                            " --device cuda "+ \
+                                            " --cache_path before.pkl " + \
+                                            " --seed 0 "+ \
+                                            " --epochs 500 "+ \
+                                            " --layer_spec " + dims + \
+                                            " --layers " + layers + \
+                                            " --conv_type " + conv + \
+                                            " --batch_size " + batch_size + \
+                                            " --learning_rate " + lr + \
+                                            " --activation " + activation + \
+                                            " --readout_type " + readout + \
+                                            " --temporal_type " + temporal_type + \
+                                            " --dropout" + dropout + \
+                                            " --pooling_type None " + \
+                                            " --pooling_ratio 1.0 " + \
+                                            " --lstm_input_dim 50 " + \
+                                            " --lstm_output_dim 20 \n")
 
 
 with open(filename,"w+") as f:

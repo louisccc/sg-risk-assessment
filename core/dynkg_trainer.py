@@ -36,6 +36,7 @@ class Config:
         self.parser.add_argument('--learning_rate', default=0.0001, type=float, help='The initial learning rate for GCN.')
         self.parser.add_argument('--seed', type=int, default=random.randint(0,2**32), help='Random seed.')
         self.parser.add_argument('--epochs', type=int, default=200, help='Number of epochs to train.')
+        self.parser.add_argument('--activation', type=str, default='relu', help='Activation function to use from [relu, leaky_relu].')
         self.parser.add_argument('--weight_decay', type=float, default=5e-4, help='Weight decay (L2 loss on parameters).')
         self.parser.add_argument('--dropout', type=float, default=0.25, help='Dropout rate (1 - keep probability).')
         self.parser.add_argument('--nclass', type=int, default=2, help="The number of classes for dynamic graph classification.")

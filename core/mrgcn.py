@@ -76,6 +76,7 @@ class MRGCN(nn.Module):
         self.lstm_dim1 = config.lstm_input_dim
         self.lstm_dim2 = config.lstm_output_dim
         self.rgcn_func = FastRGCNConv if config.conv_type == "FastRGCNConv" else RGCNConv
+        self.activation = F.relu if config.activation == 'relu' else F.leaky_relu
         self.pooling_type = config.pooling_type
         self.readout_type = config.readout_type
         self.temporal_type = config.temporal_type
@@ -120,7 +121,7 @@ class MRGCN(nn.Module):
         attn_weights = dict()
         outputs = []
         for i in range(self.num_layers):
-            x = F.relu(self.conv[i](x, edge_index, edge_attr))
+            x = self.activation(self.conv[i](x, edge_index, edge_attr))
             outputs.append(x)
         x = torch.cat(outputs, dim=-1)
         x = F.dropout(x, self.dropout, training=self.training)
@@ -142,7 +143,7 @@ class MRGCN(nn.Module):
         else:
             pass
 
-        x = F.relu(self.fc1(x))
+        x = self.activation(self.fc1(x))
 
         if self.temporal_type == "mean":
             x = F.leaky_relu(x.mean(axis=0))

@@ -254,7 +254,7 @@ class DynKGTrainer:
                 else:
                     best_stats.iloc[replace_row.index] = pd.DataFrame(best_metrics, index=replace_row.index)
                     best_stats.to_csv("best_stats.csv", mode='w', header=True,index=False, columns=list(best_metrics.keys()))
-            pdb.set_trace()
+
             #self.save_model()
 
         return outputs_test, labels_test, metrics

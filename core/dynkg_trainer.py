@@ -1,4 +1,4 @@
-import os, sys
+import os, sys, pdb
 sys.path.append(os.path.dirname(sys.path[0]))
 
 import torch
@@ -36,6 +36,7 @@ class Config:
         self.parser.add_argument('--learning_rate', default=0.0001, type=float, help='The initial learning rate for GCN.')
         self.parser.add_argument('--seed', type=int, default=random.randint(0,2**32), help='Random seed.')
         self.parser.add_argument('--epochs', type=int, default=200, help='Number of epochs to train.')
+        self.parser.add_argument('--activation', type=str, default='relu', help='Activation function to use from [relu, leaky_relu].')
         self.parser.add_argument('--weight_decay', type=float, default=5e-4, help='Weight decay (L2 loss on parameters).')
         self.parser.add_argument('--dropout', type=float, default=0.25, help='Dropout rate (1 - keep probability).')
         self.parser.add_argument('--nclass', type=int, default=2, help="The number of classes for dynamic graph classification.")
@@ -43,6 +44,7 @@ class Config:
         self.parser.add_argument('--device', type=str, default="cpu", help='The device to run on models (cuda or cpu) cpu in default.')
         self.parser.add_argument('--test_step', type=int, default=10, help='Number of epochs before testing the model.')
         self.parser.add_argument('--model', type=str, default="mrgcn", help="Model to be used intrinsically.")
+        self.parser.add_argument('--conv_type', type=str, default="FastRGCNConv", help="type of RGCNConv to use [RGCNConv, FastRGCNConv].")
         self.parser.add_argument('--num_layers', type=int, default=3, help="Number of RGCN layers in the network.")
         self.parser.add_argument('--hidden_dim', type=int, default=32, help="Hidden dimension in RGCN.")
         self.parser.add_argument('--layer_spec', type=str, default=None, help="manually specify the size of each layer in format l1,l2,l3 (no spaces)")
@@ -238,13 +240,22 @@ class DynKGTrainer:
             best_metrics['train precision'] = metrics['train']['precision']
             best_metrics['train recall'] = metrics['train']['recall']
             
-            current_stats = pd.DataFrame(best_metrics, index=[0])
+            
 
             if not os.path.exists("best_stats.csv"):
-                current_stats.to_csv("best_stats.csv", mode='w+', header=True)
+                current_stats = pd.DataFrame(best_metrics, index=[0])
+                current_stats.to_csv("best_stats.csv", mode='w+', header=True, index=False, columns=list(best_metrics.keys()))
             else:
-                best_stats = current_stats.to_csv("best_stats.csv", mode='a', header=False)
-            
+                best_stats = pd.read_csv("best_stats.csv", header=0)
+                best_stats = best_stats.reset_index(drop=True)
+                replace_row = best_stats.loc[best_stats.args == str(self.args)]
+                if(replace_row.empty):
+                    current_stats = pd.DataFrame(best_metrics, index=[0])
+                    current_stats.to_csv("best_stats.csv", mode='a', header=False, index=False, columns=list(best_metrics.keys()))
+                else:
+                    best_stats.iloc[replace_row.index] = pd.DataFrame(best_metrics, index=replace_row.index)
+                    best_stats.to_csv("best_stats.csv", mode='w', header=True,index=False, columns=list(best_metrics.keys()))
+
             #self.save_model()
 
         return outputs_test, labels_test, metrics

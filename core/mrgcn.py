@@ -13,12 +13,12 @@ from torch_geometric.utils import softmax
 
 class RGCNSAGPooling(torch.nn.Module):
     def __init__(self, in_channels, num_relations, ratio=0.5, min_score=None,
-                 multiplier=1, nonlinearity=torch.tanh, **kwargs):
+                 multiplier=1, nonlinearity=torch.tanh, rgcn_func="FastRGCNConv", **kwargs):
         super(RGCNSAGPooling, self).__init__()
 
         self.in_channels = in_channels
         self.ratio = ratio
-        self.gnn = FastRGCNConv(in_channels, 1, num_relations, **kwargs)
+        self.gnn = FastRGCNConv(in_channels, 1, num_relations, **kwargs) if rgcn_func=="FastRGCNConv" else RGCNConv(in_channels, 1, num_relations, **kwargs)
         self.min_score = min_score
         self.multiplier = multiplier
         self.nonlinearity = nonlinearity
@@ -75,7 +75,8 @@ class MRGCN(nn.Module):
         self.layer_spec = None if config.layer_spec == None else list(map(int, config.layer_spec.split(',')))
         self.lstm_dim1 = config.lstm_input_dim
         self.lstm_dim2 = config.lstm_output_dim
-
+        self.rgcn_func = FastRGCNConv if config.conv_type == "FastRGCNConv" else RGCNConv
+        self.activation = F.relu if config.activation == 'relu' else F.leaky_relu
         self.pooling_type = config.pooling_type
         self.readout_type = config.readout_type
         self.temporal_type = config.temporal_type
@@ -85,25 +86,25 @@ class MRGCN(nn.Module):
         total_dim = 0
 
         if self.layer_spec == None:
-            self.conv.append(FastRGCNConv(self.num_features, self.hidden_dim, self.num_relations).to(config.device))
+            self.conv.append(self.rgcn_func(self.num_features, self.hidden_dim, self.num_relations).to(config.device))
             total_dim += self.hidden_dim
             for i in range(1, self.num_layers):
-                self.conv.append(FastRGCNConv(self.hidden_dim, self.hidden_dim, self.num_relations).to(config.device))
+                self.conv.append(self.rgcn_func(self.hidden_dim, self.hidden_dim, self.num_relations).to(config.device))
                 total_dim += self.hidden_dim
         
         else:
             print("using layer specification and ignoring hidden_dim parameter.")
             print("layer_spec: " + str(self.layer_spec))
-            self.conv.append(FastRGCNConv(self.num_features, self.layer_spec[0], self.num_relations).to(config.device))
+            self.conv.append(self.rgcn_func(self.num_features, self.layer_spec[0], self.num_relations).to(config.device))
             total_dim += self.layer_spec[0]
             for i in range(1, self.num_layers):
-                self.conv.append(FastRGCNConv(self.layer_spec[i-1], self.layer_spec[i], self.num_relations).to(config.device))
+                self.conv.append(self.rgcn_func(self.layer_spec[i-1], self.layer_spec[i], self.num_relations).to(config.device))
                 total_dim += self.layer_spec[i]
 
             self.hidden_dim = self.layer_spec[-1] #setting the hidden dims of all later layers with last layer size of layer spec.
 
         if self.pooling_type == "sagpool":
-            self.pool1 = RGCNSAGPooling(total_dim, self.num_relations, ratio=config.pooling_ratio)
+            self.pool1 = RGCNSAGPooling(total_dim, self.num_relations, ratio=config.pooling_ratio, rgcn_func=config.conv_type)
         elif self.pooling_type == "topk":
             self.pool1 = TopKPooling(total_dim, ratio=config.pooling_ratio)
 
@@ -120,7 +121,7 @@ class MRGCN(nn.Module):
         attn_weights = dict()
         outputs = []
         for i in range(self.num_layers):
-            x = F.relu(self.conv[i](x, edge_index, edge_attr))
+            x = self.activation(self.conv[i](x, edge_index, edge_attr))
             outputs.append(x)
         x = torch.cat(outputs, dim=-1)
         x = F.dropout(x, self.dropout, training=self.training)
@@ -142,7 +143,7 @@ class MRGCN(nn.Module):
         else:
             pass
 
-        x = F.relu(self.fc1(x))
+        x = self.activation(self.fc1(x))
 
         if self.temporal_type == "mean":
             x = F.leaky_relu(x.mean(axis=0))

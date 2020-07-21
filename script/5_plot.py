@@ -40,13 +40,14 @@ class GUI():
 
     def load_paths(self):
         self.graph_paths = list(self.folder_paths[self.lane_change_index].glob(self.graph_type))
-        tmp_paths = list(self.folder_paths[self.lane_change_index].glob("raw_images/*.jpg")) + list(self.folder_paths[0].glob("raw_images/*.png")) 
         self.image_paths = []
-        for idx, path in enumerate(tmp_paths):
-            if int(path.stem) == int(self.graph_paths[idx].stem):
-                self.image_paths.append(path)
+        image_frames = [i.stem for i in self.folder_paths[self.lane_change_index].glob("raw_images/*.jpg")]
+        for path in self.graph_paths:
+            img_path = path.parent.parent / "raw_images" / (path.stem + ".jpg")
+            if path.stem in image_frames:
+                self.image_paths.append(img_path)
             else:
-                self.image_paths.append(self.graph_paths[idx])
+                self.image_paths.append(path)
 
     def get_image(self, path):
         image = Image.open(path)
@@ -118,5 +119,5 @@ class GUI():
         self.root.mainloop()
 
 if __name__ == "__main__":
-    gui = GUI("/home/aung/NAS/louisccc/av/synthesis_data/new_recording_3/")
+    gui = GUI("/home/louisccc/NAS/louisccc/av/synthesis_data/new_recording_3/")
     gui.start()

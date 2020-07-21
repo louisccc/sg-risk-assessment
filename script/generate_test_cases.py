@@ -17,7 +17,13 @@ pooling_types = ["None", "sagpool", "topk"]
 pooling_ratios = ["0.25", "0.5", "0.75"]
 temporal_types = ["lstm_attn"]
 dropouts = ["0.1","0.25", "0.5"]
-
+model = "mrgcn"
+epochs = "500"
+seed = "0"
+cache_path = "before.pkl"
+device = "cuda"
+lstm_input_dim = "50"
+lstm_output_dim = "20"
 filename = "batch_tests.sh"
 command = "python3 ./3_train_graph_learning.py "
 lines = []
@@ -37,10 +43,11 @@ for dims in hidden_dims:
                                 if not pool_type == "None":
                                     for pooling_ratio in pooling_ratios:
                                         lines.append(command + \
-                                            " --device cuda "+ \
-                                            " --cache_path before.pkl " + \
-                                            " --seed 0 "+ \
-                                            " --epochs 500 "+ \
+                                            " --device "+ device + \
+                                            " --cache_path " + cache_path + \
+                                            " --seed "+ seed + \
+                                            " --epochs "+ epochs + \
+                                            " --model " + model + \
                                             " --layer_spec " + dims + \
                                             " --num_layers " + layers + \
                                             " --conv_type " + conv + \
@@ -52,14 +59,15 @@ for dims in hidden_dims:
                                             " --dropout " + dropout + \
                                             " --pooling_type " + pool_type + \
                                             " --pooling_ratio " + pooling_ratio + \
-                                            " --lstm_input_dim 50 " + \
-                                            " --lstm_output_dim 20 \n")
+                                            " --lstm_input_dim " + lstm_input_dim + \
+                                            " --lstm_output_dim " + lstm_output_dim + "\n")
                                 else:
                                     lines.append(command + \
-                                            " --device cuda "+ \
-                                            " --cache_path before.pkl " + \
-                                            " --seed 0 "+ \
-                                            " --epochs 500 "+ \
+                                            " --device "+ device + \
+                                            " --cache_path " + cache_path + \
+                                            " --seed "+ seed + \
+                                            " --epochs "+ epochs + \
+                                            " --model " + model + \
                                             " --layer_spec " + dims + \
                                             " --num_layers " + layers + \
                                             " --conv_type " + conv + \
@@ -71,8 +79,8 @@ for dims in hidden_dims:
                                             " --dropout " + dropout + \
                                             " --pooling_type None " + \
                                             " --pooling_ratio 1.0 " + \
-                                            " --lstm_input_dim 50 " + \
-                                            " --lstm_output_dim 20 \n")
+                                            " --lstm_input_dim " + lstm_input_dim + \
+                                            " --lstm_output_dim " + lstm_output_dim + "\n")
 
 
 with open(filename,"w+") as f:

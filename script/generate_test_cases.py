@@ -3,9 +3,7 @@ import sys
 
 batch_sizes = ["4","8","16"]
 hidden_dims = [
-    "64,64,64",
     "128,128,128",
-    "64,32,64",
     "128,64,128",
     "128,64,32",
     "128,64,32,16",
@@ -13,7 +11,7 @@ hidden_dims = [
     "256,128,64,32"
     ]
 activations = ['relu','leaky_relu']
-learning_rates = ["0.0001", "0.00005","0.00002"]
+learning_rates = ["0.0001", "0.00005"]
 readouts = ["mean","add"]
 pooling_types = ["None", "sagpool", "topk"]
 pooling_ratios = ["0.25", "0.5", "0.75"]
@@ -41,10 +39,10 @@ for dims in hidden_dims:
                                         lines.append(command + \
                                             " --device cuda "+ \
                                             " --cache_path before.pkl " + \
-                                            " --seed 0"+ \
+                                            " --seed 0 "+ \
                                             " --epochs 500 "+ \
                                             " --layer_spec " + dims + \
-                                            " --layers " + layers + \
+                                            " --num_layers " + layers + \
                                             " --conv_type " + conv + \
                                             " --batch_size " + batch_size + \
                                             " --learning_rate " + lr + \
@@ -63,14 +61,14 @@ for dims in hidden_dims:
                                             " --seed 0 "+ \
                                             " --epochs 500 "+ \
                                             " --layer_spec " + dims + \
-                                            " --layers " + layers + \
+                                            " --num_layers " + layers + \
                                             " --conv_type " + conv + \
                                             " --batch_size " + batch_size + \
                                             " --learning_rate " + lr + \
                                             " --activation " + activation + \
                                             " --readout_type " + readout + \
                                             " --temporal_type " + temporal_type + \
-                                            " --dropout" + dropout + \
+                                            " --dropout " + dropout + \
                                             " --pooling_type None " + \
                                             " --pooling_ratio 1.0 " + \
                                             " --lstm_input_dim 50 " + \

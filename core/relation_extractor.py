@@ -36,11 +36,10 @@ class Relations(Enum):
     very_near = 3
     near = 4
     visible = 5
-    far = 6
-    inFrontOf = 7
-    atRearOf = 8
-    toLeftOf = 9
-    toRightOf = 10
+    inFrontOf = 6
+    atRearOf = 7
+    toLeftOf = 8
+    toRightOf = 9
 
 RELATION_COLORS = ["black", "red", "orange", "yellow", "green", "purple", "blue", 
                 "sienna", "pink", "pink", "pink",  "turquoise", "turquoise", "turquoise", "violet", "violet"]
@@ -334,7 +333,7 @@ class RelationExtractor:
             return [[actor1, Relations.near, actor2]]
         elif self.euclidean_distance(actor1, actor2) <= CAR_PROXIMITY_THRESH_VISIBLE:
             return [[actor1, Relations.visible, actor2]]
-        return [[actor1, Relations.far, actor2]]
+        return []
 
 
     def extract_directional_relation(self, actor1, actor2):

@@ -122,9 +122,10 @@ class MRGCN(nn.Module):
         outputs = []
         for i in range(self.num_layers):
             x = self.activation(self.conv[i](x, edge_index, edge_attr))
+            x = F.dropout(x, self.dropout, training=self.training)
             outputs.append(x)
         x = torch.cat(outputs, dim=-1)
-        x = F.dropout(x, self.dropout, training=self.training)
+        
         if self.pooling_type == "sagpool":
             x, edge_index, _, batch, attn_weights['pool_perm'], attn_weights['pool_score'] = self.pool1(x, edge_index, edge_attr=edge_attr, batch=batch)
         elif self.pooling_type == "topk":

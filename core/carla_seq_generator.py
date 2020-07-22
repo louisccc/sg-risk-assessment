@@ -34,11 +34,12 @@ class CarlaSceneGraphSequenceGenerator:
         self.num_classes = 8
         
         # gets a list of all feature labels (which will be used) for all scenegraphs
-        self.feature_list = {"rel_location_x", 
-                             "rel_location_y", 
-                             "rel_location_z", #add 3 columns for relative vector values
-                             "distance_abs", # adding absolute distance to ego
-                            }
+        # self.feature_list = {"rel_location_x", 
+        #                      "rel_location_y", 
+        #                      "rel_location_z", #add 3 columns for relative vector values
+        #                      "distance_abs", # adding absolute distance to ego
+        #                     }
+        self.feature_list = set()
         self.framenum = framenum
         # create 1hot class labels columns.
         for i in range(self.num_classes):
@@ -203,13 +204,13 @@ class CarlaSceneGraphSequenceGenerator:
             
         def get_embedding(node, row):
             #subtract each vector from corresponding vector of ego to find delta         
-            if "location" in node.attr:
-                ego_x, ego_y = rotate_coords(ego_attrs["location"][0], ego_attrs["location"][1])
-                node_x, node_y = rotate_coords(node.attr["location"][0], node.attr["location"][1])
-                row["rel_location_x"] = node_x - ego_x
-                row["rel_location_y"] = node_y - ego_y
-                row["rel_location_z"] = node.attr["location"][2] - ego_attrs["location"][2] #no axis rotation needed for Z
-                row["distance_abs"] = math.sqrt(row["rel_location_x"]**2 + row["rel_location_y"]**2 + row["rel_location_z"]**2)
+            # if "location" in node.attr:
+            #     ego_x, ego_y = rotate_coords(ego_attrs["location"][0], ego_attrs["location"][1])
+            #     node_x, node_y = rotate_coords(node.attr["location"][0], node.attr["location"][1])
+            #     row["rel_location_x"] = node_x - ego_x
+            #     row["rel_location_y"] = node_y - ego_y
+            #     row["rel_location_z"] = node.attr["location"][2] - ego_attrs["location"][2] #no axis rotation needed for Z
+            #     row["distance_abs"] = math.sqrt(row["rel_location_x"]**2 + row["rel_location_y"]**2 + row["rel_location_z"]**2)
 
             row['type_'+str(node.type)] = 1 #assign 1hot class label
             return row

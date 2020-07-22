@@ -54,6 +54,7 @@ class Config:
         self.parser.add_argument('--temporal_type', type=str, default="lstm_attn", help="Temporal type.")
         self.parser.add_argument('--lstm_input_dim', type=int, default=50, help="LSTM input dimensions.")
         self.parser.add_argument('--lstm_output_dim', type=int, default=20, help="LSTM output dimensions.")
+        self.parser.add_argument('--stats_path', type=str, default="best_stats.csv", help="path to save best test statistics.")
 
         args_parsed = self.parser.parse_args(args)
         
@@ -247,19 +248,19 @@ class DynKGTrainer:
             
             
 
-            if not os.path.exists("best_stats.csv"):
+            if not os.path.exists(self.config.stats_path):
                 current_stats = pd.DataFrame(best_metrics, index=[0])
-                current_stats.to_csv("best_stats.csv", mode='w+', header=True, index=False, columns=list(best_metrics.keys()))
+                current_stats.to_csv(self.config.stats_path, mode='w+', header=True, index=False, columns=list(best_metrics.keys()))
             else:
-                best_stats = pd.read_csv("best_stats.csv", header=0)
+                best_stats = pd.read_csv(self.config.stats_path, header=0)
                 best_stats = best_stats.reset_index(drop=True)
                 replace_row = best_stats.loc[best_stats.args == str(self.args)]
                 if(replace_row.empty):
                     current_stats = pd.DataFrame(best_metrics, index=[0])
-                    current_stats.to_csv("best_stats.csv", mode='a', header=False, index=False, columns=list(best_metrics.keys()))
+                    current_stats.to_csv(self.config.stats_path, mode='a', header=False, index=False, columns=list(best_metrics.keys()))
                 else:
                     best_stats.iloc[replace_row.index] = pd.DataFrame(best_metrics, index=replace_row.index)
-                    best_stats.to_csv("best_stats.csv", mode='w', header=True,index=False, columns=list(best_metrics.keys()))
+                    best_stats.to_csv(self.config.stats_path, mode='w', header=True,index=False, columns=list(best_metrics.keys()))
 
             #self.save_model()
 

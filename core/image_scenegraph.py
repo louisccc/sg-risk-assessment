@@ -21,7 +21,8 @@ H_OFFSET = CARLA_IMAGE_H - CROPPED_H #offset from top of image to start of ROI
 Y_SCALE = 0.55 #18 pixels = length of lane line (10 feet)
 X_SCALE = 0.54 #22 pixels = width of lane (12 feet)
 
-CAR_PROXIMITY_THRESH_SUPER_NEAR = 5 # max number of feet between a car and another entity to build proximity relation
+CAR_PROXIMITY_THRESH_NEAR_COLL = 4
+CAR_PROXIMITY_THRESH_SUPER_NEAR = 7 # max number of feet between a car and another entity to build proximity relation
 CAR_PROXIMITY_THRESH_VERY_NEAR = 10
 CAR_PROXIMITY_THRESH_NEAR = 16
 CAR_PROXIMITY_THRESH_VISIBLE = 25
@@ -77,7 +78,7 @@ class RealSceneGraph:
         # bird eye view projection
         # warped image is cropped to ROI (contains no sky pixels)
         M = get_birds_eye_matrix()
-        warped_img = get_birds_eye_warp(image_path, M) 
+        # warped_img = get_birds_eye_warp(image_path, M) 
         #TODO: map lane lines to warped_img. assign locations to lanes
         #TODO: map vehicles to lanes using locations. add relations to graph
 
@@ -130,20 +131,23 @@ class RealSceneGraph:
                 # dont build relations w/ road
                 continue
             if node_a.label == ActorType.CAR and node_b.label == ActorType.CAR:
-                relation_list += self.extract_proximity_relations(node_a, node_b)
-                relation_list += self.extract_directional_relations(node_a, node_b)
-                relation_list += self.extract_proximity_relations(node_b, node_a)
-                relation_list += self.extract_directional_relations(node_b, node_a)
-                self.add_relations(relation_list)
+                if self.get_euclidean_distance(node_a, node_b) <= CAR_PROXIMITY_THRESH_VISIBLE:
+                    relation_list += self.extract_proximity_relations(node_a, node_b)
+                    relation_list += self.extract_directional_relations(node_a, node_b)
+                    relation_list += self.extract_proximity_relations(node_b, node_a)
+                    relation_list += self.extract_directional_relations(node_b, node_a)
+                    self.add_relations(relation_list)
     
     def extract_proximity_relations(self, actor1, actor2):
-        if   self.get_euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_SUPER_NEAR:
+        if self.get_euclidean_distance(actor1, actor2) <= CAR_PROXIMITY_THRESH_NEAR_COLL:
+            return [[actor1, Relations.near_coll, actor2]]
+        elif self.get_euclidean_distance(actor1, actor2) <= CAR_PROXIMITY_THRESH_SUPER_NEAR:
             return [[actor1, Relations.super_near, actor2]]
-        elif self.get_euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_VERY_NEAR:
+        elif self.get_euclidean_distance(actor1, actor2) <= CAR_PROXIMITY_THRESH_VERY_NEAR:
             return [[actor1, Relations.very_near, actor2]]
-        elif self.get_euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_NEAR:
+        elif self.get_euclidean_distance(actor1, actor2) <= CAR_PROXIMITY_THRESH_NEAR:
             return [[actor1, Relations.near, actor2]]
-        elif self.get_euclidean_distance(actor1, actor2) < CAR_PROXIMITY_THRESH_VISIBLE:
+        elif self.get_euclidean_distance(actor1, actor2) <= CAR_PROXIMITY_THRESH_VISIBLE:
             return [[actor1, Relations.visible, actor2]]
         return []
 
@@ -154,17 +158,33 @@ class RealSceneGraph:
 
     def extract_directional_relations(self, actor1, actor2):
         relation_list = []
+        x1, y1 = math.cos(math.radians(0)), math.sin(math.radians(0))
+        x2, y2 = actor2.attr['location_x'] - actor1.attr['location_x'], actor2.attr['location_y'] - actor1.attr['location_y']
+        x2, y2 = x2 / math.sqrt(x2**2+y2**2), y2 / math.sqrt(x2**2+y2**2)
 
-        # actor2 is in front of actor1
-        if actor2.attr['location_y'] < actor1.attr['location_y']:
-            relation_list.append([actor2, Relations.inFrontOf, actor1])
-        # actor2 is behind actor1
-        else:
-            # actor2 is behind actor1
-            relation_list.append([actor2, Relations.atRearOf, actor1])
-        
+        degree = math.degrees(math.atan2(y1, x1)) - math.degrees(math.atan2(y2, x2)) 
+        if degree < 0: 
+            degree += 360
+            
+        if degree <= 45: # actor2 is in front of actor1
+            relation_list.append([actor1, Relations.atDRearOf, actor2])
+        elif degree >= 45 and degree <= 90:
+            relation_list.append([actor1, Relations.atSRearOf, actor2])
+        elif degree >= 90 and degree <= 135:
+            relation_list.append([actor1, Relations.inSFrontOf, actor2])
+        elif degree >= 135 and degree <= 180: # actor2 is behind actor1
+            relation_list.append([actor1, Relations.inDFrontOf, actor2])
+        elif degree >= 180 and degree <= 225: # actor2 is behind actor1
+            relation_list.append([actor1, Relations.inDFrontOf, actor2])
+        elif degree >= 225 and degree <= 270:
+            relation_list.append([actor1, Relations.inSFrontOf, actor2])
+        elif degree >= 270 and degree <= 315:
+            relation_list.append([actor1, Relations.atSRearOf, actor2])
+        elif degree >= 315 and degree <= 360: 
+            relation_list.append([actor1, Relations.atDRearOf, actor2])
+       
         if abs(actor2.attr['location_x'] - actor1.attr['location_x']) <= CENTER_LANE_THRESHOLD:
-                pass
+            pass
         # actor2 to the left of actor1 
         elif actor2.attr['location_x'] < actor1.attr['location_x']:
             relation_list.append([actor2, Relations.toLeftOf, actor1])

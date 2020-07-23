@@ -115,10 +115,11 @@ class ImageSceneGraphSequenceGenerator:
         self.num_classes = 8
         
         # gets a list of all feature labels (which will be used) for all scenegraphs
-        self.feature_list = {"rel_location_x", 
-                             "rel_location_y", #add 3 columns for relative vector values
-                             "distance_abs", # adding absolute distance to ego
-                            }
+        # self.feature_list = {"rel_location_x", 
+        #                      "rel_location_y", #add 3 columns for relative vector values
+        #                      "distance_abs", # adding absolute distance to ego
+        #                     }
+        self.feature_list = set()
         # create 1hot class labels columns.
         for i in range(self.num_classes):
             self.feature_list.add("type_"+str(i))
@@ -178,9 +179,6 @@ class ImageSceneGraphSequenceGenerator:
                   
                 if self.visualize:
                     vis_folder_name = path / "image_visualize"
-                    print("writing scenegraphs to %s"% str(vis_folder_name))
-                    # if vis_folder_name.exists():
-                    #     shutil.rmtree(vis_folder_name)
                     for scenegraph, frame_number in zip(subsampled_scenegraphs, frame_numbers): 
                         vis_folder_name.mkdir(exist_ok=True)
                         scenegraph.visualize(to_filename=str(vis_folder_name / "{}.png".format(frame_number)))
@@ -196,12 +194,6 @@ class ImageSceneGraphSequenceGenerator:
     def get_bounding_boxes(self, img_path, out_img_path=None):
         im = cv2.imread(img_path)
         outputs = self.predictor(im)
-
-        # look at the outputs. See https://detectron2.readthedocs.io/tutorials/models.html#model-output-format for specification
-        # print(outputs["instances"].pred_classes)
-        # print(outputs["instances"].pred_boxes)
-        # import pdb; pdb.set_trace()
-
         if out_img_path:
             # We can use `Visualizer` to draw the predictions on the image.
             v = detectron2.utils.visualizer.Visualizer(im[:, :, ::-1], MetadataCatalog.get(self.cfg.DATASETS.TRAIN[0]), scale=1.2)
@@ -273,9 +265,9 @@ class ImageSceneGraphSequenceGenerator:
             raise NameError("Ego not found in scenegraph")
           
         def get_embedding(node, row):
-            for key in self.feature_list:
-                if key in node.attr:
-                    row[key] = node.attr[key]
+            # for key in self.feature_list:
+            #     if key in node.attr:
+            #         row[key] = node.attr[key]
             row['type_'+str(node.label.value)] = 1 #assign 1hot class label
             return row
         

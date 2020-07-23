@@ -178,6 +178,7 @@ class MRGIN(MRGCN):
         #readout performed after each layer and concatenated
         for i in range(self.num_layers):
             x = self.activation(self.conv[i](x, edge_index, edge_attr))
+            x = F.dropout(x, self.dropout, training=self.training)
             if self.readout_type == "add":
                 r = global_add_pool(x, batch)
             elif self.readout_type == "mean":
@@ -191,7 +192,7 @@ class MRGIN(MRGCN):
             outputs.append(r)
 
         x = torch.cat(outputs, dim=-1)
-        x = F.dropout(x, self.dropout, training=self.training)
+        
         x = self.activation(self.fc1(x))
 
         if self.temporal_type == "mean":

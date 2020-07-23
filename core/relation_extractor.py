@@ -36,10 +36,12 @@ class Relations(Enum):
     very_near = 3
     near = 4
     visible = 5
-    inFrontOf = 6
-    atRearOf = 7
-    toLeftOf = 8
-    toRightOf = 9
+    inDFrontOf = 6
+    inSFrontOf = 7
+    atDRearOf = 8
+    atSRearOf = 9
+    toLeftOf = 10
+    toRightOf = 11
 
 RELATION_COLORS = ["black", "red", "orange", "yellow", "green", "purple", "blue", 
                 "sienna", "pink", "pink", "pink",  "turquoise", "turquoise", "turquoise", "violet", "violet"]
@@ -335,20 +337,41 @@ class RelationExtractor:
             return [[actor1, Relations.visible, actor2]]
         return []
 
-
     def extract_directional_relation(self, actor1, actor2):
         relation_list = []
         # gives directional relations between actors based on their 2D absolute positions.      
         x1, y1 = math.cos(math.radians(actor1.attr['rotation'][0])), math.sin(math.radians(actor1.attr['rotation'][0]))
         x2, y2 = actor2.attr['location'][0] - actor1.attr['location'][0], actor2.attr['location'][1] - actor1.attr['location'][1]
-        inner_product = x1*x2 + y1*y2
-        length_product = math.sqrt(x1**2+y1**2) + math.sqrt(x2**2+y2**2)
-        degree = math.degrees(math.acos(inner_product / length_product))
+        x2, y2 = x2 / math.sqrt(x2**2+y2**2), y2 / math.sqrt(x2**2+y2**2)
 
-        if degree <= 80 or (degree >=280 and degree <= 360): # actor2 is in front of actor1
-            relation_list.append([actor1, Relations.atRearOf, actor2])
-        else: # actor2 is behind actor1
-            relation_list.append([actor1, Relations.inFrontOf, actor2])
+        degree = math.degrees(math.atan2(y1, x1)) - math.degrees(math.atan2(y2, x2)) 
+        if degree < 0: 
+            degree += 360
+            
+        if degree <= 45: # actor2 is in front of actor1
+            relation_list.append([actor1, Relations.atDRearOf, actor2])
+            # relation_list.append([actor1, Relations.toLeftOf, actor2])
+        elif degree >= 45 and degree <= 90:
+            relation_list.append([actor1, Relations.atSRearOf, actor2])
+            # relation_list.append([actor1, Relations.toLeftOf, actor2])
+        elif degree >= 90 and degree <= 135:
+            relation_list.append([actor1, Relations.inSFrontOf, actor2])
+            # relation_list.append([actor1, Relations.toLeftOf, actor2])
+        elif degree >= 135 and degree <= 180: # actor2 is behind actor1
+            relation_list.append([actor1, Relations.inDFrontOf, actor2])
+            # relation_list.append([actor1, Relations.toLeftOf, actor2])
+        elif degree >= 180 and degree <= 225: # actor2 is behind actor1
+            relation_list.append([actor1, Relations.inDFrontOf, actor2])
+            # relation_list.append([actor1, Relations.toRightOf, actor2])
+        elif degree >= 225 and degree <= 270:
+            relation_list.append([actor1, Relations.inSFrontOf, actor2])
+            # relation_list.append([actor1, Relations.toRightOf, actor2])
+        elif degree >= 270 and degree <= 315:
+            relation_list.append([actor1, Relations.atSRearOf, actor2])
+            # relation_list.append([actor1, Relations.toRightOf, actor2])
+        elif degree >= 315 and degree <= 360: 
+            relation_list.append([actor1, Relations.atDRearOf, actor2])
+            # relation_list.append([actor1, Relations.toRightOf,actor2])
 
         if actor2.attr['lane_idx'] < actor1.attr['lane_idx']: # actor2 to the left of actor1 
             relation_list.append([actor1, Relations.toRightOf, actor2])
@@ -356,3 +379,24 @@ class RelationExtractor:
             relation_list.append([actor1, Relations.toLeftOf, actor2])
 
         return relation_list
+
+    # def extract_directional_relation(self, actor1, actor2):
+    #     relation_list = []
+    #     # gives directional relations between actors based on their 2D absolute positions.      
+    #     x1, y1 = math.cos(math.radians(actor1.attr['rotation'][0])), math.sin(math.radians(actor1.attr['rotation'][0]))
+    #     x2, y2 = actor2.attr['location'][0] - actor1.attr['location'][0], actor2.attr['location'][1] - actor1.attr['location'][1]
+    #     inner_product = x1*x2 + y1*y2
+    #     length_product = math.sqrt(x1**2+y1**2) + math.sqrt(x2**2+y2**2)
+    #     degree = math.degrees(math.acos(inner_product / length_product))
+
+    #     if degree <= 80 or (degree >=280 and degree <= 360): # actor2 is in front of actor1
+    #         relation_list.append([actor1, Relations.atRearOf, actor2])
+    #     else: # actor2 is behind actor1
+    #         relation_list.append([actor1, Relations.inFrontOf, actor2])
+
+    #     if actor2.attr['lane_idx'] < actor1.attr['lane_idx']: # actor2 to the left of actor1 
+    #         relation_list.append([actor1, Relations.toRightOf, actor2])
+    #     elif actor2.attr['lane_idx'] > actor1.attr['lane_idx']: # actor2 to the right of actor1 
+    #         relation_list.append([actor1, Relations.toLeftOf, actor2])
+
+    #     return relation_list

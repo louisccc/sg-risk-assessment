@@ -89,18 +89,13 @@ class RelationExtractor:
 
     def extract_relations_car_car(self, actor1, actor2):
         relation_list = []
-        # if actor1.name.startswith("ego:") or actor2.name.startswith("ego:"):
-        #     relation_list += self.create_proximity_relations(actor1, actor2)
-        #     relation_list += self.create_proximity_relations(actor2, actor1)
-        #     relation_list += self.extract_directional_relation(actor1, actor2)
-        #     relation_list += self.extract_directional_relation(actor2, actor1)
-        # else:
-        #     # consider the proximity relations with neighboring lanes.
-        # if self.euclidean_distance(actor1, actor2) <= CAR_PROXIMITY_THRESH_VERY_NEAR:
-        relation_list += self.create_proximity_relations(actor1, actor2)
-        relation_list += self.create_proximity_relations(actor2, actor1)
-        relation_list += self.extract_directional_relation(actor1, actor2)
-        relation_list += self.extract_directional_relation(actor2, actor1)
+        # consider the proximity relations with neighboring lanes.
+        if actor1.name.startswith("ego:") or actor2.name.startswith("ego:"):
+            if self.euclidean_distance(actor1, actor2) <= CAR_PROXIMITY_THRESH_NEAR:
+                relation_list += self.create_proximity_relations(actor1, actor2)
+                relation_list += self.create_proximity_relations(actor2, actor1)
+                relation_list += self.extract_directional_relation(actor1, actor2)
+                relation_list += self.extract_directional_relation(actor2, actor1)
 
         return relation_list
             
@@ -309,7 +304,6 @@ class RelationExtractor:
     #check if an actor is in a certain lane
     def in_lane(self, actor1, actor2):
         if 'lane_idx' in actor1.attr.keys():
-            # import pdb; pdb.set_trace()
             # calculate the distance bewteen actor1 and actor2
             # if it is below 3.5 then they have is in relation.
                 # if actor1 is ego: if actor2 is not equal to the ego_lane's index then it's invading relation.
@@ -327,7 +321,7 @@ class RelationExtractor:
     def create_proximity_relations(self, actor1, actor2):
         if self.euclidean_distance(actor1, actor2) <= CAR_PROXIMITY_THRESH_NEAR_COLL:
             return [[actor1, Relations.near_coll, actor2]]
-        if self.euclidean_distance(actor1, actor2) <= CAR_PROXIMITY_THRESH_SUPER_NEAR:
+        elif self.euclidean_distance(actor1, actor2) <= CAR_PROXIMITY_THRESH_SUPER_NEAR:
             return [[actor1, Relations.super_near, actor2]]
         elif self.euclidean_distance(actor1, actor2) <= CAR_PROXIMITY_THRESH_VERY_NEAR:
             return [[actor1, Relations.very_near, actor2]]
@@ -350,28 +344,20 @@ class RelationExtractor:
             
         if degree <= 45: # actor2 is in front of actor1
             relation_list.append([actor1, Relations.atDRearOf, actor2])
-            # relation_list.append([actor1, Relations.toLeftOf, actor2])
         elif degree >= 45 and degree <= 90:
             relation_list.append([actor1, Relations.atSRearOf, actor2])
-            # relation_list.append([actor1, Relations.toLeftOf, actor2])
         elif degree >= 90 and degree <= 135:
             relation_list.append([actor1, Relations.inSFrontOf, actor2])
-            # relation_list.append([actor1, Relations.toLeftOf, actor2])
         elif degree >= 135 and degree <= 180: # actor2 is behind actor1
             relation_list.append([actor1, Relations.inDFrontOf, actor2])
-            # relation_list.append([actor1, Relations.toLeftOf, actor2])
         elif degree >= 180 and degree <= 225: # actor2 is behind actor1
             relation_list.append([actor1, Relations.inDFrontOf, actor2])
-            # relation_list.append([actor1, Relations.toRightOf, actor2])
         elif degree >= 225 and degree <= 270:
             relation_list.append([actor1, Relations.inSFrontOf, actor2])
-            # relation_list.append([actor1, Relations.toRightOf, actor2])
         elif degree >= 270 and degree <= 315:
             relation_list.append([actor1, Relations.atSRearOf, actor2])
-            # relation_list.append([actor1, Relations.toRightOf, actor2])
         elif degree >= 315 and degree <= 360: 
             relation_list.append([actor1, Relations.atDRearOf, actor2])
-            # relation_list.append([actor1, Relations.toRightOf,actor2])
 
         if actor2.attr['lane_idx'] < actor1.attr['lane_idx']: # actor2 to the left of actor1 
             relation_list.append([actor1, Relations.toRightOf, actor2])
@@ -379,24 +365,3 @@ class RelationExtractor:
             relation_list.append([actor1, Relations.toLeftOf, actor2])
 
         return relation_list
-
-    # def extract_directional_relation(self, actor1, actor2):
-    #     relation_list = []
-    #     # gives directional relations between actors based on their 2D absolute positions.      
-    #     x1, y1 = math.cos(math.radians(actor1.attr['rotation'][0])), math.sin(math.radians(actor1.attr['rotation'][0]))
-    #     x2, y2 = actor2.attr['location'][0] - actor1.attr['location'][0], actor2.attr['location'][1] - actor1.attr['location'][1]
-    #     inner_product = x1*x2 + y1*y2
-    #     length_product = math.sqrt(x1**2+y1**2) + math.sqrt(x2**2+y2**2)
-    #     degree = math.degrees(math.acos(inner_product / length_product))
-
-    #     if degree <= 80 or (degree >=280 and degree <= 360): # actor2 is in front of actor1
-    #         relation_list.append([actor1, Relations.atRearOf, actor2])
-    #     else: # actor2 is behind actor1
-    #         relation_list.append([actor1, Relations.inFrontOf, actor2])
-
-    #     if actor2.attr['lane_idx'] < actor1.attr['lane_idx']: # actor2 to the left of actor1 
-    #         relation_list.append([actor1, Relations.toRightOf, actor2])
-    #     elif actor2.attr['lane_idx'] > actor1.attr['lane_idx']: # actor2 to the right of actor1 
-    #         relation_list.append([actor1, Relations.toLeftOf, actor2])
-
-    #     return relation_list

@@ -115,7 +115,7 @@ class CarlaSceneGraphSequenceGenerator:
                 scenegraphs_dict['label'] = risk_label
                 scenegraphs_dict['folder_name'] = path.name
 
-                if self.visualize:
+                if self.visualize and (self.clip_ids == None or int(path.stem) in self.clip_ids):
                     vis_folder_name = path / "carla_visualize"
                     print("writing scenegraphs to %s"% str(vis_folder_name))
                     # if vis_folder_name.exists():
@@ -155,8 +155,9 @@ class CarlaSceneGraphSequenceGenerator:
 
         return sequence
 
-    def visualize_scenegraphs(self):
+    def visualize_scenegraphs(self, clip_ids):
         self.visualize = True
+        self.clip_ids = clip_ids
 
     def subsample(self, scenegraphs, number_of_frames=20): 
         '''

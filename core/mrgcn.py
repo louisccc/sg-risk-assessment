@@ -9,6 +9,7 @@ from torch_geometric.nn import global_add_pool, global_mean_pool, global_max_poo
 from torch_geometric.nn import GraphConv
 from torch_geometric.nn.pool.topk_pool import topk, filter_adj
 from torch_geometric.utils import softmax
+import pdb
 
 
 class RGCNSAGPooling(torch.nn.Module):
@@ -101,8 +102,6 @@ class MRGCN(nn.Module):
                 self.conv.append(self.rgcn_func(self.layer_spec[i-1], self.layer_spec[i], self.num_relations).to(config.device))
                 total_dim += self.layer_spec[i]
 
-            self.hidden_dim = self.layer_spec[-1] #setting the hidden dims of all later layers with last layer size of layer spec.
-
         if self.pooling_type == "sagpool":
             self.pool1 = RGCNSAGPooling(total_dim, self.num_relations, ratio=config.pooling_ratio, rgcn_func=config.conv_type)
         elif self.pooling_type == "topk":
@@ -165,10 +164,61 @@ class MRGCN(nn.Module):
 
     
 #implementation of MRGCN using a GIN style readout.
-class MRGIN(MRGCN):
+class MRGIN(nn.Module):
     def __init__(self, config):
-        super(MRGIN, self).__init__(config)
-        print("pooling parameters ignored as MRGIN doesnt support pooling.")
+        super(MRGIN, self).__init__()
+        self.num_features = config.num_features
+        self.num_relations = config.num_relations
+        self.num_classes  = config.nclass
+        self.num_layers = config.num_layers #defines number of RGCN conv layers.
+        self.hidden_dim = config.hidden_dim
+        self.layer_spec = None if config.layer_spec == None else list(map(int, config.layer_spec.split(',')))
+        self.lstm_dim1 = config.lstm_input_dim
+        self.lstm_dim2 = config.lstm_output_dim
+        self.rgcn_func = FastRGCNConv if config.conv_type == "FastRGCNConv" else RGCNConv
+        self.activation = F.relu if config.activation == 'relu' else F.leaky_relu
+        self.pooling_type = config.pooling_type
+        self.readout_type = config.readout_type
+        self.temporal_type = config.temporal_type
+        self.dropout = config.dropout
+        self.conv = []
+        self.pool = []
+        total_dim = 0
+
+        if self.layer_spec == None:
+            for i in range(self.num_layers):
+                if i == 0:
+                    self.conv.append(self.rgcn_func(self.num_features, self.hidden_dim, self.num_relations).to(config.device))
+                else:
+                    self.conv.append(self.rgcn_func(self.hidden_dim, self.hidden_dim, self.num_relations).to(config.device))
+                if self.pooling_type == "sagpool":
+                    self.pool.append(RGCNSAGPooling(self.hidden_dim, self.num_relations, ratio=config.pooling_ratio, rgcn_func=config.conv_type).to(config.device))
+                elif self.pooling_type == "topk":
+                    self.pool.append(TopKPooling(self.hidden_dim, ratio=config.pooling_ratio).to(config.device))
+                total_dim += self.hidden_dim
+        
+        else:
+            print("using layer specification and ignoring hidden_dim parameter.")
+            print("layer_spec: " + str(self.layer_spec))
+            for i in range(self.num_layers):
+                if i == 0:
+                    self.conv.append(self.rgcn_func(self.num_features, self.layer_spec[0], self.num_relations).to(config.device))
+                else:
+                    self.conv.append(self.rgcn_func(self.layer_spec[i-1], self.layer_spec[i], self.num_relations).to(config.device))
+                if self.pooling_type == "sagpool":
+                    self.pool.append(RGCNSAGPooling(self.layer_spec[i], self.num_relations, ratio=config.pooling_ratio, rgcn_func=config.conv_type).to(config.device))
+                elif self.pooling_type == "topk":
+                    self.pool.append(TopKPooling(self.layer_spec[i], ratio=config.pooling_ratio).to(config.device))
+                total_dim += self.layer_spec[i]
+            
+        self.fc1 = Linear(total_dim, self.lstm_dim1)
+        
+        if "lstm" in self.temporal_type:
+            self.lstm = LSTM(self.lstm_dim1, self.lstm_dim2, batch_first=True)
+            self.attn = Attention(self.lstm_dim2)
+        
+        self.fc2 = Linear(self.lstm_dim2, self.num_classes)
+
 
 
     def forward(self, x, edge_index, edge_attr, batch=None):
@@ -179,16 +229,23 @@ class MRGIN(MRGCN):
         for i in range(self.num_layers):
             x = self.activation(self.conv[i](x, edge_index, edge_attr))
             x = F.dropout(x, self.dropout, training=self.training)
-            if self.readout_type == "add":
-                r = global_add_pool(x, batch)
-            elif self.readout_type == "mean":
-                r = global_mean_pool(x, batch)
-            elif self.readout_type == "max":
-                r = global_max_pool(x, batch)
-            elif self.readout_type == "sort":
-                r = global_sort_pool(x, batch, k=100)
+            if self.pooling_type == "sagpool":
+                p, _, _, batch2, attn_weights['pool_perm'], attn_weights['pool_score'] = self.pool[i](x, edge_index, edge_attr=edge_attr, batch=batch)
+            elif self.pooling_type == "topk":
+                p, _, _, batch2, attn_weights['pool_perm'], attn_weights['pool_score'] = self.pool[i](x, edge_index, edge_attr=edge_attr, batch=batch)
             else:
-                pass
+                p = x
+                batch2 = batch
+            if self.readout_type == "add":
+                r = global_add_pool(p, batch2)
+            elif self.readout_type == "mean":
+                r = global_mean_pool(p, batch2)
+            elif self.readout_type == "max":
+                r = global_max_pool(p, batch2)
+            elif self.readout_type == "sort":
+                r = global_sort_pool(p, batch2, k=100)
+            else:
+                r = p
             outputs.append(r)
 
         x = torch.cat(outputs, dim=-1)

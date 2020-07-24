@@ -79,11 +79,7 @@ class RealSceneGraph:
         # warped image is cropped to ROI (contains no sky pixels)
         M = get_birds_eye_matrix()
         # warped_img = get_birds_eye_warp(image_path, M) 
-        #TODO: map lane lines to warped_img. assign locations to lanes
-        #TODO: map vehicles to lanes using locations. add relations to graph
-
         # cv2.imwrite( "./warped.jpg", cv2.cvtColor(warped_img, cv2.COLOR_BGR2RGB)) #plot warped image
-        ### TODO: Arnav's part lane/road detection
 
         for idx, (box, label) in enumerate(zip(boxes, labels)):
             box = box.cpu().numpy().tolist()
@@ -131,12 +127,13 @@ class RealSceneGraph:
                 # dont build relations w/ road
                 continue
             if node_a.label == ActorType.CAR and node_b.label == ActorType.CAR:
-                if self.get_euclidean_distance(node_a, node_b) <= CAR_PROXIMITY_THRESH_VISIBLE:
-                    relation_list += self.extract_proximity_relations(node_a, node_b)
-                    relation_list += self.extract_directional_relations(node_a, node_b)
-                    relation_list += self.extract_proximity_relations(node_b, node_a)
-                    relation_list += self.extract_directional_relations(node_b, node_a)
-                    self.add_relations(relation_list)
+                if node_a.name.startswith("Ego") or node_b.name.startswith("Ego"):
+                    if self.get_euclidean_distance(node_a, node_b) <= CAR_PROXIMITY_THRESH_VISIBLE:
+                        relation_list += self.extract_proximity_relations(node_a, node_b)
+                        relation_list += self.extract_directional_relations(node_a, node_b)
+                        relation_list += self.extract_proximity_relations(node_b, node_a)
+                        relation_list += self.extract_directional_relations(node_b, node_a)
+                        self.add_relations(relation_list)
     
     def extract_proximity_relations(self, actor1, actor2):
         if self.get_euclidean_distance(actor1, actor2) <= CAR_PROXIMITY_THRESH_NEAR_COLL:

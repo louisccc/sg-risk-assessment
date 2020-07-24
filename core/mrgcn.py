@@ -144,7 +144,7 @@ class MRGCN(nn.Module):
         x = self.activation(self.fc1(x))
 
         if self.temporal_type == "mean":
-            x = F.leaky_relu(x.mean(axis=0))
+            x = self.activation(x.mean(axis=0))
         elif self.temporal_type == "lstm_last":
             x_predicted, (h, c) = self.lstm(x.unsqueeze(0))
             x = h.flatten()
@@ -245,11 +245,10 @@ class MRGIN(nn.Module):
             outputs.append(r)
 
         x = torch.cat(outputs, dim=-1)
-        
         x = self.activation(self.fc1(x))
 
         if self.temporal_type == "mean":
-            x = F.leaky_relu(x.mean(axis=0))
+            x = self.activation(x.mean(axis=0))
         elif self.temporal_type == "lstm_last":
             x_predicted, (h, c) = self.lstm(x.unsqueeze(0))
             x = h.flatten()

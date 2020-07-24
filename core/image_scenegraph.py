@@ -58,13 +58,16 @@ class RealSceneGraph:
         self.ego_location = ((BIRDS_EYE_IMAGE_W/2) * X_SCALE, BIRDS_EYE_IMAGE_H * Y_SCALE)
         self.ego_node  = ObjectNode("Ego Car", {"location_x": self.ego_location[0], "location_y": self.ego_location[1]}, ActorType.CAR)
         self.add_node(self.ego_node)
-        
         self.extract_relative_lanes() ### three lane formulation.
-        
+
+        #convert bounding boxes to nodes and build relations.
         boxes, labels, image_size = bounding_boxes
-                
-        # bird eye view projection
-        # warped image is cropped to ROI (contains no sky pixels)
+        self.get_nodes_from_bboxes(boxes, labels, coco_class_names)
+        self.extract_relations()
+    
+
+    def get_nodes_from_bboxes(self, boxes, labels, coco_class_names):
+        # birds eye view projection
         M = get_birds_eye_matrix()
         # warped_img = get_birds_eye_warp(image_path, M) 
         # cv2.imwrite( "./warped.jpg", cv2.cvtColor(warped_img, cv2.COLOR_BGR2RGB)) #plot warped image
@@ -95,20 +98,23 @@ class RealSceneGraph:
             y_bottom = box[3] - H_OFFSET #offset to account for image crop
             pt = np.array([[[x_mid,y_bottom]]], dtype='float32')
             warp_pt = cv2.perspectiveTransform(pt, M)[0][0]
-
-            plt.plot(warp_pt[0], warp_pt[1], color='cyan', marker='o') #plot marked bbox locations
             
-            #location/distance in feet
+            #locations/distances in feet
             attr['location_x'] = warp_pt[0] * X_SCALE
             attr['location_y'] = warp_pt[1] * Y_SCALE
-            attr['rel_location_x'] = attr['location_x'] - self.ego_node.attr["location_x"]
-            attr['rel_location_y'] = attr['location_y'] - self.ego_node.attr["location_y"]
-            attr['distance_abs'] = math.sqrt(attr['rel_location_x']**2 + attr['rel_location_y']**2) 
+            attr['rel_location_x'] = attr['location_x'] - self.ego_node.attr["location_x"] #x position relative to ego
+            attr['rel_location_y'] = attr['location_y'] - self.ego_node.attr["location_y"] #y position relative to ego
+            attr['distance_abs'] = math.sqrt(attr['rel_location_x']**2 + attr['rel_location_y']**2) #absolute distance from ego
             node = ObjectNode("%s_%d"%(class_name, idx), attr, actor_type)
             self.add_node(node)
             self.add_mapping_to_relative_lanes(node)
 
-        # get the relations between nodes
+        
+    #extract relations between all nodes in the graph
+    #does not build relations with the road node.
+    #only builds relations between the ego node and other nodes. 
+    #only builds relations if other node is within the distance CAR_PROXIMITY_THRESH_VISIBLE from ego.
+    def extract_relations(self):
         for node_a, node_b in itertools.combinations(self.g.nodes, 2):
             relation_list = []
             if node_a.label == ActorType.ROAD or node_b.label == ActorType.ROAD:  
@@ -123,6 +129,8 @@ class RealSceneGraph:
                         relation_list += self.extract_directional_relations(node_b, node_a)
                         self.add_relations(relation_list)
     
+
+    #returns proximity relations based on the absolute distance between two actors.
     def extract_proximity_relations(self, actor1, actor2):
         if self.get_euclidean_distance(actor1, actor2) <= CAR_PROXIMITY_THRESH_NEAR_COLL:
             return [[actor1, Relations.near_coll, actor2]]
@@ -136,11 +144,15 @@ class RealSceneGraph:
             return [[actor1, Relations.visible, actor2]]
         return []
 
+
+    #calculates absolute distance between two actors
     def get_euclidean_distance(self, actor1, actor2):
         l1 = (actor1.attr['location_x'], actor1.attr['location_y'])
         l2 = (actor2.attr['location_x'], actor2.attr['location_y'])
         return math.sqrt((l1[0] - l2[0])**2 + (l1[1]- l2[1])**2)
 
+
+    #returns directional relations between entities based on their relative positions to one another in the scene.
     def extract_directional_relations(self, actor1, actor2):
         relation_list = []
         x1, y1 = math.cos(math.radians(0)), math.sin(math.radians(0))
@@ -193,6 +205,7 @@ class RealSceneGraph:
         self.add_relation([self.middle_lane, Relations.isIn, self.road_node])
         self.add_relation([self.ego_node, Relations.isIn, self.middle_lane])
 
+
     #builds isIn relation between object and lane depending on x-displacement relative to ego
     #left/middle and right/middle relations have an overlap area determined by the size of CENTER_LANE_THRESHOLD and LANE_THRESHOLD.
     #TODO: move to relation_extractor in replacement of current lane-vehicle relation code
@@ -206,6 +219,7 @@ class RealSceneGraph:
         if abs(object_node.attr['rel_location_x']) <= CENTER_LANE_THRESHOLD:
             self.add_relation([object_node, Relations.isIn, self.middle_lane])
 
+
     #add single node to graph. node can be any hashable datatype including objects.
     def add_node(self, node):
         color = "white"
@@ -217,6 +231,7 @@ class RealSceneGraph:
             color = "yellow"
         self.g.add_node(node, attr=node.attr, label=node.name,  style='filled', fillcolor=color)
     
+
     #add relation (edge) between nodes on graph. relation is a list containing [subject, relation, object]
     def add_relation(self, relation):
         if relation != []:
@@ -225,14 +240,17 @@ class RealSceneGraph:
             else:
                 raise NameError("One or both nodes in relation do not exist in graph. Relation: " + str(relation))
         
+
     def add_relations(self, relations_list):
         for relation in relations_list:
             self.add_relation(relation)
             
+
     def visualize(self, to_filename):
         A = to_agraph(self.g)
         A.layout('dot')
         A.draw(to_filename)
+
 
 #ROI: Region of Interest
 #returns transformation matrix for warping image to birds eye projection

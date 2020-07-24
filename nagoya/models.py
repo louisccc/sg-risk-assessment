@@ -17,7 +17,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import roc_auc_score, f1_score
 import matplotlib.pyplot as plt
 from tqdm import tqdm
-
+from sklearn.utils import resample
 
 class Models:
 
@@ -131,7 +131,7 @@ class Models:
 
         min_number = min(len(class_0), len(class_1))
         if downsample:
-            class_0, y_0 = resample(class_0, y_0, n_samples=min_number)
+            class_1, y_1 = resample(class_1, y_1, n_samples=min_number)
 
         for i in tqdm(range(n)):
 

@@ -31,7 +31,6 @@ sys.path.append(os.path.dirname(sys.path[0]))
 from core.image_scenegraph import RealSceneGraph
 from core.scene_graph import SceneGraph
 from core.relation_extractor import ActorType, Relations, RELATION_COLORS
-# from core.lane_extractor import LaneExtractor
 
 # from enum import Enum
 
@@ -154,7 +153,6 @@ class ImageSceneGraphSequenceGenerator:
                     out_img_path.mkdir(exist_ok=True)
                     out_img_path = str(out_img_path / str(Path(raw_image_path).name))
                 bounding_boxes = self.get_bounding_boxes(str(raw_image_path),out_img_path=out_img_path)
-                ### get lane prediction using lanenet.
                 ### use two information to generate the corresponding scenegraphs.
                 scenegraph = RealSceneGraph(str(raw_image_path), bounding_boxes, coco_class_names=self.coco_class_names)
                 scenegraphs[frame] = scenegraph

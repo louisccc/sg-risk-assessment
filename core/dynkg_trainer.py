@@ -262,7 +262,7 @@ class DynKGTrainer:
                     best_stats.iloc[replace_row.index] = pd.DataFrame(best_metrics, index=replace_row.index)
                     best_stats.to_csv(self.config.stats_path, mode='w', header=True,index=False, columns=list(best_metrics.keys()))
 
-            #self.save_model()
+            self.save_model()
 
         return outputs_test, labels_test, metrics
 
@@ -276,6 +276,7 @@ class DynKGTrainer:
         """Function to load the model."""
         saved_path = Path(self.config.model_load_path).resolve()
         if saved_path.exists():
+            self.build_model()
             self.model.load_state_dict(torch.load(str(saved_path)))
             self.model.eval()
 

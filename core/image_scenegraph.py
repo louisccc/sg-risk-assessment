@@ -7,7 +7,6 @@ import networkx as nx
 import matplotlib.pyplot as plt
 from networkx.drawing.nx_agraph import to_agraph
 from core.relation_extractor import ActorType, Relations, RELATION_COLORS
-# from core.lane_extractor import LaneExtractor
 
 
 #SETTINGS FOR 1280x720 CARLA IMAGES:
@@ -48,11 +47,10 @@ class RealSceneGraph:
             image_path : path to the image for which the scene graph is generated
             lane extractor: used to load lane dicts from image directories. Pass None to disable the use of lane information
     '''
-    def __init__(self, image_path, bounding_boxes, coco_class_names=None, lane_extractor=None):
+    def __init__(self, image_path, bounding_boxes, coco_class_names=None):
         self.g = nx.MultiDiGraph() #initialize scenegraph as networkx graph
 
         # road and lane settings.
-        self.lane_extractor = lane_extractor
         self.road_node = ObjectNode("Root Road", {}, ActorType.ROAD) # we need to define the type of node.
         self.add_node(self.road_node)   # adding the road as the root node
         
@@ -64,26 +62,12 @@ class RealSceneGraph:
         self.extract_relative_lanes() ### three lane formulation.
         
         boxes, labels, image_size = bounding_boxes
-
-        ### TODO: Arnav's part lane/road detection
-        if self.lane_extractor != None:
-            lanedict = self.lane_extractor.get_lanes_from_file(image_path)
-            if lanedict != None:
-                #TODO: use pairs of lane lines to add complete lanes instead of lines to the graph
-                for lane_line, mask in lanedict.items():
-                    lane_line_node = ObjectNode(name="Lane_Marking_" + lane_line, attr=mask, label=ActorType.LANE)
-                    self.add_node(lane_line_node)
-                    self.add_relation([lane_line_node, Relations.partOf, self.road_node])
                 
         # bird eye view projection
         # warped image is cropped to ROI (contains no sky pixels)
         M = get_birds_eye_matrix()
         # warped_img = get_birds_eye_warp(image_path, M) 
-        #TODO: map lane lines to warped_img. assign locations to lanes
-        #TODO: map vehicles to lanes using locations. add relations to graph
-
         # cv2.imwrite( "./warped.jpg", cv2.cvtColor(warped_img, cv2.COLOR_BGR2RGB)) #plot warped image
-        ### TODO: Arnav's part lane/road detection
 
         for idx, (box, label) in enumerate(zip(boxes, labels)):
             box = box.cpu().numpy().tolist()
@@ -194,16 +178,6 @@ class RealSceneGraph:
         ### disable rear relations help the inference. 
         return relation_list
 
-    # lane/road detection using LaneNet (not currently used)
-    def extract_lanenet_lanes(self, image_path):
-        if self.lane_extractor != None:
-            lanedict = self.lane_extractor.get_lanes_from_file(image_path)
-            if lanedict != None:
-                #TODO: use pairs of lane lines to add complete lanes instead of lines to the graph
-                for lane_line, mask in lanedict.items():
-                    lane_line_node = ObjectNode(name="Lane_Marking_" + lane_line, attr=mask, label=ActorType.LANE)
-                    self.add_node(lane_line_node)
-                    self.add_relation([lane_line_node, Relations.partOf, self.road_node])
 
     #relative lane mapping method. Each vehicle is assigned to left, middle, or right lane depending on relative position to ego
     def extract_relative_lanes(self):

@@ -115,12 +115,13 @@ class RealSceneGraph:
                 # dont build relations w/ road
                 continue
             if node_a.label == ActorType.CAR and node_b.label == ActorType.CAR:
-                if self.get_euclidean_distance(node_a, node_b) <= CAR_PROXIMITY_THRESH_VISIBLE:
-                    relation_list += self.extract_proximity_relations(node_a, node_b)
-                    relation_list += self.extract_directional_relations(node_a, node_b)
-                    relation_list += self.extract_proximity_relations(node_b, node_a)
-                    relation_list += self.extract_directional_relations(node_b, node_a)
-                    self.add_relations(relation_list)
+                if node_a.name.startswith("Ego") or node_b.name.startswith("Ego"):
+                    if self.get_euclidean_distance(node_a, node_b) <= CAR_PROXIMITY_THRESH_VISIBLE:
+                        relation_list += self.extract_proximity_relations(node_a, node_b)
+                        relation_list += self.extract_directional_relations(node_a, node_b)
+                        relation_list += self.extract_proximity_relations(node_b, node_a)
+                        relation_list += self.extract_directional_relations(node_b, node_a)
+                        self.add_relations(relation_list)
     
     def extract_proximity_relations(self, actor1, actor2):
         if self.get_euclidean_distance(actor1, actor2) <= CAR_PROXIMITY_THRESH_NEAR_COLL:

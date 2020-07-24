@@ -45,7 +45,7 @@ class RealSceneGraph:
         scene graph the real images 
         arguments: 
             image_path : path to the image for which the scene graph is generated
-            lane extractor: used to load lane dicts from image directories. Pass None to disable the use of lane information
+            
     '''
     def __init__(self, image_path, bounding_boxes, coco_class_names=None):
         self.g = nx.MultiDiGraph() #initialize scenegraph as networkx graph

@@ -31,7 +31,7 @@ def show_video(canvas, clip_folder, root, title):
 
 def anotate_task(root_folder):
     foldernames = [f for f in root_folder.iterdir() if f.stem.isnumeric()]
-    foldernames = sorted(foldernames, key=lambda x : int(x.stem))
+    foldernames = sorted(foldernames, key=lambda x : int(x.stem.replace("_", "")))
 
     idx = -1
 

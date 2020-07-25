@@ -4,7 +4,7 @@ import torch.nn.functional as F
 from torchnlp.nn import Attention
 from torch.nn import Linear, LSTM
 from torch_geometric.nn import RGCNConv, SAGPooling, TopKPooling, FastRGCNConv
-from torch_geometric.nn import global_add_pool, global_mean_pool, global_max_pool, global_sort_pool
+from torch_geometric.nn import global_add_pool, global_mean_pool, global_max_pool
 
 from torch_geometric.nn import GraphConv
 from torch_geometric.nn.pool.topk_pool import topk, filter_adj
@@ -138,15 +138,13 @@ class MRGCN(nn.Module):
             x = global_mean_pool(x, batch)
         elif self.readout_type == "max":
             x = global_max_pool(x, batch)
-        elif self.readout_type == "sort":
-            x = global_sort_pool(x, batch, k=100)
         else:
             pass
 
         x = self.activation(self.fc1(x))
 
         if self.temporal_type == "mean":
-            x = F.leaky_relu(x.mean(axis=0))
+            x = self.activation(x.mean(axis=0))
         elif self.temporal_type == "lstm_last":
             x_predicted, (h, c) = self.lstm(x.unsqueeze(0))
             x = h.flatten()
@@ -242,18 +240,15 @@ class MRGIN(nn.Module):
                 r = global_mean_pool(p, batch2)
             elif self.readout_type == "max":
                 r = global_max_pool(p, batch2)
-            elif self.readout_type == "sort":
-                r = global_sort_pool(p, batch2, k=100)
             else:
                 r = p
             outputs.append(r)
 
         x = torch.cat(outputs, dim=-1)
-        
         x = self.activation(self.fc1(x))
 
         if self.temporal_type == "mean":
-            x = F.leaky_relu(x.mean(axis=0))
+            x = self.activation(x.mean(axis=0))
         elif self.temporal_type == "lstm_last":
             x_predicted, (h, c) = self.lstm(x.unsqueeze(0))
             x = h.flatten()

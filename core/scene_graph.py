@@ -71,6 +71,7 @@ class SceneGraph:
                 n.name = self.relation_extractor.get_actor_type(n).name.lower() + ":" + actor_id
                 n.type = self.relation_extractor.get_actor_type(n).value
                 self.add_node(n)
+                self.add_mapping_to_relative_lanes(n)
             
     #adds lanes and their dicts. constructs relation between each lane and the root road node.
     def add_lane_dict(self, lanedict):
@@ -97,13 +98,13 @@ class SceneGraph:
         self.ego_yaw = math.radians(self.egoNode.attr['rotation'][0])
         self.ego_cos_term = math.cos(self.ego_yaw)
         self.ego_sin_term = math.sin(self.ego_yaw)
+        self.extract_relative_lanes()
 
         self.relation_extractor = RelationExtractor(self.egoNode)
-        # self.add_attributes(egoNode, attrs)
         for key, attrs in framedict.items():   
-            if key == "lane":
-                self.add_lane_dict(attrs)
-            elif key == "sign":
+            # if key == "lane":
+            #     self.add_lane_dict(attrs)
+            if key == "sign":
                 self.add_sign_dict(attrs)
             elif key == "actors":
                 self.add_actor_dict(attrs)
@@ -121,13 +122,13 @@ class SceneGraph:
         A.layout('dot')
         A.draw(filename)
 
-    
-    #TODO refactor after testing
-    #relative lane mapping method. Each vehicle is assigned to left, middle, or right lane depending on relative position to ego
+
+    # TODO refactor after testing
+    # relative lane mapping method. Each vehicle is assigned to left, middle, or right lane depending on relative position to ego
     def extract_relative_lanes(self):
-        self.left_lane = Node("lane_left", {}, ActorType.LANE)
-        self.right_lane = Node("lane_right", {}, ActorType.LANE)
-        self.middle_lane = Node("lane_middle", {}, ActorType.LANE)
+        self.left_lane = Node("lane_left", {"curr":"lane_left"}, ActorType.LANE)
+        self.right_lane = Node("lane_right", {"curr":"lane_right"}, ActorType.LANE)
+        self.middle_lane = Node("lane_middle", {"curr":"lane_middle"}, ActorType.LANE)
         self.add_node(self.left_lane)
         self.add_node(self.right_lane)
         self.add_node(self.middle_lane)

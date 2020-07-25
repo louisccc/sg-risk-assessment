@@ -31,28 +31,7 @@ sys.path.append(os.path.dirname(sys.path[0]))
 from core.image_scenegraph import RealSceneGraph
 from core.scene_graph import SceneGraph
 from core.relation_extractor import ActorType, Relations, RELATION_COLORS
-# from core.lane_extractor import LaneExtractor
 
-# from enum import Enum
-
-#SETTINGS FOR 1280x720 CARLA IMAGES:
-CARLA_IMAGE_H = 720
-CARLA_IMAGE_W = 1280
-CROPPED_H = 350 #height of ROI. crops to lane area of carla images
-BIRDS_EYE_IMAGE_H = 850 
-BIRDS_EYE_IMAGE_W = 1280
-
-H_OFFSET = CARLA_IMAGE_H - CROPPED_H #offset from top of image to start of ROI
-Y_SCALE = 0.55 #18 pixels = length of lane line (10 feet)
-X_SCALE = 0.54 #22 pixels = width of lane (12 feet)
-
-CAR_PROXIMITY_THRESH_SUPER_NEAR = 50 # max number of feet between a car and another entity to build proximity relation
-CAR_PROXIMITY_THRESH_VERY_NEAR = 150
-CAR_PROXIMITY_THRESH_NEAR = 300
-CAR_PROXIMITY_THRESH_VISIBLE = 500
-
-LANE_THRESHOLD = 6 #feet. if object's center is more than this distance away from ego's center, build left or right lane relation
-CENTER_LANE_THRESHOLD = 9 #feet. if object's center is within this distance of ego's center, build middle lane relation
 
 def create_text_labels_with_idx(classes, scores, class_names):
     """
@@ -75,26 +54,6 @@ def create_text_labels_with_idx(classes, scores, class_names):
     return labels
 
 detectron2.utils.visualizer._create_text_labels = create_text_labels_with_idx
-
-#ROI: Region of Interest
-#returns transformation matrix for warping image to birds eye projection
-#birds eye matrix fixed for all images using the assumption that camera perspective does not change over time.
-def get_birds_eye_matrix():
-    src = np.float32([[0, CROPPED_H], [BIRDS_EYE_IMAGE_W, CROPPED_H], [0, 0], [BIRDS_EYE_IMAGE_W, 0]]) #original dimensions (cropped to ROI)
-    dst = np.float32([[int(BIRDS_EYE_IMAGE_W*16/33), BIRDS_EYE_IMAGE_H], [int(BIRDS_EYE_IMAGE_W*17/33), BIRDS_EYE_IMAGE_H], [0, 0], [BIRDS_EYE_IMAGE_W, 0]]) #warped dimensions
-    M = cv2.getPerspectiveTransform(src, dst) # The transformation matrix
-    #Minv = cv2.getPerspectiveTransform(dst, src) # Inverse transformation (if needed)
-    return M
-    
-
-#returns image warped to birds eye projection using M
-#returned image is vertically cropped to the ROI (lane area)
-def get_birds_eye_warp(image_path, M):
-    img = cv2.imread(image_path)
-    img = img[H_OFFSET:CARLA_IMAGE_H, 0:BIRDS_EYE_IMAGE_W] # Apply np slicing for ROI crop
-    warped_img = cv2.warpPerspective(img, M, (BIRDS_EYE_IMAGE_W, BIRDS_EYE_IMAGE_H)) # Image warping
-    warped_img = cv2.cvtColor(warped_img, cv2.COLOR_BGR2RGB) #set to RGB
-    return warped_img
 
 
 class ImageSceneGraphSequenceGenerator:
@@ -154,7 +113,6 @@ class ImageSceneGraphSequenceGenerator:
                     out_img_path.mkdir(exist_ok=True)
                     out_img_path = str(out_img_path / str(Path(raw_image_path).name))
                 bounding_boxes = self.get_bounding_boxes(str(raw_image_path),out_img_path=out_img_path)
-                ### get lane prediction using lanenet.
                 ### use two information to generate the corresponding scenegraphs.
                 scenegraph = RealSceneGraph(str(raw_image_path), bounding_boxes, coco_class_names=self.coco_class_names)
                 scenegraphs[frame] = scenegraph

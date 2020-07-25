@@ -185,7 +185,7 @@ class UI(Label):
         except KeyError:
             duration = 100
         self.paused = False
-        self.after(duration, self.next)
+        self.after(1, self.next)
     
     def update_title(self):
         new_title = self.title + ", Frame: {} / {}".format(self.index, len(self.image_path_list) - 1)
@@ -202,7 +202,7 @@ class UI(Label):
             duration = im.info["duration"]
         except KeyError:
             duration = 100
-        self.after(duration, self.next)
+        self.after(1, self.next)
 
     def previousFrame(self):
         if self.paused and self.index > 0:
@@ -279,7 +279,7 @@ class UI(Label):
             except KeyError:
                 duration = 100
             self.update_title()
-            self.after(duration, self.next)
+            self.after(1, self.next)
 
         self.update_idletasks()
 

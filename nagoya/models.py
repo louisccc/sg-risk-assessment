@@ -12,12 +12,12 @@ from keras.optimizers import Adam
 from keras.applications import ResNet50
 import tensorflow as tf
 import keras.backend as K
-
+from sklearn.model_selection import train_test_split
 
 from sklearn.metrics import roc_auc_score, f1_score
 import matplotlib.pyplot as plt
 from tqdm import tqdm
-
+from sklearn.utils import resample
 
 class Models:
 
@@ -93,7 +93,10 @@ class Models:
         self.model.fit(X_train, y_train,
                        batch_size=self.batch_size,
                        nb_epoch=self.nb_epoch,
-                       validation_data=(X_test, y_test), class_weight=self.class_weights, verbose=verbose, callbacks=[self.history])
+                       validation_data=(X_test, y_test), 
+                       class_weight=self.class_weights, verbose=verbose
+                       , callbacks=[self.history]
+                       )
         
         self.get_lastMpercent_loss()
 
@@ -101,29 +104,39 @@ class Models:
             print(self.last_Mpercent_epoch_val_loss)
 
     def train_n_fold_cross_val(self, Data, label, training_to_all_data_ratio=0.9, n=10, print_option=0, plot_option=0,
-                               save_option=0, save_path='results/test1.png', epoch_resolution=100, verbose=2):
+                               save_option=0, save_path='results/test1.png', epoch_resolution=100, verbose=2, seed=0, downsample=False):
 
         nb_samples = Data.shape[0]
-        # import pdb; pdb.set_trace()
-        rand_indexes = list(range(0, nb_samples))
         # get the initial random model weights
         w_save = self.model.get_weights()
+        
+        class_0 = []
+        class_1 = []
+
+        for idx, l in enumerate(label):
+            # [0,1] = risky, [1,0] = safe
+            if (l == [0., 1.]).all():
+                class_0.append(Data[idx])
+            elif (l == [1., 0.]).all():
+                class_1.append(Data[idx])
+
+        class_0 = np.array(class_0)
+        class_1 = np.array(class_1)
+        
+        y_0 = [[0., 1.]] * len(class_0)
+        y_1 = [[1., 0.]] * len(class_1)
+        
+        y_0 = np.array(y_0, dtype=np.float64)
+        y_1 = np.array(y_1, dtype=np.float64)
+
+        min_number = min(len(class_0), len(class_1))
+        if downsample:
+            class_1, y_1 = resample(class_1, y_1, n_samples=min_number)
 
         for i in tqdm(range(n)):
 
-            # randomize how we split the videos
-            random.shuffle(rand_indexes)
-            # take
-            #int(nb_samples * training_to_all_data_ratio) * 0.05
-            
-            # split videos into train and test i.e. first 2 videos for train last 2 for test
-            # then train model
-            X_train = Data[rand_indexes[0:int(nb_samples * training_to_all_data_ratio)], :]
-            y_train = label[rand_indexes[0:int(nb_samples * training_to_all_data_ratio)], :]
-            X_test = Data[rand_indexes[int(nb_samples * training_to_all_data_ratio):], :]
-            y_test = label[rand_indexes[int(nb_samples * training_to_all_data_ratio):], :]
-            # if both classes in testing set?
-            
+            X_train, X_test, y_train, y_test = train_test_split(np.concatenate([class_0, class_1], axis=0), np.concatenate([y_0, y_1], axis=0), test_size=1-training_to_all_data_ratio, shuffle=True, stratify=np.concatenate([y_0, y_1], axis=0), random_state=seed)
+
             # Model weights from the previous training session must be resetted to the initial random values
             self.model.set_weights(w_save)
             self.history = []
@@ -133,10 +146,16 @@ class Models:
             self.class_weights = {0: c2, 1: c1}
             self.train_model(X_train, y_train, X_test, y_test, print_option=print_option, verbose=verbose)
             
-            
+            metrics = {}
+            output = self.model.predict_proba(X_train)
+            true_label = np.argmax(y_train, axis=-1)
+            metrics['train'] = get_metrics(output, true_label)
+            metrics['train']['loss'] = self.history.train_loss[-1]
+
             output = self.model.predict_proba(X_test)
-            true_label = np.argmax(y_test,axis=-1)
-            metrics = get_metrics(output,true_label)
+            true_label = np.argmax(y_test, axis=-1)
+            metrics['test'] = get_metrics(output, true_label)
+            metrics['test']['loss'] = self.history.val_loss[-1]
             
             if plot_option == 1:
                 if i == 0:

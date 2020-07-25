@@ -55,7 +55,7 @@ class CarlaWorld():
 
         # Town 5: Squared-grid town with cross junctions and a bridge. 
         # It has multiple lanes per direction. Useful to perform lane changes.
-        self.world = self.client.load_world('Town05')
+        self.world = self.client.load_world('Town04')
         CarlaDataProvider.set_world(self.world)
         
         # set number of vehicles randomly

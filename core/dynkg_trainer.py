@@ -1,4 +1,4 @@
-import os, sys
+import os, sys, pdb
 sys.path.append(os.path.dirname(sys.path[0]))
 
 import torch
@@ -29,26 +29,32 @@ class Config:
     def __init__(self, args):
         self.parser = ArgumentParser(description='The parameters for training the scene graph using GCN.')
         self.parser.add_argument('--cache_path', type=str, default="../script/image_dataset.pkl", help="Path to the cache file.")
-        self.parser.add_argument('--model_load_path', type=str, default="./model/model.vec.pt", help="Path to load cached model file.")
+        self.parser.add_argument('--model_load_path', type=str, default="./model/model_best_val_loss_.vec.pt", help="Path to load cached model file.")
         self.parser.add_argument('--model_save_path', type=str, default="./model/model_best_val_loss_.vec.pt", help="Path to save model file.")
-        self.parser.add_argument('--split_ratio', type=float, default=0.3, help="Train to test dataset split ratio.")
-        self.parser.add_argument('--downsample', type=lambda x: (str(x).lower() == 'true'), default=False, help='Flag to downsample dataset.')
+        self.parser.add_argument('--split_ratio', type=float, default=0.3, help="Ratio of dataset withheld for testing.")
+        self.parser.add_argument('--downsample', type=lambda x: (str(x).lower() == 'true'), default=False, help='Set to true to downsample dataset.')
         self.parser.add_argument('--learning_rate', default=0.0001, type=float, help='The initial learning rate for GCN.')
         self.parser.add_argument('--seed', type=int, default=random.randint(0,2**32), help='Random seed.')
         self.parser.add_argument('--epochs', type=int, default=200, help='Number of epochs to train.')
+        self.parser.add_argument('--activation', type=str, default='relu', help='Activation function to use, options: [relu, leaky_relu].')
         self.parser.add_argument('--weight_decay', type=float, default=5e-4, help='Weight decay (L2 loss on parameters).')
         self.parser.add_argument('--dropout', type=float, default=0.25, help='Dropout rate (1 - keep probability).')
-        self.parser.add_argument('--nclass', type=int, default=2, help="The number of classes for dynamic graph classification.")
+        self.parser.add_argument('--nclass', type=int, default=2, help="The number of classes for dynamic graph classification (currently only supports 2).")
         self.parser.add_argument('--batch_size', type=int, default=32, help='Number of graphs in a batch.')
-        self.parser.add_argument('--device', type=str, default="cpu", help='The device to run on models (cuda or cpu) cpu in default.')
-        self.parser.add_argument('--test_step', type=int, default=10, help='Number of epochs before testing the model.')
-        self.parser.add_argument('--model', type=str, default="mrgcn", help="Model to be used intrinsically.")
-        self.parser.add_argument('--num_layers', type=int, default=3, help="Number of RGCN layers in the network.")
-        self.parser.add_argument('--hidden_dim', type=int, default=32, help="Hidden dimension in GIN.")
-        self.parser.add_argument('--pooling_type', type=str, default="sagpool", help="Graph pooling type.")
+        self.parser.add_argument('--device', type=str, default="cpu", help='The device on which models are run, options: [cuda, cpu].')
+        self.parser.add_argument('--test_step', type=int, default=10, help='Number of training epochs before testing the model.')
+        self.parser.add_argument('--model', type=str, default="mrgcn", help="Model to be used intrinsically. options: [mrgcn, mrgin]")
+        self.parser.add_argument('--conv_type', type=str, default="FastRGCNConv", help="type of RGCNConv to use [RGCNConv, FastRGCNConv].")
+        self.parser.add_argument('--num_layers', type=int, default=3, help="Number of layers in the network.")
+        self.parser.add_argument('--hidden_dim', type=int, default=32, help="Hidden dimension in RGCN.")
+        self.parser.add_argument('--layer_spec', type=str, default=None, help="manually specify the size of each layer in format l1,l2,l3 (no spaces).")
+        self.parser.add_argument('--pooling_type', type=str, default="sagpool", help="Graph pooling type, options: [sagpool, topk, None].")
         self.parser.add_argument('--pooling_ratio', type=float, default=0.5, help="Graph pooling ratio.")        
-        self.parser.add_argument('--readout_type', type=str, default="mean", help="Readout type.")
-        self.parser.add_argument('--temporal_type', type=str, default="lstm_last", help="Temporal type.")
+        self.parser.add_argument('--readout_type', type=str, default="mean", help="Readout type, options: [max, mean, add].")
+        self.parser.add_argument('--temporal_type', type=str, default="lstm_attn", help="Temporal type, options: [mean, lstm_last, lstm_sum, lstm_attn].")
+        self.parser.add_argument('--lstm_input_dim', type=int, default=50, help="LSTM input dimensions.")
+        self.parser.add_argument('--lstm_output_dim', type=int, default=20, help="LSTM output dimensions.")
+        self.parser.add_argument('--stats_path', type=str, default="best_stats.csv", help="path to save best test statistics.")
 
         args_parsed = self.parser.parse_args(args)
         
@@ -57,7 +63,7 @@ class Config:
 
         self.cache_path = Path(self.cache_path).resolve()
 
-def build_scenegraph_dataset(cache_path, train_to_test_ratio=0.3, downsample=False):
+def build_scenegraph_dataset(cache_path, train_to_test_ratio=0.3, downsample=False, seed=0):
     dataset_file = open(cache_path, "rb")
     scenegraphs_sequence, feature_list = pkl.load(dataset_file)
 
@@ -79,7 +85,7 @@ def build_scenegraph_dataset(cache_path, train_to_test_ratio=0.3, downsample=Fal
     else:
         modified_class_0, modified_y_0 = class_0, y_0
         
-    train, test, train_y, test_y = train_test_split(modified_class_0+class_1, modified_y_0+y_1, test_size=train_to_test_ratio, shuffle=True, stratify=modified_y_0+y_1)
+    train, test, train_y, test_y = train_test_split(modified_class_0+class_1, modified_y_0+y_1, test_size=train_to_test_ratio, shuffle=True, stratify=modified_y_0+y_1, random_state=seed)
 
     return train, test, feature_list
 
@@ -94,7 +100,7 @@ class DynKGTrainer:
         if not self.config.cache_path.exists():
             raise Exception("The cache file does not exist.")    
 
-        self.training_data, self.testing_data, self.feature_list = build_scenegraph_dataset(self.config.cache_path, self.config.split_ratio, downsample=self.config.downsample)
+        self.training_data, self.testing_data, self.feature_list = build_scenegraph_dataset(self.config.cache_path, self.config.split_ratio, downsample=self.config.downsample, seed=self.config.seed)
         self.training_labels = [data['label'] for data in self.training_data]
         self.testing_labels = [data['label'] for data in self.testing_data]
         self.class_weights = torch.from_numpy(compute_class_weight('balanced', np.unique(self.training_labels), self.training_labels))
@@ -111,10 +117,14 @@ class DynKGTrainer:
     def build_model(self):
         self.config.num_features = len(self.feature_list)
         self.config.num_relations = max([r.value for r in Relations])+1
-        self.model = MRGCN(self.config).to(self.config.device)
+        if self.config.model == "mrgcn":
+            self.model = MRGCN(self.config).to(self.config.device)
+        elif self.config.model == "mrgin":
+            self.model = MRGIN(self.config).to(self.config.device)
+        else:
+            raise Exception("model selection is invalid: " + self.config.model)
 
-        self.optimizer = optim.Adam(self.model.parameters(), lr=self.config.learning_rate)
-        #, weight_decay=self.config.weight_decay)
+        self.optimizer = optim.Adam(self.model.parameters(), lr=self.config.learning_rate, weight_decay=self.config.weight_decay)
         if self.class_weights.shape[0] < 2:
             self.loss_func = nn.CrossEntropyLoss()
         else:    
@@ -211,10 +221,6 @@ class DynKGTrainer:
         outputs_test, labels_test, folder_names_test, acc_loss_test = self.inference(self.testing_data, self.testing_labels)
         metrics['test'] = get_metrics(outputs_test, labels_test)
         metrics['test']['loss'] = acc_loss_test
-        
-        # for output, label, folder_name in zip(outputs_train, labels_train, folder_names_train):
-        #     pred = 0 if output[0] > output[1] else 1
-        #     print(output, pred, label, folder_name)
 
         print("\ntrain loss: " + str(acc_loss_train) + ", acc:", metrics['train']['acc'], metrics['train']['confusion'], metrics['train']['auc'], \
               "\ntest loss: " +  str(acc_loss_test) + ", acc:",  metrics['test']['acc'],  metrics['test']['confusion'], metrics['test']['auc'])
@@ -223,18 +229,39 @@ class DynKGTrainer:
         if acc_loss_test < self.best_val_loss:
             self.best_val_loss = acc_loss_test
             self.best_epoch = current_epoch if current_epoch != None else self.config.epochs
+
+            best_metrics = {}
+            best_metrics['args'] = str(self.args)
+            best_metrics['epoch'] = self.best_epoch
+            best_metrics['val loss'] = acc_loss_test
+            best_metrics['val acc'] = metrics['test']['acc']
+            best_metrics['val conf'] = metrics['test']['confusion']
+            best_metrics['val auc'] = metrics['test']['auc']
+            best_metrics['val precision'] = metrics['test']['precision']
+            best_metrics['val recall'] = metrics['test']['recall']
+            best_metrics['train loss'] = acc_loss_train
+            best_metrics['train acc'] = metrics['train']['acc']
+            best_metrics['train conf'] = metrics['train']['confusion'] 
+            best_metrics['train auc'] = metrics['train']['auc']
+            best_metrics['train precision'] = metrics['train']['precision']
+            best_metrics['train recall'] = metrics['train']['recall']
             
-            with open("best_stats.txt",'a') as f:
-                f.write(str(self.args))
-                f.write("val loss: " + str(self.best_val_loss) + \
-                    ". epoch: " + str(self.best_epoch) + \
-                    ". val acc: " + str(metrics['test']['acc']) + \
-                    ". val conf: " + str(metrics['test']['confusion']) + \
-                    ". val auc: " + str(metrics['test']['auc']) + \
-                    ". train loss: " + str(acc_loss_train) + \
-                    ". train acc: " + str(metrics['train']['acc']) + \
-                    ". train conf: " + str(metrics['train']['confusion']) + \
-                    ". train auc: " + str(metrics['train']['auc']) + "\n\n\n")
+            
+
+            if not os.path.exists(self.config.stats_path):
+                current_stats = pd.DataFrame(best_metrics, index=[0])
+                current_stats.to_csv(self.config.stats_path, mode='w+', header=True, index=False, columns=list(best_metrics.keys()))
+            else:
+                best_stats = pd.read_csv(self.config.stats_path, header=0)
+                best_stats = best_stats.reset_index(drop=True)
+                replace_row = best_stats.loc[best_stats.args == str(self.args)]
+                if(replace_row.empty):
+                    current_stats = pd.DataFrame(best_metrics, index=[0])
+                    current_stats.to_csv(self.config.stats_path, mode='a', header=False, index=False, columns=list(best_metrics.keys()))
+                else:
+                    best_stats.iloc[replace_row.index] = pd.DataFrame(best_metrics, index=replace_row.index)
+                    best_stats.to_csv(self.config.stats_path, mode='w', header=True,index=False, columns=list(best_metrics.keys()))
+
             self.save_model()
 
         return outputs_test, labels_test, metrics
@@ -244,11 +271,14 @@ class DynKGTrainer:
         saved_path = Path(self.config.model_save_path).resolve()
         os.makedirs(os.path.dirname(saved_path), exist_ok=True)
         torch.save(self.model.state_dict(), str(saved_path))
+        with open(os.path.dirname(saved_path) + "/model_parameters.txt", "w+") as f:
+            f.write(str(self.config))
 
     def load_model(self):
         """Function to load the model."""
         saved_path = Path(self.config.model_load_path).resolve()
         if saved_path.exists():
+            self.build_model()
             self.model.load_state_dict(torch.load(str(saved_path)))
             self.model.eval()
 

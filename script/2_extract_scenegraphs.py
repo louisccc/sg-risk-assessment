@@ -8,11 +8,14 @@ sys.path.append(os.path.dirname(sys.path[0]))
 class Config:
     def __init__(self, args):
         self.parser = ArgumentParser(description="Parameters for extracting scenegraphs.")
-        self.parser.add_argument('--input_path', type=str, default="/home/aung/NAS/louisccc/av/synthesis_data/new_recording_3", help="Path to lane-change clips directory.")
-        self.parser.add_argument('--platform', type=str, default="image", help="Method for scenegraph extraction (carla or image).")
+        self.parser.add_argument('--input_path', type=str, default="/home/louisccc/NAS/louisccc/av/synthesis_data/new_recording_3", help="Path to lane-change clips directory.")
+        self.parser.add_argument('--platform', type=str, default="carla", help="Method for scenegraph extraction (carla or image).")
         self.parser.add_argument('--cache', type=lambda x: (str(x).lower() == 'true'), default=True, help="Cache processed scenegraphs.")
         self.parser.add_argument('--address', type=str, default="./image_dataset.pkl", help="Path to save cache file.")
         self.parser.add_argument('--visualize', type=lambda x: (str(x).lower() == 'true'), default=False, help="Visualize scenegraphs.")
+        self.parser.add_argument('--vis_clipids', type=int, nargs='+', default=None, help='Folder Ids of the lane change clip to visualize.')
+        self.parser.add_argument('--framenum', type=int, default=10, help='Number of frames to extract from each video clip.')
+
         args_parsed = self.parser.parse_args(args)
             
         for arg_name in vars(args_parsed):
@@ -27,13 +30,13 @@ if __name__ == '__main__':
 
     if cfg.platform == "carla":
         from core.carla_seq_generator import CarlaSceneGraphSequenceGenerator
-        generator = CarlaSceneGraphSequenceGenerator()
+        generator = CarlaSceneGraphSequenceGenerator(cfg.framenum)
     elif cfg.platform == "image":
         from core.real_seq_generator import ImageSceneGraphSequenceGenerator
         generator = ImageSceneGraphSequenceGenerator()
 
     if cfg.visualize:
-        generator.visualize_scenegraphs()
+        generator.visualize_scenegraphs(cfg.vis_clipids)
 
     generator.load(cfg.input_base_dir)
     if cfg.cache:

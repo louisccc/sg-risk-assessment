@@ -179,7 +179,7 @@ class LaneChangeRecorder:
                 self.tick_count = 0
                 self.recording_count += 1
         
-        return self.recording_count >= 3
+        return self.recording_count >= 10
 
 class DataExtractor(object):
 

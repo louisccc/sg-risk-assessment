@@ -63,7 +63,7 @@ class DetectObjects:
                        'teddy bear', 'hair drier', 'toothbrush']
 
         foldernames = [f for f in os.listdir(IMAGE_DIR) if f.isnumeric() and not f.startswith('.')]
-        foldernames.sort()
+        foldernames.sort(key=int)
         
         for foldername in foldernames:
             CURRENT_IMAGE_DIR = IMAGE_DIR / foldername / 'raw_images'

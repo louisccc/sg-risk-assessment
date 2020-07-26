@@ -62,6 +62,7 @@ class Config:
             self.__dict__[arg_name] = getattr(args_parsed, arg_name)
 
         self.cache_path = Path(self.cache_path).resolve()
+        self.stats_path = Path(self.stats_path.strip()).resolve()
 
 def build_scenegraph_dataset(cache_path, train_to_test_ratio=0.3, downsample=False, seed=0):
     dataset_file = open(cache_path, "rb")
@@ -248,19 +249,19 @@ class DynKGTrainer:
             
             
 
-            if not os.path.exists(self.config.stats_path):
+            if not self.config.stats_path.exists():
                 current_stats = pd.DataFrame(best_metrics, index=[0])
-                current_stats.to_csv(self.config.stats_path, mode='w+', header=True, index=False, columns=list(best_metrics.keys()))
+                current_stats.to_csv(str(self.config.stats_path), mode='w+', header=True, index=False, columns=list(best_metrics.keys()))
             else:
-                best_stats = pd.read_csv(self.config.stats_path, header=0)
+                best_stats = pd.read_csv(str(self.config.stats_path), header=0)
                 best_stats = best_stats.reset_index(drop=True)
                 replace_row = best_stats.loc[best_stats.args == str(self.args)]
                 if(replace_row.empty):
                     current_stats = pd.DataFrame(best_metrics, index=[0])
-                    current_stats.to_csv(self.config.stats_path, mode='a', header=False, index=False, columns=list(best_metrics.keys()))
+                    current_stats.to_csv(str(self.config.stats_path), mode='a', header=False, index=False, columns=list(best_metrics.keys()))
                 else:
                     best_stats.iloc[replace_row.index] = pd.DataFrame(best_metrics, index=replace_row.index)
-                    best_stats.to_csv(self.config.stats_path, mode='w', header=True,index=False, columns=list(best_metrics.keys()))
+                    best_stats.to_csv(str(self.config.stats_path), mode='w', header=True,index=False, columns=list(best_metrics.keys()))
 
             self.save_model()
 

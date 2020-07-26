@@ -35,70 +35,70 @@ class Models:
         self.m_fold_cross_val_results = []
         self.flops = []
 
-    # def build_loss_history(self, X_train, y_train, X_test, y_test):
+    def build_loss_history(self, X_train, y_train, X_test, y_test):
 
-    #     class LossHistory(keras.callbacks.Callback):
+        class LossHistory(keras.callbacks.Callback):
 
-    #         def __init__(self, train_x, train_y, val_x, val_y):
-    #             self.train_x = train_x
-    #             self.train_y = train_y
-    #             self.val_x = val_x
-    #             self.val_y = val_y
+            def __init__(self, train_x, train_y, val_x, val_y):
+                self.train_x = train_x
+                self.train_y = train_y
+                self.val_x = val_x
+                self.val_y = val_y
 
-    #             self.AUC_train = []
-    #             self.AUC_val = []
-    #             self.train_loss = []
-    #             self.val_loss = []
-    #             self.f1_train = []
-    #             self.f1_val = []
+                self.AUC_train = []
+                self.AUC_val = []
+                self.train_loss = []
+                self.val_loss = []
+                self.f1_train = []
+                self.f1_val = []
 
-    #         def make_prediction(self, scores, threshold=0.3):
-    #             return [1 if score >= threshold else 0 for score in scores]
+            def make_prediction(self, scores, threshold=0.3):
+                return [1 if score >= threshold else 0 for score in scores]
 
-    #         def on_train_begin(self, logs=None):
-    #             y_pred_train = self.model.predict_proba(self.train_x)
-    #             y_pred_val = self.model.predict_proba(self.val_x)
+            def on_train_begin(self, logs=None):
+                y_pred_train = self.model.predict_proba(self.train_x)
+                y_pred_val = self.model.predict_proba(self.val_x)
 
-    #             self.AUC_train.append(roc_auc_score(self.train_y, y_pred_train))
-    #             self.AUC_val.append(roc_auc_score(self.val_y, y_pred_val))
+                self.AUC_train.append(roc_auc_score(self.train_y, y_pred_train))
+                self.AUC_val.append(roc_auc_score(self.val_y, y_pred_val))
 
-    #             self.f1_train.append(f1_score(self.train_y[:,1], self.make_prediction(y_pred_train[:,1])))
-    #             self.f1_val.append(f1_score(self.val_y[:, 1], self.make_prediction(y_pred_val[:, 1])))
+                self.f1_train.append(f1_score(self.train_y[:,1], self.make_prediction(y_pred_train[:,1])))
+                self.f1_val.append(f1_score(self.val_y[:, 1], self.make_prediction(y_pred_val[:, 1])))
 
-    #         def on_epoch_end(self, epoch, logs={}):
-    #             y_pred_train = self.model.predict_proba(self.train_x)
-    #             y_pred_val = self.model.predict_proba(self.val_x)
+            def on_epoch_end(self, epoch, logs={}):
+                y_pred_train = self.model.predict_proba(self.train_x)
+                y_pred_val = self.model.predict_proba(self.val_x)
 
-    #             self.AUC_train.append(roc_auc_score(self.train_y, y_pred_train))
-    #             self.AUC_val.append(roc_auc_score(self.val_y, y_pred_val))
-    #             self.train_loss.append(logs.get('loss'))
-    #             self.val_loss.append(logs.get('val_loss'))
-    #             self.f1_train.append(f1_score(self.train_y[:, 1], self.make_prediction(y_pred_train[:, 1])))
-    #             self.f1_val.append(f1_score(self.val_y[:, 1], self.make_prediction(y_pred_val[:, 1])))
+                self.AUC_train.append(roc_auc_score(self.train_y, y_pred_train))
+                self.AUC_val.append(roc_auc_score(self.val_y, y_pred_val))
+                self.train_loss.append(logs.get('loss'))
+                self.val_loss.append(logs.get('val_loss'))
+                self.f1_train.append(f1_score(self.train_y[:, 1], self.make_prediction(y_pred_train[:, 1])))
+                self.f1_val.append(f1_score(self.val_y[:, 1], self.make_prediction(y_pred_val[:, 1])))
 
-    #     self.history = LossHistory(X_train, y_train, X_test, y_test)
+        self.history = LossHistory(X_train, y_train, X_test, y_test)
 
-    # def get_flops(self):
+    def get_flops(self):
 
-    #     run_meta_data = tf.RunMetadata()
-    #     flop_opts = tf.profiler.ProfileOptionBuilder.float_operation()
+        run_meta_data = tf.RunMetadata()
+        flop_opts = tf.profiler.ProfileOptionBuilder.float_operation()
 
-    #     conv_flops = tf.profiler.profile(graph=K.get_session().graph, run_meta=run_meta_data, cmd='op', options=flop_opts)
-    #     self.flops = conv_flops.total_float_ops
-    #     print(self.flops)
+        conv_flops = tf.profiler.profile(graph=K.get_session().graph, run_meta=run_meta_data, cmd='op', options=flop_opts)
+        self.flops = conv_flops.total_float_ops
+        print(self.flops)
 
     def train_model(self, X_train, y_train, X_test, y_test, print_option=0, verbose=2):
         
-        # self.build_loss_history(X_train, y_train, X_test, y_test)
+        self.build_loss_history(X_train, y_train, X_test, y_test)
         self.model.fit(X_train, y_train,
                        batch_size=self.batch_size,
                        nb_epoch=self.nb_epoch,
                        validation_data=(X_test, y_test), 
                        class_weight=self.class_weights, verbose=verbose
-                    #    , callbacks=[self.history]
+                       , callbacks=[self.history]
                        )
         
-        # self.get_lastMpercent_loss()
+        self.get_lastMpercent_loss()
 
         if print_option == 1:
             print(self.last_Mpercent_epoch_val_loss)
@@ -146,10 +146,16 @@ class Models:
             self.class_weights = {0: c2, 1: c1}
             self.train_model(X_train, y_train, X_test, y_test, print_option=print_option, verbose=verbose)
             
-            
+            metrics = {}
+            output = self.model.predict_proba(X_train)
+            true_label = np.argmax(y_train, axis=-1)
+            metrics['train'] = get_metrics(output, true_label)
+            metrics['train']['loss'] = self.history.train_loss[-1]
+
             output = self.model.predict_proba(X_test)
-            true_label = np.argmax(y_test,axis=-1)
-            metrics = get_metrics(output,true_label)
+            true_label = np.argmax(y_test, axis=-1)
+            metrics['test'] = get_metrics(output, true_label)
+            metrics['test']['loss'] = self.history.val_loss[-1]
             
             if plot_option == 1:
                 if i == 0:
@@ -167,10 +173,10 @@ class Models:
         plt.close()
         return metrics
 
-    # def get_lastMpercent_loss(self, m=0.1):
+    def get_lastMpercent_loss(self, m=0.1):
 
-    #     index = int(self.nb_epoch*m)
-    #     self.last_Mpercent_epoch_val_loss = sum(self.history.AUC_val[index:])/len(self.history.AUC_val[index:])
+        index = int(self.nb_epoch*m)
+        self.last_Mpercent_epoch_val_loss = sum(self.history.AUC_val[index:])/len(self.history.AUC_val[index:])
 
     def plot_auc(self, epoch_resolution=1, option='AUC_v_epoch'):
 

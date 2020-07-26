@@ -100,6 +100,20 @@ class ImageSceneGraphSequenceGenerator:
 
     def load(self, input_path):
         all_video_clip_dirs = [x for x in input_path.iterdir() if x.is_dir()]
+        
+        # (Honda dataset) create raw_images directory and move *.jpg into that directory
+        for path in tqdm(all_video_clip_dirs):
+            raw_path = path / "raw_images"
+            raw_path.mkdir(exist_ok=True);
+            honda_clips = [x for x in path.iterdir() if x.is_file()]
+            for clip in honda_clips:
+                if ( clip.name.endswith(".jpg") or clip.name.endswith(".png") ):
+#                     print(clip.name)
+                    new_path = raw_path / clip.name
+                    clip.replace(new_path);
+#                     print(new_path)
+#                 else: 
+#                     print("not an image")
 
         for path in tqdm(all_video_clip_dirs):
             scenegraphs = {} 

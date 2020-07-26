@@ -30,8 +30,8 @@ def show_video(canvas, clip_folder, root, title):
     UI(canvas, im, image_list, root, title).grid(row=0)
 
 def anotate_task(root_folder):
-    foldernames = [f for f in root_folder.iterdir() if f.stem.isnumeric()]
-    foldernames = sorted(foldernames, key=lambda x : int(x.stem))
+    foldernames = [f for f in root_folder.iterdir() if f.isdir() and not f.stem.startswith('.')]
+    foldernames = sorted(foldernames, key=lambda x : int(x.stem.replace("_", "")))
 
     idx = -1
 
@@ -185,7 +185,7 @@ class UI(Label):
         except KeyError:
             duration = 100
         self.paused = False
-        self.after(duration, self.next)
+        self.after(1, self.next)
     
     def update_title(self):
         new_title = self.title + ", Frame: {} / {}".format(self.index, len(self.image_path_list) - 1)
@@ -202,7 +202,7 @@ class UI(Label):
             duration = im.info["duration"]
         except KeyError:
             duration = 100
-        self.after(duration, self.next)
+        self.after(1, self.next)
 
     def previousFrame(self):
         if self.paused and self.index > 0:
@@ -279,7 +279,7 @@ class UI(Label):
             except KeyError:
                 duration = 100
             self.update_title()
-            self.after(duration, self.next)
+            self.after(1, self.next)
 
         self.update_idletasks()
 

@@ -165,6 +165,7 @@ class DynKGTrainer:
                 acc_loss_train += loss_train.detach().cpu().item() * len(data_list)
                 self.optimizer.step()
 
+            acc_loss_train /= len(self.training_data)
             tqdm_bar.set_description('Epoch: {:04d}, loss_train: {:.4f}'.format(epoch_idx, acc_loss_train))
             
             if epoch_idx % self.config.test_step == 0:
@@ -210,7 +211,7 @@ class DynKGTrainer:
                 labels.append(label)
                 folder_names.append(testing_data[i]['folder_name'])
 
-        return outputs, labels, folder_names, acc_loss_test
+        return outputs, labels, folder_names, acc_loss_test/len(testing_data)
     
     def evaluate(self, current_epoch=None):
         metrics = {}

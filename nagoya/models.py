@@ -44,6 +44,8 @@ class Models:
                 self.train_y = train_y
                 self.val_x = val_x
                 self.val_y = val_y
+                self.train_true_label = np.argmax(train_y, axis=-1)
+                self.test_true_label = np.argmax(val_y, axis=-1)
 
                 self.AUC_train = []
                 self.AUC_val = []
@@ -51,6 +53,9 @@ class Models:
                 self.val_loss = []
                 self.f1_train = []
                 self.f1_val = []
+
+                self.min_val_loss = float('inf')
+                self.best_metrics = {}
 
             def make_prediction(self, scores, threshold=0.3):
                 return [1 if score >= threshold else 0 for score in scores]
@@ -68,13 +73,25 @@ class Models:
             def on_epoch_end(self, epoch, logs={}):
                 y_pred_train = self.model.predict_proba(self.train_x)
                 y_pred_val = self.model.predict_proba(self.val_x)
-
+                
+                train_loss = logs.get('loss')
+                val_loss = logs.get('val_loss')
+            
                 self.AUC_train.append(roc_auc_score(self.train_y, y_pred_train))
                 self.AUC_val.append(roc_auc_score(self.val_y, y_pred_val))
-                self.train_loss.append(logs.get('loss'))
-                self.val_loss.append(logs.get('val_loss'))
+                self.train_loss.append(train_loss)
+                self.val_loss.append(val_loss)
                 self.f1_train.append(f1_score(self.train_y[:, 1], self.make_prediction(y_pred_train[:, 1])))
                 self.f1_val.append(f1_score(self.val_y[:, 1], self.make_prediction(y_pred_val[:, 1])))
+
+                if val_loss < self.min_val_loss:
+                    self.min_val_loss = val_loss
+                    self.best_metrics['epoch'] = epoch
+                    self.best_metrics['train'] = get_metrics(y_pred_train, self.train_true_label)
+                    self.best_metrics['train']['loss'] = train_loss
+
+                    self.best_metrics['test'] = get_metrics(y_pred_val, self.test_true_label)
+                    self.best_metrics['test']['loss'] = val_loss
 
         self.history = LossHistory(X_train, y_train, X_test, y_test)
 
@@ -146,17 +163,6 @@ class Models:
             self.class_weights = {0: c2, 1: c1}
             self.train_model(X_train, y_train, X_test, y_test, print_option=print_option, verbose=verbose)
             
-            metrics = {}
-            output = self.model.predict_proba(X_train)
-            true_label = np.argmax(y_train, axis=-1)
-            metrics['train'] = get_metrics(output, true_label)
-            metrics['train']['loss'] = self.history.train_loss[-1]
-
-            output = self.model.predict_proba(X_test)
-            true_label = np.argmax(y_test, axis=-1)
-            metrics['test'] = get_metrics(output, true_label)
-            metrics['test']['loss'] = self.history.val_loss[-1]
-            
             if plot_option == 1:
                 if i == 0:
                     #plt.plot(self.history.AUC_train[0::epoch_resolution], 'r--')
@@ -171,7 +177,7 @@ class Models:
             else:
                 plt.show()
         plt.close()
-        return metrics
+        return self.history.best_metrics
 
     def get_lastMpercent_loss(self, m=0.1):
 

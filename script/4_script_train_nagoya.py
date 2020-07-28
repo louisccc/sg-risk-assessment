@@ -5,6 +5,7 @@ import skimage.io as io
 import matplotlib
 matplotlib.use("Agg")
 import numpy as np 
+import pandas as pd
 
 sys.path.append('../nagoya')
 sys.path.append('../')
@@ -12,6 +13,7 @@ from nagoya.dataset import DataSet
 from nagoya.models import Models
 from nagoya.Mask_RCNN.mask_rcnn.detect_objects import DetectObjects
 from core.dynkg_trainer import get_metrics
+from pprint import pprint
 io.use_plugin('pil')
 
 
@@ -27,6 +29,8 @@ class Config:
 		self.parser.add_argument('--mask_rcnn', type=lambda x: (str(x).lower() == 'true'), default=True, help='Create masked imgages.')
 		self.parser.add_argument('--seed', type=int, default=0, help="Seed for splitting the dataset.")
 		self.parser.add_argument('--downsample', type=lambda x: (str(x).lower() == 'true'), default=False, help='Downsample dataset.')
+		self.parser.add_argument('--stats_path', type=str, default="nagoya_best_stats.csv", help="Path to save best test statistics.")
+
 
 		args_parsed = self.parser.parse_args(args)
 		
@@ -36,6 +40,33 @@ class Config:
 		self.input_base_dir = Path(self.input_path).resolve()
 		self.cache_model_path = Path(self.model_path).resolve()
 
+def save_metrics(metrics, config):
+	filepath = Path(config.stats_path).resolve()
+
+	best_metrics = {}
+	best_metrics['seed'] = config.seed
+	best_metrics['dataset'] = Path(config.pkl_path).name
+	best_metrics['balanced'] = config.downsample
+	best_metrics['epoch'] = metrics['epoch']
+	best_metrics['val loss'] = metrics['test']['loss']
+	best_metrics['val acc'] = metrics['test']['acc']
+	best_metrics['val conf'] = metrics['test']['confusion']
+	best_metrics['val auc'] = metrics['test']['auc']
+	best_metrics['val precision'] = metrics['test']['precision']
+	best_metrics['val recall'] = metrics['test']['recall']
+	best_metrics['train loss'] = metrics['train']['loss']
+	best_metrics['train acc'] = metrics['train']['acc']
+	best_metrics['train conf'] = metrics['train']['confusion'] 
+	best_metrics['train auc'] = metrics['train']['auc']
+	best_metrics['train precision'] = metrics['train']['precision']
+	best_metrics['train recall'] = metrics['train']['recall']
+	
+	if not filepath.exists():
+		current_stats = pd.DataFrame(best_metrics, index=[0])
+		current_stats.to_csv(str(filepath), mode='w+', header=True, index=False, columns=list(best_metrics.keys()))
+	else:
+		current_stats = pd.DataFrame(best_metrics, index=[0])
+		current_stats.to_csv(str(filepath), mode='a', header=False, index=False, columns=list(best_metrics.keys()))
 
 def train_cnn_to_lstm(dataset, cache_path, seed, downsample):
 	'''
@@ -45,7 +76,7 @@ def train_cnn_to_lstm(dataset, cache_path, seed, downsample):
 	class_weight = {0: 0.05, 1: 0.95}
 	training_to_all_data_ratio = 0.7
 	nb_cross_val = 1
-	nb_epoch = 100
+	nb_epoch = 200
 	batch_size = 32
 
 	end = int(0.7*len(dataset.video)) #training_to_all_data_ratio*len(dataset.video))
@@ -57,8 +88,7 @@ def train_cnn_to_lstm(dataset, cache_path, seed, downsample):
 	
 	cache_path.parent.mkdir(exist_ok=True)
 	model.model.save(str(cache_path))
-	print(metrics)
-	return model
+	return model, metrics
 
 def process_raw_images_to_masked_images(src_path: Path, dst_path: Path, coco_path: Path):
     ''' 
@@ -94,7 +124,7 @@ def load_dataset(raw_image_path: Path, masked_image_path: Path, dataset_type: st
 
 	dataset = DataSet()
 	# dataset.read_video(image_path, option='all frames', number_of_frames=20, scaling='scale', scale_x=0.05, scale_y=0.05)
-	dataset.read_video(image_path, option='fixed frame amount', number_of_frames=7, scaling='scale', scale_x=0.05, scale_y=0.05)
+	dataset.read_video(image_path, option='fixed frame amount', number_of_frames=5, scaling='scale', scale_x=0.05, scale_y=0.05)
 
 	'''
 		order videos by risk and find top riskiest
@@ -105,7 +135,7 @@ def load_dataset(raw_image_path: Path, masked_image_path: Path, dataset_type: st
 	dataset.convert_risk_to_one_hot(risk_threshold=0.5)
 	save_dir = Path("/home/louisccc/NAS/louisccc/av/nagoya_pkl_data/").resolve()
 	save_dir.mkdir(exist_ok=True)
-	dataset.save(save_dir=str(save_dir), filename='/7_frames_dataset.pkl')
+	dataset.save(save_dir=str(save_dir), filename='/5_frames_nr4.pkl')
 	print("Saved pickled dataset")
 	return dataset
 
@@ -155,4 +185,5 @@ if __name__ == '__main__':
 			raise FileNotFoundError ("Cached model file not found.")
 		# model = load_model(str(cache_model_path))
 	else:
-		model = train_cnn_to_lstm(dataset, cache_model_path, config.seed, config.downsample)
+		model, metrics = train_cnn_to_lstm(dataset, cache_model_path, config.seed, config.downsample)
+		save_metrics(metrics, config)

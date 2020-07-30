@@ -13,7 +13,7 @@ class Config:
     def __init__(self, args):
         self.parser = ArgumentParser(description='The parameters for creating gifs of input videos.')
         self.parser.add_argument('--input_path', type=str, default="/home/aung/NAS/louisccc/av/synthesis_data/lane-change-100-old/", help="Path to data directory.")
-
+        self.parser.add_argument('--start', type=int, default=0, help="Starting lane change clip ex: for 5825_201706081335 use 5825")
         args_parsed = self.parser.parse_args(args)
         
         for arg_name in vars(args_parsed):
@@ -29,10 +29,10 @@ def show_video(canvas, clip_folder, root, title):
         im.append(Image.open(str(img)))
     UI(canvas, im, image_list, root, title).grid(row=0)
 
-def anotate_task(root_folder):
-    foldernames = [f for f in root_folder.iterdir() if f.isdir() and not f.stem.startswith('.')]
+def anotate_task(root_folder, starting_folder):
+    foldernames = [f for f in root_folder.iterdir() if f.is_dir() and not f.stem.startswith('.') and int(str(f).split('/')[-1].split('_')[0]) >= starting_folder]
     foldernames = sorted(foldernames, key=lambda x : int(x.stem.replace("_", "")))
-
+    
     idx = -1
 
     def read_score(path):
@@ -286,6 +286,6 @@ class UI(Label):
 
 if __name__ == "__main__":
 	config = Config(sys.argv[1:])
-	anotate_task(config.input_base_dir)
+	anotate_task(config.input_base_dir, config.start)
 	
 

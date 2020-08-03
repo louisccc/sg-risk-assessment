@@ -57,7 +57,7 @@ detectron2.utils.visualizer._create_text_labels = create_text_labels_with_idx
 
 
 class ImageSceneGraphSequenceGenerator:
-    def __init__(self, cache_fname='real_dyngraph_embeddings.pkl'):
+    def __init__(self, framenum, cache_fname='real_dyngraph_embeddings.pkl'):
         # [ 
         #   {'node_embeddings':..., 'edge_indexes':..., 'edge_attrs':..., 'label':...}  
         # ]
@@ -79,6 +79,7 @@ class ImageSceneGraphSequenceGenerator:
         #                      "distance_abs", # adding absolute distance to ego
         #                     }
         self.feature_list = set()
+        self.framenum = framenum
         # create 1hot class labels columns.
         for i in range(self.num_classes):
             self.feature_list.add("type_"+str(i))
@@ -144,13 +145,14 @@ class ImageSceneGraphSequenceGenerator:
 
                 # scenegraph_dict contains node embeddings edge indexes and edge attrs.
                 scenegraphs_dict = {}
-                subsampled_scenegraphs, frame_numbers = self.subsample(scenegraphs, 1000)
+                subsampled_scenegraphs, frame_numbers = self.subsample(scenegraphs, self.framenum)
                 scenegraphs_dict['sequence'] = self.process_graph_sequences(subsampled_scenegraphs, frame_numbers, folder_name=path.name)
                 scenegraphs_dict['label'] = risk_label
                 scenegraphs_dict['folder_name'] = path.name
-                  
-                if self.visualize:
+                
+                if self.visualize and (self.clip_ids == None or int(path.stem) in self.clip_ids):
                     vis_folder_name = path / "image_visualize"
+                    print("writing scenegraphs to %s"% str(vis_folder_name))
                     for scenegraph, frame_number in zip(subsampled_scenegraphs, frame_numbers): 
                         vis_folder_name.mkdir(exist_ok=True)
                         scenegraph.visualize(to_filename=str(vis_folder_name / "{}.png".format(frame_number)))
@@ -197,8 +199,9 @@ class ImageSceneGraphSequenceGenerator:
         # import pdb; pdb.set_trace()
         return sequence
     
-    def visualize_scenegraphs(self):
+    def visualize_scenegraphs(self, clip_ids):
         self.visualize = True
+        self.clip_ids = clip_ids
 
     def subsample(self, scenegraphs, number_of_frames=20): 
         '''

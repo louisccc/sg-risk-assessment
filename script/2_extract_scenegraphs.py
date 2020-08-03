@@ -33,7 +33,7 @@ if __name__ == '__main__':
         generator = CarlaSceneGraphSequenceGenerator(cfg.framenum)
     elif cfg.platform == "image":
         from core.real_seq_generator import ImageSceneGraphSequenceGenerator
-        generator = ImageSceneGraphSequenceGenerator()
+        generator = ImageSceneGraphSequenceGenerator(cfg.framenum)
 
     if cfg.visualize:
         generator.visualize_scenegraphs(cfg.vis_clipids)

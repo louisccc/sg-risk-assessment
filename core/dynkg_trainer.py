@@ -275,6 +275,8 @@ class DynKGTrainer:
         torch.save(self.model.state_dict(), str(saved_path))
         with open(os.path.dirname(saved_path) + "/model_parameters.txt", "w+") as f:
             f.write(str(self.config))
+            f.write('\n')
+            f.write(str(' '.join(sys.argv)))
 
     def load_model(self):
         """Function to load the model."""

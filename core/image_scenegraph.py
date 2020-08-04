@@ -8,17 +8,29 @@ import matplotlib.pyplot as plt
 from networkx.drawing.nx_agraph import to_agraph
 from core.relation_extractor import ActorType, Relations, RELATION_COLORS
 
+###SELECT ONE OF THE FOLLOWING:
 
-#SETTINGS FOR 1280x720 CARLA IMAGES:
-CARLA_IMAGE_H = 720
-CARLA_IMAGE_W = 1280
-CROPPED_H = 350 #height of ROI. crops to lane area of carla images
-BIRDS_EYE_IMAGE_H = 850 
+# #SETTINGS FOR 1280x720 CARLA IMAGES:
+# IMAGE_H = 720
+# IMAGE_W = 1280
+# CROPPED_H = 350 #height of ROI. crops to lane area of carla images
+# BIRDS_EYE_IMAGE_H = 850 
+# BIRDS_EYE_IMAGE_W = 1280
+# Y_SCALE = 0.55 #18 pixels = length of lane line (10 feet)
+# X_SCALE = 0.54 #22 pixels = width of lane (12 feet)
+
+
+#SETTINGS FOR 1280x720 HONDA IMAGES:
+IMAGE_H = 720
+IMAGE_W = 1280
+CROPPED_H = 390 
+BIRDS_EYE_IMAGE_H = 620 
 BIRDS_EYE_IMAGE_W = 1280
+Y_SCALE = 0.45 #22 pixels = length of lane line (10 feet)
+X_SCALE = 0.46 #26 pixels = width of lane (12 feet)
 
-H_OFFSET = CARLA_IMAGE_H - CROPPED_H #offset from top of image to start of ROI
-Y_SCALE = 0.55 #18 pixels = length of lane line (10 feet)
-X_SCALE = 0.54 #22 pixels = width of lane (12 feet)
+
+H_OFFSET = IMAGE_H - CROPPED_H #offset from top of image to start of ROI
 
 CAR_PROXIMITY_THRESH_NEAR_COLL = 4
 CAR_PROXIMITY_THRESH_SUPER_NEAR = 7 # max number of feet between a car and another entity to build proximity relation
@@ -256,7 +268,7 @@ class RealSceneGraph:
 #returns transformation matrix for warping image to birds eye projection
 #birds eye matrix fixed for all images using the assumption that camera perspective does not change over time.
 def get_birds_eye_matrix():
-    src = np.float32([[0, CROPPED_H], [BIRDS_EYE_IMAGE_W, CROPPED_H], [0, 0], [BIRDS_EYE_IMAGE_W, 0]]) #original dimensions (cropped to ROI)
+    src = np.float32([[0, CROPPED_H], [IMAGE_W, CROPPED_H], [0, 0], [IMAGE_W, 0]]) #original dimensions (cropped to ROI)
     dst = np.float32([[int(BIRDS_EYE_IMAGE_W*16/33), BIRDS_EYE_IMAGE_H], [int(BIRDS_EYE_IMAGE_W*17/33), BIRDS_EYE_IMAGE_H], [0, 0], [BIRDS_EYE_IMAGE_W, 0]]) #warped dimensions
     M = cv2.getPerspectiveTransform(src, dst) # The transformation matrix
     #Minv = cv2.getPerspectiveTransform(dst, src) # Inverse transformation (if needed)
@@ -267,7 +279,7 @@ def get_birds_eye_matrix():
 #returned image is vertically cropped to the ROI (lane area)
 def get_birds_eye_warp(image_path, M):
     img = cv2.imread(image_path)
-    img = img[H_OFFSET:CARLA_IMAGE_H, 0:BIRDS_EYE_IMAGE_W] # Apply np slicing for ROI crop
+    img = img[H_OFFSET:IMAGE_H, 0:IMAGE_W] # Apply np slicing for ROI crop
     warped_img = cv2.warpPerspective(img, M, (BIRDS_EYE_IMAGE_W, BIRDS_EYE_IMAGE_H)) # Image warping
     warped_img = cv2.cvtColor(warped_img, cv2.COLOR_BGR2RGB) #set to RGB
     return warped_img

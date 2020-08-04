@@ -76,7 +76,7 @@ class RealSceneGraph:
         boxes, labels, image_size = bounding_boxes
         self.get_nodes_from_bboxes(boxes, labels, coco_class_names)
 
-        import pdb; pdb.set_trace()
+        # import pdb; pdb.set_trace()
         self.extract_relations()
     
 

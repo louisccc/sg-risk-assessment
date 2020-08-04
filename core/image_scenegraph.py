@@ -75,6 +75,8 @@ class RealSceneGraph:
         #convert bounding boxes to nodes and build relations.
         boxes, labels, image_size = bounding_boxes
         self.get_nodes_from_bboxes(boxes, labels, coco_class_names)
+
+        import pdb; pdb.set_trace()
         self.extract_relations()
     
 
@@ -87,19 +89,22 @@ class RealSceneGraph:
         for idx, (box, label) in enumerate(zip(boxes, labels)):
             box = box.cpu().numpy().tolist()
             class_name = coco_class_names[label]
+            
+            if box[1] >= 620:
+                continue
 
             if class_name in ['car', 'truck', 'bus']:
                 actor_type = ActorType.CAR
-            elif class_name in ['person']:
-                actor_type = ActorType.PED
-            elif class_name in ['bicycle']:
-                actor_type = ActorType.BICYCLE
-            elif class_name in ['motorcycle']:
-                actor_type = ActorType.MOTO
-            elif class_name in ['traffic light']:
-                actor_type = ActorType.LIGHT
-            elif class_name in ['stop sign']:
-                actor_type = ActorType.SIGN
+            # elif class_name in ['person']:
+            #     actor_type = ActorType.PED
+            # elif class_name in ['bicycle']:
+            #     actor_type = ActorType.BICYCLE
+            # elif class_name in ['motorcycle']:
+            #     actor_type = ActorType.MOTO
+            # elif class_name in ['traffic light']:
+            #     actor_type = ActorType.LIGHT
+            # elif class_name in ['stop sign']:
+            #     actor_type = ActorType.SIGN
             else:
                 continue
         
@@ -134,6 +139,8 @@ class RealSceneGraph:
                 continue
             if node_a.label == ActorType.CAR and node_b.label == ActorType.CAR:
                 if node_a.name.startswith("Ego") or node_b.name.startswith("Ego"):
+                    # print(node_a, node_b, self.get_euclidean_distance(node_a, node_b))
+                    # import pdb; pdb.set_trace()
                     if self.get_euclidean_distance(node_a, node_b) <= CAR_PROXIMITY_THRESH_VISIBLE:
                         relation_list += self.extract_proximity_relations(node_a, node_b)
                         relation_list += self.extract_directional_relations(node_a, node_b)

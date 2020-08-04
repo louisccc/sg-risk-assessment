@@ -31,7 +31,7 @@ class Config:
 def create_csv(input_path):
 	lctable = input_path / 'LCTable.csv'	
 
-	foldernames = [f for f in sorted(os.listdir(input_path)) if f.isnumeric() and not f.startswith('.')]
+	foldernames = [f for f in sorted(os.listdir(input_path)) if f[0:4].isnumeric() and not f.startswith('.')]
 	foldernames = sorted(foldernames,key=int)
 
 	column_headers = ['folder_id', 'lc_dir', 'score', 'total_frames', 'img_path', 'json_path', 'gif_path']
@@ -41,15 +41,26 @@ def create_csv(input_path):
 		lc_path = input_path / foldername
 		gif_path = lc_path / "lane_change.gif"
 		label_path = lc_path / "label.txt"
-		json_path = list((lc_path / "scene_raw").glob("*.json"))[0] 
+		json_files = list((lc_path / "scene_raw").glob("*.json"))
 		
-		json_data = parse_json(json_path)
+		# check if json files exist
+		if (len(json_files) != 0):
+			json_path = list((lc_path / "scene_raw").glob("*.json"))[0]
+			json_data = parse_json(json_path)
+		else:
+			json_path = 'n/a'
+			data_dict = {}
+			data_dict['lc_dir'] = 'n/a'
+			json_data = data_dict
+		
 
 		if label_path.exists():
 			with open(str(label_path), 'r') as label_f:
 				risk_label = int(float(label_f.read().strip().split(",")[0]))
 		else:
 			raise FileNotFoundError("No label.txt in %s" % label_path) 
+			# if risk labels dont exist and you dont care about them
+			# you can hard code a value for risk and remove exception
 		
 		images =  list(lc_path.glob("raw_images/*.jpg")) + list(lc_path.glob("raw_images/*.png")) 
 		total_frames = len(images)

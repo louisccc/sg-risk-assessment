@@ -6,6 +6,7 @@ import matplotlib
 matplotlib.use("Agg")
 import numpy as np 
 import pandas as pd
+from keras.models import load_model
 
 sys.path.append('../nagoya')
 sys.path.append('../')
@@ -22,6 +23,7 @@ class Config:
 	def __init__(self, args):
 		self.parser = ArgumentParser(description='The parameters for creating gifs of input videos.')
 		self.parser.add_argument('--input_path', type=str, default="../input/synthesis_data", help="Path to data directory.")
+		self.parser.add_argument('--coco_path', type=str, default="../pretrained_models/", help="Path to coco pretrained model.")
 		self.parser.add_argument('--pkl_path', type=str, default="/home/louisccc/NAS/louisccc/av/nagoya_pkl_data/all_frames_dataset.pkl", help="Path to pickled dataset.")
 		self.parser.add_argument('--load_pkl', type=lambda x: (str(x).lower() == 'true'), default=False, help='Load model from cache.')
 		self.parser.add_argument('--load_model', type=lambda x: (str(x).lower() == 'true'), default=False, help='Load model from cache.')
@@ -90,6 +92,17 @@ def train_cnn_to_lstm(dataset, cache_path, seed, downsample):
 	model.model.save(str(cache_path))
 	return model, metrics
 
+def eval_model(dataset, cache_path, seed, downsample):
+
+	video_sequence = dataset.video
+	label = dataset.risk_one_hot
+	model = load_model(str(cache_path))
+
+	true_label = np.argmax(label, axis=-1)
+	y_pred_train = model.predict_proba(video_sequence)	
+	metrics = get_metrics(y_pred_train, true_label)
+	return model, metrics
+
 def process_raw_images_to_masked_images(src_path: Path, dst_path: Path, coco_path: Path):
     ''' 
         This step is for preprocessing the raw images 
@@ -100,8 +113,8 @@ def process_raw_images_to_masked_images(src_path: Path, dst_path: Path, coco_pat
 
 def read_risk_data(masked_image_path: Path):
 	risk_scores = []
-	all_video_clip_dirs = [f for f in masked_image_path.iterdir() if f.is_dir() and f.stem.isnumeric()]
-	all_video_clip_dirs = sorted(all_video_clip_dirs, key=lambda f: int(f.stem))
+	all_video_clip_dirs = [f for f in masked_image_path.iterdir() if f.is_dir() and f.stem.split('_')[0].isnumeric()]
+	all_video_clip_dirs = sorted(all_video_clip_dirs, key=lambda f: int(f.stem.split('_')[0]))
 	for path in all_video_clip_dirs:
 		label_path = path / "label.txt"
 		if label_path.exists():
@@ -161,13 +174,13 @@ if __name__ == '__main__':
 		dataset = load_pickle(Path(config.pkl_path).resolve())
 	else:
 		if do_mask_rcnn: 
-			coco_model_path = root_folder_path / 'pretrained_models' #Path('../pretrained_models')
+			coco_model_path = Path(config.coco_path) #Path('../pretrained_models')
 			masked_image_path = root_folder_path / (raw_image_path.stem + '_masked') # the path in parallel with raw_image_path
 			masked_image_path.mkdir(exist_ok=True)
 
 			#check if masked images already exist
-			raw_folders = [f for f in os.listdir(raw_image_path) if f.isnumeric() and not f.startswith('.')]
-			masked_folders = [f for f in os.listdir(masked_image_path) if f.isnumeric() and not f.startswith('.')]
+			raw_folders = [f for f in sorted(os.listdir(raw_image_path), key=lambda x: int(x.split('_')[0])) if f.split('_')[0].isnumeric() and not f.startswith('.')]
+			masked_folders = [f for f in sorted(os.listdir(masked_image_path), key=lambda x: int(x.split('_')[0])) if f.split('_')[0].isnumeric() and not f.startswith('.')]
 			
 			if len(raw_folders)!=len(masked_folders):
 				process_raw_images_to_masked_images(raw_image_path, masked_image_path, coco_model_path)
@@ -183,7 +196,8 @@ if __name__ == '__main__':
 	if config.load_model:
 		if not cache_model_path.exists():
 			raise FileNotFoundError ("Cached model file not found.")
-		# model = load_model(str(cache_model_path))
+		metrics = eval_model(dataset, cache_model_path, config.seed, config.downsample)
+		save_metrics(metrics, config)
 	else:
 		model, metrics = train_cnn_to_lstm(dataset, cache_model_path, config.seed, config.downsample)
 		save_metrics(metrics, config)

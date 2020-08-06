@@ -62,8 +62,8 @@ class DetectObjects:
                        'sink', 'refrigerator', 'book', 'clock', 'vase', 'scissors',
                        'teddy bear', 'hair drier', 'toothbrush']
 
-        foldernames = [f for f in os.listdir(IMAGE_DIR) if f.isnumeric() and not f.startswith('.')]
-        foldernames.sort(key=int)
+        foldernames = [f for f in os.listdir(IMAGE_DIR) if f.split('_')[0].isnumeric() and not f.startswith('.')]
+        foldernames.sort(key=lambda x: x.split('_')[0])
         
         for foldername in foldernames:
             CURRENT_IMAGE_DIR = IMAGE_DIR / foldername / 'raw_images'
@@ -89,7 +89,10 @@ class DetectObjects:
                 #    img = skimage.io.imread(CURRENT_IMAGE_PATH) 
                 #elif CURRENT_IMAGE_PATH.suffix.lower() == ".png":
                 img_rgba = skimage.io.imread(CURRENT_IMAGE_PATH)
-                img = skimage.color.rgba2rgb(img_rgba)
+                if img_rgba.shape[-1] == 4:
+                    img = skimage.color.rgba2rgb(img_rgba)
+                else:
+                    img = img_rgba
                 img=img*255
                 results = model.detect([img], verbose=1)
 

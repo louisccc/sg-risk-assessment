@@ -32,7 +32,7 @@ class DataSet:
     def read_video(self, data_dir, option='fixed frame amount', number_of_frames=20, max_number_of_frames=500,
                    scaling='no scaling', scale_x=0.1, scale_y=0.1):
 
-        foldernames = [f for f in sorted(os.listdir(data_dir),key=int) if f.isnumeric() and not f.startswith('.')]
+        foldernames = [f for f in sorted(os.listdir(data_dir),key=lambda x: int(x.split('_')[0])) if f.split('_')[0].isnumeric() and not f.startswith('.')]
         self.read_image_data(str(data_dir/foldernames[0]), scaling=scaling, scale_x=scale_x, scale_y=scale_y)
 
         if len(self.image_seq) == 0:

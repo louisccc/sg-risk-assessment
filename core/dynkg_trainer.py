@@ -169,7 +169,7 @@ class DynKGTrainer:
             tqdm_bar.set_description('Epoch: {:04d}, loss_train: {:.4f}'.format(epoch_idx, acc_loss_train))
             
             if epoch_idx % self.config.test_step == 0:
-                _, _, metrics = self.evaluate(epoch_idx)
+                _, _, metrics, _ = self.evaluate(epoch_idx)
                 self.summary_writer.add_scalar('Acc_Loss/train', metrics['train']['loss'], epoch_idx)
                 self.summary_writer.add_scalar('Acc_Loss/train_acc', metrics['train']['acc'], epoch_idx)
                 self.summary_writer.add_scalar('F1/train', metrics['train']['f1'], epoch_idx)
@@ -266,7 +266,7 @@ class DynKGTrainer:
 
             self.save_model()
 
-        return outputs_test, labels_test, metrics
+        return outputs_test, labels_test, metrics, folder_names_train
 
     def save_model(self):
         """Function to save the model."""

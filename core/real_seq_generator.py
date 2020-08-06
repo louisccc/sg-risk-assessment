@@ -57,7 +57,7 @@ detectron2.utils.visualizer._create_text_labels = create_text_labels_with_idx
 
 
 class ImageSceneGraphSequenceGenerator:
-    def __init__(self, framenum, cache_fname='real_dyngraph_embeddings.pkl'):
+    def __init__(self, framenum, cache_fname='real_dyngraph_embeddings.pkl', platform='image'):
         # [ 
         #   {'node_embeddings':..., 'edge_indexes':..., 'edge_attrs':..., 'label':...}  
         # ]
@@ -65,6 +65,9 @@ class ImageSceneGraphSequenceGenerator:
 
         # cache_filename determine the name of caching file name storing self.scenegraphs_sequence and 
         self.cache_filename = cache_fname
+
+        # specify which type of data to load into model (options: image or honda)
+        self.platfrom = platform
 
         # flag for turning on visualization
         self.visualize = False
@@ -103,19 +106,9 @@ class ImageSceneGraphSequenceGenerator:
         all_video_clip_dirs = [x for x in input_path.iterdir() if x.is_dir()]
         
         # (Honda dataset) create raw_images directory and move *.jpg into that directory
-        for path in tqdm(all_video_clip_dirs):
-            raw_path = path / "raw_images"
-            raw_path.mkdir(exist_ok=True);
-            honda_clips = [x for x in path.iterdir() if x.is_file()]
-            for clip in honda_clips:
-                if ( clip.name.endswith(".jpg") or clip.name.endswith(".png") ):
-#                     print(clip.name)
-                    new_path = raw_path / clip.name
-                    clip.replace(new_path);
-#                     print(new_path)
-#                 else: 
-#                     print("not an image")
-
+        if self.platfrom == 'honda':
+            self.format_folders(all_video_clip_dirs)
+        
         for path in tqdm(all_video_clip_dirs):
             scenegraphs = {} 
             raw_images = sorted(list(path.glob("raw_images/*.jpg")) + list(path.glob("raw_images/*.png")), key=lambda x: int(x.stem))
@@ -174,7 +167,12 @@ class ImageSceneGraphSequenceGenerator:
             out = v.draw_instance_predictions(outputs["instances"].to("cpu"))
             cv2.imwrite(out_img_path, out.get_image()[:, :, ::-1])
 
-        return outputs["instances"].pred_boxes, outputs["instances"].pred_classes, outputs["instances"].image_size
+        #todo: after done scp to server
+        # crop im to remove ego car's hood
+        # find threshold then remove from pred_boxes, pred_classes, check image_size
+        bounding_boxes = outputs["instances"].pred_boxes, outputs["instances"].pred_classes, outputs["instances"].image_size
+        print(bounding_boxes)
+        return bounding_boxes
             
     def process_graph_sequences(self, scenegraphs, frame_numbers, folder_name=None):
         '''
@@ -269,3 +267,16 @@ class ImageSceneGraphSequenceGenerator:
         edge_attr  = torch.LongTensor(edge_attr)
         
         return edge_index, edge_attr
+
+    def format_folders(self, all_video_clip_dirs):
+        print('Begin formatting folders for Honda Dataset')
+        for path in tqdm(all_video_clip_dirs):
+            raw_path = path / "raw_images"
+            raw_path.mkdir(exist_ok=True);
+            honda_clips = [x for x in path.iterdir() if x.is_file()]
+            for clip in honda_clips:
+                if ( clip.name.endswith(".jpg") or clip.name.endswith(".png") ):
+                    new_path = raw_path / clip.name
+                    clip.replace(new_path);
+        print('Finish formatting folders for Honda Dataset')
+

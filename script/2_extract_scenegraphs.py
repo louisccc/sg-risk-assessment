@@ -9,7 +9,7 @@ class Config:
     def __init__(self, args):
         self.parser = ArgumentParser(description="Parameters for extracting scenegraphs.")
         self.parser.add_argument('--input_path', type=str, default="/home/louisccc/NAS/louisccc/av/synthesis_data/new_recording_3", help="Path to lane-change clips directory.")
-        self.parser.add_argument('--platform', type=str, default="carla", help="Method for scenegraph extraction (carla or image).")
+        self.parser.add_argument('--platform', type=str, default="carla", help="Method for scenegraph extraction (carla or image or honda).")
         self.parser.add_argument('--cache', type=lambda x: (str(x).lower() == 'true'), default=True, help="Cache processed scenegraphs.")
         self.parser.add_argument('--address', type=str, default="./image_dataset.pkl", help="Path to save cache file.")
         self.parser.add_argument('--visualize', type=lambda x: (str(x).lower() == 'true'), default=False, help="Visualize scenegraphs.")
@@ -34,6 +34,9 @@ if __name__ == '__main__':
     elif cfg.platform == "image":
         from core.real_seq_generator import ImageSceneGraphSequenceGenerator
         generator = ImageSceneGraphSequenceGenerator(cfg.framenum)
+    elif cfg.platform == "honda":
+        from core.real_seq_generator import ImageSceneGraphSequenceGenerator
+        generator = ImageSceneGraphSequenceGenerator(cfg.framenum, platform='honda')
 
     if cfg.visualize:
         generator.visualize_scenegraphs(cfg.vis_clipids)

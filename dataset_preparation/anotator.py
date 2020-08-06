@@ -12,8 +12,8 @@ class Config:
 
     def __init__(self, args):
         self.parser = ArgumentParser(description='The parameters for creating gifs of input videos.')
-        self.parser.add_argument('--input_path', type=str, default="/home/aung/NAS/louisccc/av/synthesis_data/lane-change-100-old/", help="Path to data directory.")
-        self.parser.add_argument('--start', type=int, default=0, help="Starting lane change clip ex: for 5825_201706081335 use 5825")
+        self.parser.add_argument('--input_path', type=str, default="/Volume/temp/louisccc/av/honda_data/backup/partial-backup-lane-change/", help="Path to data directory.")
+        self.parser.add_argument('--start', type=int, default=6305, help="Starting lane change clip ex: for 5825_201706081335 use 5825")
         args_parsed = self.parser.parse_args(args)
         
         for arg_name in vars(args_parsed):
@@ -94,7 +94,7 @@ def anotate_task(root_folder, starting_folder):
         else:
             print("Error: Invalid index!")
 
-    def saveScore():  
+    def saveScore(event=None):  
         x = int(eval(entry.get()))
         if (1 <= x <= 5):
             score = x - 3
@@ -120,9 +120,9 @@ def anotate_task(root_folder, starting_folder):
             print("Error: Score not in range.")
 
     root = Tk()
-    clip_canvas = Canvas(root, width = 400, height = 300)
+    clip_canvas = Canvas(root, width = 300, height = 200)
     clip_canvas.pack()
-    util_canvas = Canvas(root, width = 400, height = 200)
+    util_canvas = Canvas(root, width = 300, height = 100)
     util_canvas.pack()
     Label(util_canvas, text="Enter a score from 1-5(safe-risk): ").grid(row=0)
     entry = Entry(util_canvas)
@@ -132,6 +132,9 @@ def anotate_task(root_folder, starting_folder):
     Button(util_canvas, text='Replay Clip', command=replayClip).grid(row=2, column=0)
     Button(util_canvas, text='Prev Clip', command=prevClip).grid(row=2, column=1)
     Button(util_canvas, text='Next Clip', command=nextClip).grid(row=2, column=2)
+    
+    # enter button saves clip
+    root.bind('<Return>', saveScore)
     root.mainloop()
 
 class AppletDisplay:
@@ -177,7 +180,7 @@ class UI(Label):
         Button(master, text='Next Frame', command=self.nextFrame).grid(row=1, column=3)
         Button(master, text="Del Before", command=self.deleteBefore).grid(row=2, column=1)
         Button(master, text="Del After", command=self.deleteAfter).grid(row=2, column=2)
-
+       
         self.update()
 
         try:

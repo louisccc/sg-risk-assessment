@@ -67,7 +67,7 @@ class RealSceneGraph:
 
     '''
 
-    def __init__(self, image_path, bounding_boxes, coco_class_names=None, platform='carla'):
+    def __init__(self, image_path, bounding_boxes, coco_class_names=None, platform='image'):
         self.g = nx.MultiDiGraph()  # initialize scenegraph as networkx graph
 
         # road and lane settings.

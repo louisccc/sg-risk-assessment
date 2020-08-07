@@ -103,7 +103,7 @@ class MRGCN(nn.Module):
                 total_dim += self.layer_spec[i]
 
         if self.pooling_type == "sagpool":
-            self.pool1 = RGCNSAGPooling(total_dim, self.num_relations, ratio=config.pooling_ratio, rgcn_func=config.conv_type)
+            self.pool1 = RGCNSAGPooling(total_dim, self.num_relations, ratio=config.pooling_ratio, rgcn_func=config.conv_type, min_score=0.5)
         elif self.pooling_type == "topk":
             self.pool1 = TopKPooling(total_dim, ratio=config.pooling_ratio)
 
@@ -112,6 +112,7 @@ class MRGCN(nn.Module):
         if "lstm" in self.temporal_type:
             self.lstm = LSTM(self.lstm_dim1, self.lstm_dim2, batch_first=True)
             self.attn = Attention(self.lstm_dim2)
+            self.lstm_decoder = LSTM(self.lstm_dim2, self.lstm_dim2, batch_first=True)
         
         self.fc2 = Linear(self.lstm_dim2, self.num_classes)
 
@@ -126,18 +127,18 @@ class MRGCN(nn.Module):
         x = torch.cat(outputs, dim=-1)
         
         if self.pooling_type == "sagpool":
-            x, edge_index, _, batch, attn_weights['pool_perm'], attn_weights['pool_score'] = self.pool1(x, edge_index, edge_attr=edge_attr, batch=batch)
+            x, edge_index, _, attn_weights['batch'], attn_weights['pool_perm'], attn_weights['pool_score'] = self.pool1(x, edge_index, edge_attr=edge_attr, batch=batch)
         elif self.pooling_type == "topk":
-            x, edge_index, _, batch, attn_weights['pool_perm'], attn_weights['pool_score'] = self.pool1(x, edge_index, edge_attr=edge_attr, batch=batch)
+            x, edge_index, _, attn_weights['batch'], attn_weights['pool_perm'], attn_weights['pool_score'] = self.pool1(x, edge_index, edge_attr=edge_attr, batch=batch)
         else: 
             pass
 
         if self.readout_type == "add":
-            x = global_add_pool(x, batch)
+            x = global_add_pool(x, attn_weights['batch'])
         elif self.readout_type == "mean":
-            x = global_mean_pool(x, batch)
+            x = global_mean_pool(x, attn_weights['batch'])
         elif self.readout_type == "max":
-            x = global_max_pool(x, batch)
+            x = global_max_pool(x, attn_weights['batch'])
         else:
             pass
 
@@ -154,11 +155,12 @@ class MRGCN(nn.Module):
         elif self.temporal_type == "lstm_attn":
             x_predicted, (h, c) = self.lstm(x.unsqueeze(0))
             x, attn_weights['lstm_attn_weights'] = self.attn(h.view(1,1,-1), x_predicted)
+            x, (h_decoder, c_decoder) = self.lstm_decoder(x, (h, c))
             x = x.flatten()
         else:
             pass
                 
-        return F.log_softmax(self.fc2(x), dim=-1)
+        return F.log_softmax(self.fc2(x), dim=-1), attn_weights
 
     
 #implementation of MRGCN using a GIN style readout.
@@ -262,4 +264,4 @@ class MRGIN(nn.Module):
         else:
             pass
                 
-        return F.log_softmax(self.fc2(x), dim=-1)
+        return F.log_softmax(self.fc2(x), dim=-1), attn_weights

@@ -24,6 +24,7 @@ from sklearn.utils import resample
 import pickle as pkl
 from sklearn.model_selection import train_test_split
 
+from collections import Counter
 class Config:
     '''Argument Parser for script to train scenegraphs.'''
     def __init__(self, args):
@@ -155,7 +156,7 @@ class DynKGTrainer:
                     self.train_loader = DataLoader(graph_list, batch_size=len(graph_list))
                     sequence = next(iter(self.train_loader)).to(self.config.device)
 
-                    output = self.model.forward(sequence.x, sequence.edge_index, sequence.edge_attr, sequence.batch)
+                    output, _ = self.model.forward(sequence.x, sequence.edge_index, sequence.edge_attr, sequence.batch)
                     outputs = torch.cat([outputs, output.view(-1, 2)], dim=0)
                     labels  = torch.cat([labels, torch.LongTensor([label]).to(self.config.device)], dim=0)
                 
@@ -191,6 +192,9 @@ class DynKGTrainer:
         outputs = []
         acc_loss_test = 0
         folder_names = []
+        attns_weights = []
+        node_attns = []
+
         with torch.no_grad():
             for i in range(len(testing_data)): # iterate through scenegraphs
                 data, label = testing_data[i]['sequence'], testing_labels[i]
@@ -201,7 +205,7 @@ class DynKGTrainer:
                 sequence = next(iter(self.test_loader)).to(self.config.device)
 
                 self.model.eval()
-                output = self.model.forward(sequence.x, sequence.edge_index, sequence.edge_attr, sequence.batch)
+                output, attns = self.model.forward(sequence.x, sequence.edge_index, sequence.edge_attr, sequence.batch)
                 
                 loss_test = self.loss_func(output.view(-1, 2), torch.LongTensor([label]).to(self.config.device))
                 
@@ -210,17 +214,24 @@ class DynKGTrainer:
                 outputs.append(output.detach().cpu().numpy().tolist())
                 labels.append(label)
                 folder_names.append(testing_data[i]['folder_name'])
+                attns_weights.append(attns['lstm_attn_weights'].squeeze().detach().cpu().numpy().tolist())
+                node_attn = {}
+                node_attn["original_batch"] = sequence.batch.detach().cpu().numpy().tolist()
+                node_attn["pool_perm"] = attns['pool_perm'].detach().cpu().numpy().tolist()
+                node_attn["pool_batch"] = attns['batch'].detach().cpu().numpy().tolist()
+                node_attn["pool_score"] = attns['pool_score'].detach().cpu().numpy().tolist()
+                node_attns.append(node_attn)
 
-        return outputs, labels, folder_names, acc_loss_test/len(testing_data)
+        return outputs, labels, folder_names, acc_loss_test/len(testing_data), attns_weights, node_attns
     
     def evaluate(self, current_epoch=None):
         metrics = {}
 
-        outputs_train, labels_train, folder_names_train, acc_loss_train = self.inference(self.training_data, self.training_labels)
+        outputs_train, labels_train, folder_names_train, acc_loss_train, attns_train, node_attns_train = self.inference(self.training_data, self.training_labels)
         metrics['train'] = get_metrics(outputs_train, labels_train)
         metrics['train']['loss'] = acc_loss_train
 
-        outputs_test, labels_test, folder_names_test, acc_loss_test = self.inference(self.testing_data, self.testing_labels)
+        outputs_test, labels_test, folder_names_test, acc_loss_test, attns_test, node_attns_test = self.inference(self.testing_data, self.testing_labels)
         metrics['test'] = get_metrics(outputs_test, labels_test)
         metrics['test']['loss'] = acc_loss_test
 

@@ -214,13 +214,15 @@ class DynKGTrainer:
                 outputs.append(output.detach().cpu().numpy().tolist())
                 labels.append(label)
                 folder_names.append(testing_data[i]['folder_name'])
-                attns_weights.append(attns['lstm_attn_weights'].squeeze().detach().cpu().numpy().tolist())
-                node_attn = {}
-                node_attn["original_batch"] = sequence.batch.detach().cpu().numpy().tolist()
-                node_attn["pool_perm"] = attns['pool_perm'].detach().cpu().numpy().tolist()
-                node_attn["pool_batch"] = attns['batch'].detach().cpu().numpy().tolist()
-                node_attn["pool_score"] = attns['pool_score'].detach().cpu().numpy().tolist()
-                node_attns.append(node_attn)
+                if 'lstm_attn_weights' in attns:
+                    attns_weights.append(attns['lstm_attn_weights'].squeeze().detach().cpu().numpy().tolist())
+                if 'pool_score' in attns:
+                    node_attn = {}
+                    node_attn["original_batch"] = sequence.batch.detach().cpu().numpy().tolist()
+                    node_attn["pool_perm"] = attns['pool_perm'].detach().cpu().numpy().tolist()
+                    node_attn["pool_batch"] = attns['batch'].detach().cpu().numpy().tolist()
+                    node_attn["pool_score"] = attns['pool_score'].detach().cpu().numpy().tolist()
+                    node_attns.append(node_attn)
 
         return outputs, labels, folder_names, acc_loss_test/len(testing_data), attns_weights, node_attns
     

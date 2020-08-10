@@ -46,14 +46,14 @@ class DataSet:
                                    self.image_seq[000].shape[1], self.image_seq[000].shape[2]])
             # shape: (n_vidoes, n_frames, im_height, im_width, channel)
         # todo convert this to a wrapper
-        for foldername in tqdm(foldernames):
+        for idx, foldername in tqdm(enumerate(foldernames)):
             if foldername.isnumeric:
                 self.read_image_data(str(data_dir/foldername), scaling=scaling, scale_x=scale_x, scale_y=scale_y)
                 if not len(self.image_seq) == 0:
                     if option == 'fixed frame amount':
-                        self.video[int(foldername), :, :, :, :] = self._read_video_helper(number_of_frames=number_of_frames)
+                        self.video[idx, :, :, :, :] = self._read_video_helper(number_of_frames=number_of_frames)
                     elif option == 'all frames':
-                        self.video[int(foldername), 0:len(self.image_seq), :, :, :] = self.image_seq
+                        self.video[idx, 0:len(self.image_seq), :, :, :] = self.image_seq
 
     def _read_video_helper(self, number_of_frames=20):
 
@@ -90,14 +90,14 @@ class DataSet:
         # todo convert this to a wrapper
         # tqdm shows progress bar
         # image_seq has the features of the images
-        for foldername in tqdm(foldernames):
+        for idx, foldername in tqdm(enumerate(foldernames)):
             if foldername.isnumeric:
                 self.image_seq = self.load_images_for_keras(img_path + "/" + foldername + "/raw_images")
                 if not len(self.image_seq) == 0:
                     if option == 'fixed frame amount':
-                        self.video_features[int(foldername), :, :] = self._read_video_helper(number_of_frames=number_of_frames)
+                        self.video_features[idx, :, :] = self._read_video_helper(number_of_frames=number_of_frames)
                     elif option == 'all frames':
-                        self.video_features[int(foldername), 0:len(self.image_seq), :] = self.image_seq
+                        self.video_features[idx, 0:len(self.image_seq), :] = self.image_seq
 
     def read_image_data(self, data_dir, scaling='no scaling', scale_x=0.1, scale_y=0.1):
 

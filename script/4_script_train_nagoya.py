@@ -92,16 +92,31 @@ def train_cnn_to_lstm(dataset, cache_path, seed, downsample):
 	model.model.save(str(cache_path))
 	return model, metrics
 
-def eval_model(dataset, cache_path, seed, downsample):
+def transfer_learning(pretrained_model, dataset, seed, downsample):
+
+	class_weight = {0: 0.05, 1: 0.95}
+	training_to_all_data_ratio = 0.7
+	nb_cross_val = 1
+	nb_epoch = 100
+	batch_size = 32
 
 	video_sequence = dataset.video
 	label = dataset.risk_one_hot
-	model = load_model(str(cache_path))
+	model = Models(nb_epoch=nb_epoch, batch_size=batch_size, class_weights=class_weight)
+	model.model = pretrained_model
+	metrics = model.train_n_fold_cross_val(video_sequence, label, training_to_all_data_ratio=training_to_all_data_ratio, n=nb_cross_val, print_option=0, plot_option=0, save_option=0, seed=seed, downsample=downsample)
+
+	return model, metrics
+
+def eval_model(model, dataset, seed, downsample):
+
+	video_sequence = dataset.video
+	label = dataset.risk_one_hot
 
 	true_label = np.argmax(label, axis=-1)
 	y_pred_train = model.predict_proba(video_sequence)	
 	metrics = get_metrics(y_pred_train, true_label)
-	return model, metrics
+	return metrics
 
 def process_raw_images_to_masked_images(src_path: Path, dst_path: Path, coco_path: Path):
     ''' 
@@ -148,7 +163,7 @@ def load_dataset(raw_image_path: Path, masked_image_path: Path, dataset_type: st
 	dataset.convert_risk_to_one_hot(risk_threshold=0.5)
 	save_dir = Path("/home/louisccc/NAS/louisccc/av/nagoya_pkl_data/").resolve()
 	save_dir.mkdir(exist_ok=True)
-	dataset.save(save_dir=str(save_dir), filename='/5_frames_nr4.pkl')
+	dataset.save(save_dir=str(save_dir), filename='/5_frames_honda.pkl')
 	print("Saved pickled dataset")
 	return dataset
 
@@ -196,7 +211,8 @@ if __name__ == '__main__':
 	if config.load_model:
 		if not cache_model_path.exists():
 			raise FileNotFoundError ("Cached model file not found.")
-		metrics = eval_model(dataset, cache_model_path, config.seed, config.downsample)
+		model = load_model(str(cache_model_path))
+		model, metrics = transfer_learning(model, dataset, config.seed, config.downsample)
 		save_metrics(metrics, config)
 	else:
 		model, metrics = train_cnn_to_lstm(dataset, cache_model_path, config.seed, config.downsample)

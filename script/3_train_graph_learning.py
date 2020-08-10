@@ -15,7 +15,7 @@ def train_dynamic_kg(args, iterations=1):
         trainer = DynKGTrainer(args)
         trainer.build_model()
         trainer.train()
-        output, label, metric = trainer.evaluate()
+        output, label, metric, _ = trainer.evaluate()
 
         outputs += output
         labels  += label

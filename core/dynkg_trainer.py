@@ -306,10 +306,10 @@ def get_metrics(outputs, labels):
 
     metrics = {}
     metrics['acc'] = accuracy_score(labels_tensor, preds)
-    metrics['f1'] = f1_score(labels_tensor, preds, average="micro")
+    metrics['f1'] = f1_score(labels_tensor, preds, average="binary")
     metrics['confusion'] = str(confusion_matrix(labels_tensor, preds)).replace('\n', ',')
-    metrics['precision'] = precision_score(labels_tensor, preds, average="micro")
-    metrics['recall'] = recall_score(labels_tensor, preds, average="micro")
+    metrics['precision'] = precision_score(labels_tensor, preds, average="binary")
+    metrics['recall'] = recall_score(labels_tensor, preds, average="binary")
     metrics['auc'] = get_auc(outputs_tensor, labels_tensor)
     metrics['label_distribution'] = str(np.unique(labels_tensor, return_counts=True)[1])
     

@@ -266,11 +266,11 @@ class RealSceneGraph:
 
     def add_node(self, node):
         color = "white"
-        if node.name.startswith("ego"):
+        if "ego" in node.name.lower():
             color = "red"
-        elif node.name.startswith("car"):
-            color = "blue"
-        elif node.name.startswith("lane"):
+        elif "car" in node.name.lower():
+            color = "green"
+        elif "lane" in node.name.lower():
             color = "yellow"
         self.g.add_node(node, attr=node.attr, label=node.name,
                         style='filled', fillcolor=color)

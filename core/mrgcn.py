@@ -103,7 +103,7 @@ class MRGCN(nn.Module):
                 total_dim += self.layer_spec[i]
 
         if self.pooling_type == "sagpool":
-            self.pool1 = RGCNSAGPooling(total_dim, self.num_relations, ratio=config.pooling_ratio, rgcn_func=config.conv_type, min_score=0.5)
+            self.pool1 = RGCNSAGPooling(total_dim, self.num_relations, ratio=config.pooling_ratio, rgcn_func=config.conv_type)
         elif self.pooling_type == "topk":
             self.pool1 = TopKPooling(total_dim, ratio=config.pooling_ratio)
 

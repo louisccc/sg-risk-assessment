@@ -131,7 +131,7 @@ class MRGCN(nn.Module):
         elif self.pooling_type == "topk":
             x, edge_index, _, attn_weights['batch'], attn_weights['pool_perm'], attn_weights['pool_score'] = self.pool1(x, edge_index, edge_attr=edge_attr, batch=batch)
         else: 
-            pass
+            attn_weights['batch'] = batch
 
         if self.readout_type == "add":
             x = global_add_pool(x, attn_weights['batch'])

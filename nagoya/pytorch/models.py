@@ -19,7 +19,6 @@ import torch.optim as optim
 import torchvision
 import torchvision.models as models
 
-from keras.layers.wrappers import TimeDistributed
 import tensorflow as tf
 import keras.backend as K
 
@@ -232,12 +231,12 @@ class Models(nn.Module):
     def build_transfer_LSTM_model(self, input_shape, lr=1e-6, decay=1e-5):
 
         model = nn.Sequential(
-            nn.GRU(input_size=input_shape, hidden_size=100),
+            nn.GRU(input_size=input_shape[-1], hidden_size=100),
             nn.Linear(in_features=100, out_features=2),
             nn.Softmax(),
         )
 
-        loss_fn = nn.CrossEntropyLoss() # should be categorical crossentropy
+        loss_fn = nn.CrossEntropyLoss() 
         optimizer = optim.Adam(model.parameters(), lr=lr, lr_decay=decay)
         
         self.loss_func = loss_fn
@@ -248,7 +247,7 @@ class Models(nn.Module):
     def build_transfer_LSTM_model2(self, input_shape, lr=1e-6, decay=1e-5):
 
         model = nn.Sequential(
-            nn.LSTM(input_size=input_shape, hidden_size=512, num_layers=2),
+            nn.LSTM(input_size=input_shape[-1], hidden_size=512, num_layers=2),
             nn.Dropout(0.8),
             nn.Linear(in_features=512, out_features=1000),
             nn.Dropout(0.8),
@@ -257,17 +256,18 @@ class Models(nn.Module):
             nn.Softmax(),
         )
 
-        loss_fn = nn.CrossEntropyLoss() # should be categorical crossentropy
+        loss_fn = nn.CrossEntropyLoss()
         optimizer = optim.Adam(model.parameters(), lr=lr, lr_decay=decay)
 
         self.loss_func = loss_fn
         self.optimizer = optimizer
         self.model = model
 
+    # TODO: find out if LSTM can be used in sequential model
     def build_transfer_LSTM_model3(self, input_shape, lr=1e-6, decay=1e-5):
 
         model = nn.Sequential(
-            nn.LSTM(input_size=input_shape, hidden_size=512, dropout=0.5), # TODO: add recurrent dropout
+            nn.LSTM(input_size=input_shape[-1], hidden_size=512, dropout=0.5), # TODO: add recurrent dropout
             nn.LSTM(input_size=512, hidden_size=512),
             nn.Linear(in_features=512, out_features=1000),
             nn.Linear(in_features=1000, out_features=200),
@@ -275,31 +275,45 @@ class Models(nn.Module):
             nn.Softmax(),
         )
 
-        loss_fn = nn.CrossEntropyLoss() # should be categorical crossentropy
+        loss_fn = nn.CrossEntropyLoss()
         optimizer = optim.Adam(model.parameters(), lr=lr, lr_decay=decay)
 
         self.loss_func = loss_fn
         self.optimizer = optimizer
         self.model = model
 
-    # TODO: Figure out TDL for pytorch
     def build_cnn_to_lstm_model(self, input_shape, lr=1e-6, decay=1e-5):
 
-        model = Sequential()
+        # CNN layers
+        layer_1 = TimeDistributed(nn.Conv2d(in_channels=input_shape[-1], out_channels=16, kernel_size=3, stride=3))
+        activ_1 = TimeDistributed(nn.ReLU())(layer_1)
+        output_size = feature_map_size(input_size=input_shape[0], kernel_size=3, stride=3) 
 
-        model.add(TimeDistributed(Convolution2D(16, 3, 3), input_shape=input_shape))
-        model.add(TimeDistributed(Activation('relu')))
-        model.add(TimeDistributed(Convolution2D(16, 3, 3)))
-        model.add(TimeDistributed(Activation('relu')))
-        model.add(TimeDistributed(MaxPooling2D(pool_size=(2, 2))))
-        model.add(TimeDistributed(Dropout(0.2)))
-        model.add(TimeDistributed(Flatten()))
-        model.add(TimeDistributed(Dense(200)))
-        model.add(TimeDistributed(Dense(50, name="first_dense")))
-        model.add(LSTM(20, return_sequences=False, name="lstm_layer"))
-        model.add(Dense(2, activation='softmax'))
+        layer_2 = TimeDistributed(nn.Conv2d(in_channels=16, out_channels=16, kernel_size=3, stride=3))(activ_1)
+        activ_2 = TimeDistributed(nn.ReLU())(layer_2)
+        output_size = feature_map_size(input_size=output_size, kernel_size=3, stride=3) 
 
-        loss_fn = nn.CrossEntropyLoss() # should be categorical crossentropy
+        layer_3 = TimeDistributed(nn.MaxPool2d(kernel_size=(2, 2)))(activ_2)
+        activ_3 = TimeDistributed(nn.Dropout(0.2))(layer_3)
+        output_size = feature_map_size(input_size=output_size, kernel_size=2) 
+
+        layer_4 = TimeDistributed(nn.Flatten())(activ_3)
+        output_size = num_flat_features(output_size)
+
+        # FC layers
+        layer_5 = TimeDistributed(nn.Linear(in_features=output_size, out_features=200))(layer_4)
+
+        layer_6 = TimeDistributed(nn.Linear(in_features=200, out_features=50))(layer_5)
+
+        # LSTM layer TODO: verify it is correct
+        layer_7, (hn, cn) = nn.LSTM(input_size=50, hidden_size=20)(layer_6)
+
+        # Classification layer
+        layer_8 = nn.Linear(in_features=20, out_features=2)(layer_7) # confirm input features
+        activ_8 = nn.Softmax()(layer_8)
+
+        model = activ_8
+        loss_fn = nn.CrossEntropyLoss() 
         optimizer = optim.Adam(model.parameters(), lr=lr, lr_decay=decay)
 
         self.loss_func = loss_fn
@@ -307,23 +321,32 @@ class Models(nn.Module):
         self.model = model
 
     def build_cnn_model(self, input_shape, lr=1e-6, decay=1e-5):
-        flatten_size = 0 # TODO: get size after flatten operation
+        
+        # define model will refactor once tested
+        layer = nn.Conv2d(in_channels=input_shape[-1], out_channels=32, kernel_size=(5,5), stride=(1,1))
+        layer = nn.ReLU()(layer)
+        output_size = feature_map_size(input_size=input_shape[0], kernel_size=5)
+        
+        layer = nn.MaxPool2d(kernel_size=(2, 2), stride=(2, 2))(layer)
+        output_size = feature_map_size(input_size=output_size, kernel_size=2, stride=2)
+        
+        layer = nn.Conv2d(in_channels=output_size, out_channels=64, kernel_size=(5,5))(layer)
+        layer = nn.ReLU()(layer)
+        output_size = feature_map_size(input_size=output_size, kernel_size=5, stride=2)
 
-        model = nn.Sequential(
-            nn.Conv2d(in_channels=input_shape, out_channels=32, kernel_size=(5,5), stride=(1,1)),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=(2, 2), stride=(2, 2)),
-            nn.Conv2d(in_channels=16, out_channels=64, kernel_size=(5,5)), # TODO: check in_channels 
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=(2, 2)),
-            nn.Flatten(),
-            nn.Linear(in_features=flatten_size, out_features=1000),
-            nn.ReLU(),
-            nn.Linear(in_features=1000, out_features=2),
-            nn.Softmax(),
-        )
+        layer = nn.MaxPool2d(kernel_size=(2, 2))(layer)
+        output_size = feature_map_size(input_size=output_size, kernel_size=2)
 
-        loss_fn = nn.CrossEntropyLoss() # should be categorical crossentropy
+        layer = nn.Flatten()(layer)
+        output_size = num_flat_features(output_size)
+
+        layer = nn.Linear(in_features=output_size, out_features=1000)(layer)
+        layer = nn.ReLU()(layer)
+        layer = nn.Linear(in_features=1000, out_features=2)(layer)
+        layer = nn.Softmax()(layer)
+
+        model = layer
+        loss_fn = nn.CrossEntropyLoss() 
         optimizer = optim.Adam(model.parameters(), lr=lr, lr_decay=decay)
 
         self.loss_func = loss_fn
@@ -335,18 +358,61 @@ class Models(nn.Module):
 
         # TODO: feature sequence missing time distributed & double check dimensions
         backbone_model = models.resnet50(pretrained=True)
-        backbone_model.fc = nn.Linear(num_ftrs, input_shape) # fit to dataset
-
+        backbone_model.fc = nn.Linear(num_ftrs, input_shape[-1])
+        
+        # debug
+        feature_sequences = TimeDistributed(backbone_model)(input_sequences)
+        
         model = nn.Sequential(
-            backbone_model,
-            nn.LSTM(input_size=input_shape, hidden_size=20),
+            feature_sequences,
+            nn.LSTM(input_size=input_shape[-1], hidden_size=20),
             nn.Linear(in_features=20, out_features=2),
             nn.Softmax(),
         )
         
-        loss_fn = nn.CrossEntropyLoss() # should be categorical crossentropy
+        loss_fn = nn.CrossEntropyLoss()
         optimizer = optim.Adam(model.parameters(), lr=lr, lr_decay=decay)
 
         self.loss_func = loss_fn
         self.optimizer = optimizer
         self.model = model
+
+    # determine output feature map size for convolution layers
+    @staticmethod
+    def feature_map_size(input_size, kernel_size, padding=0, stride=1):
+        output_size = 1 + (input_size - kernel_size + 2*padding)/stride 
+        return output_size
+    
+    # determine output dimension after flatten operation
+    @staticmethod
+    def num_flat_features(feature_map):
+        size = feature_map.size()[1:]  # all dimensions except the batch dimension
+        num_features = 1
+        for s in size:
+            num_features *= s
+        return num_features
+
+    # https://www.jianshu.com/p/223e13ce35a2
+    class TimeDistributed(nn.Module):
+        def __init__(self, module, batch_first=False):
+            super(TimeDistributed, self).__init__()
+            self.module = module
+            self.batch_first = batch_first
+
+        def forward(self, x):
+            if len(x.size()) <= 2:
+                return self.module(x)
+
+            # reshape input data --> (samples * timesteps, input_size)
+            # squash timesteps
+            x_reshaped = x.contiguous().view(-1, x.size(-1))
+            y = self.module(x_reshaped)
+
+            # We have to reshape Y
+            if self.batch_first:
+                # (samples, timesteps, output_size)
+                y = y.contiguous().view(x.size(0), -1, y.size(-1))
+            else:
+                # (timesteps, samples, output_size)
+                y = y.contiguous().view(-1, x.size(1), y.size(-1))
+            return y

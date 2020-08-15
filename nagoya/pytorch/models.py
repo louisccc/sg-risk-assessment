@@ -330,16 +330,19 @@ class Models(nn.Module):
         self.optimizer = optimizer
         self.model = model
 
-    # TODO: convert to pytorch idk how to transer learn...
+    # TODO: double check
     def build_transfer_ResNet_to_LSTM(self, input_shape, lr=1e-6, decay=1e-5):
-        input_sequences = Input(shape=input_shape)
 
+        # TODO: feature sequence missing time distributed & double check dimensions
         backbone_model = models.resnet50(pretrained=True)
+        backbone_model.fc = nn.Linear(num_ftrs, input_shape) # fit to dataset
 
-        feature_sequences = TimeDistributed(backbone_model)(input_sequences)
-
-        lstm_out = LSTM(20, return_sequences=False)(feature_sequences)
-        prediction = Dense(2, activation='softmax', kernel_initializer='ones')(lstm_out)
+        model = nn.Sequential(
+            backbone_model,
+            nn.LSTM(input_size=input_shape, hidden_size=20),
+            nn.Linear(in_features=20, out_features=2),
+            nn.Softmax(),
+        )
         
         loss_fn = nn.CrossEntropyLoss() # should be categorical crossentropy
         optimizer = optim.Adam(model.parameters(), lr=lr, lr_decay=decay)
@@ -347,4 +350,3 @@ class Models(nn.Module):
         self.loss_func = loss_fn
         self.optimizer = optimizer
         self.model = model
-        # self.model = Model(inputs=input_sequences, outputs=prediction)

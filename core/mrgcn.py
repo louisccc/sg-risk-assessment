@@ -87,20 +87,27 @@ class MRGCN(nn.Module):
         total_dim = 0
 
         if self.layer_spec == None:
-            self.conv.append(self.rgcn_func(self.num_features, self.hidden_dim, self.num_relations).to(config.device))
-            total_dim += self.hidden_dim
-            for i in range(1, self.num_layers):
-                self.conv.append(self.rgcn_func(self.hidden_dim, self.hidden_dim, self.num_relations).to(config.device))
+            if self.num_layers > 0:
+                self.conv.append(self.rgcn_func(self.num_features, self.hidden_dim, self.num_relations).to(config.device))
                 total_dim += self.hidden_dim
-        
+                for i in range(1, self.num_layers):
+                    self.conv.append(self.rgcn_func(self.hidden_dim, self.hidden_dim, self.num_relations).to(config.device))
+                    total_dim += self.hidden_dim
+            else:
+                self.fc0_5 = Linear(self.num_features, self.hidden_dim)
         else:
-            print("using layer specification and ignoring hidden_dim parameter.")
-            print("layer_spec: " + str(self.layer_spec))
-            self.conv.append(self.rgcn_func(self.num_features, self.layer_spec[0], self.num_relations).to(config.device))
-            total_dim += self.layer_spec[0]
-            for i in range(1, self.num_layers):
-                self.conv.append(self.rgcn_func(self.layer_spec[i-1], self.layer_spec[i], self.num_relations).to(config.device))
-                total_dim += self.layer_spec[i]
+            if self.num_layers > 0:
+                print("using layer specification and ignoring hidden_dim parameter.")
+                print("layer_spec: " + str(self.layer_spec))
+                self.conv.append(self.rgcn_func(self.num_features, self.layer_spec[0], self.num_relations).to(config.device))
+                total_dim += self.layer_spec[0]
+                for i in range(1, self.num_layers):
+                    self.conv.append(self.rgcn_func(self.layer_spec[i-1], self.layer_spec[i], self.num_relations).to(config.device))
+                    total_dim += self.layer_spec[i]
+
+            else:
+                self.fc0_5 = Linear(self.num_features, self.hidden_dim)
+                total_dim += self.hidden_dim
 
         if self.pooling_type == "sagpool":
             self.pool1 = RGCNSAGPooling(total_dim, self.num_relations, ratio=config.pooling_ratio, rgcn_func=config.conv_type)
@@ -113,19 +120,24 @@ class MRGCN(nn.Module):
             self.lstm = LSTM(self.lstm_dim1, self.lstm_dim2, batch_first=True)
             self.attn = Attention(self.lstm_dim2)
             self.lstm_decoder = LSTM(self.lstm_dim2, self.lstm_dim2, batch_first=True)
-        
+        else:
+            self.fc1_5 = Linear(self.lstm_dim1, self.lstm_dim2)
+
         self.fc2 = Linear(self.lstm_dim2, self.num_classes)
 
 
     def forward(self, x, edge_index, edge_attr, batch=None):
         attn_weights = dict()
         outputs = []
-        for i in range(self.num_layers):
-            x = self.activation(self.conv[i](x, edge_index, edge_attr))
-            x = F.dropout(x, self.dropout, training=self.training)
-            outputs.append(x)
-        x = torch.cat(outputs, dim=-1)
-        
+        if self.num_layers > 0:
+            for i in range(self.num_layers):
+                x = self.activation(self.conv[i](x, edge_index, edge_attr))
+                x = F.dropout(x, self.dropout, training=self.training)
+                outputs.append(x)
+            x = torch.cat(outputs, dim=-1)
+        else:
+            x = self.activation(self.fc0_5(x))
+
         if self.pooling_type == "sagpool":
             x, edge_index, _, attn_weights['batch'], attn_weights['pool_perm'], attn_weights['pool_score'] = self.pool1(x, edge_index, edge_attr=edge_attr, batch=batch)
         elif self.pooling_type == "topk":
@@ -143,9 +155,9 @@ class MRGCN(nn.Module):
             pass
 
         x = self.activation(self.fc1(x))
-
+    
         if self.temporal_type == "mean":
-            x = self.activation(x.mean(axis=0))
+            x = self.activation(self.fc1_5(x.mean(axis=0)))
         elif self.temporal_type == "lstm_last":
             x_predicted, (h, c) = self.lstm(x.unsqueeze(0))
             x = h.flatten()

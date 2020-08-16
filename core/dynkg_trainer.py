@@ -30,6 +30,7 @@ class Config:
     def __init__(self, args):
         self.parser = ArgumentParser(description='The parameters for training the scene graph using GCN.')
         self.parser.add_argument('--cache_path', type=str, default="../script/image_dataset.pkl", help="Path to the cache file.")
+        self.parser.add_argument('--transfer_path', type=str, default="", help="Path to the transfer file.")
         self.parser.add_argument('--model_load_path', type=str, default="./model/model_best_val_loss_.vec.pt", help="Path to load cached model file.")
         self.parser.add_argument('--model_save_path', type=str, default="./model/model_best_val_loss_.vec.pt", help="Path to save model file.")
         self.parser.add_argument('--split_ratio', type=float, default=0.3, help="Ratio of dataset withheld for testing.")
@@ -63,33 +64,45 @@ class Config:
             self.__dict__[arg_name] = getattr(args_parsed, arg_name)
 
         self.cache_path = Path(self.cache_path).resolve()
+        if self.transfer_path != "":
+            self.transfer_path = Path(self.transfer_path).resolve()
+        else:
+            self.transfer_path = None
         self.stats_path = Path(self.stats_path.strip()).resolve()
 
-def build_scenegraph_dataset(cache_path, train_to_test_ratio=0.3, downsample=False, seed=0):
+def build_scenegraph_dataset(cache_path, train_to_test_ratio=0.3, downsample=False, seed=0, transfer_path=None):
     dataset_file = open(cache_path, "rb")
     scenegraphs_sequence, feature_list = pkl.load(dataset_file)
 
-    class_0 = []
-    class_1 = []
+    if transfer_path == None:
 
-    for g in scenegraphs_sequence:
-        if g['label'] == 0:
-            class_0.append(g)
-        elif g['label'] == 1:
-            class_1.append(g)
-        
-    y_0 = [0]*len(class_0)
-    y_1 = [1]*len(class_1)
+        class_0 = []
+        class_1 = []
 
-    min_number = min(len(class_0), len(class_1))
-    if downsample:
-        modified_class_0, modified_y_0 = resample(class_0, y_0, n_samples=min_number)
-    else:
-        modified_class_0, modified_y_0 = class_0, y_0
-        
-    train, test, train_y, test_y = train_test_split(modified_class_0+class_1, modified_y_0+y_1, test_size=train_to_test_ratio, shuffle=True, stratify=modified_y_0+y_1, random_state=seed)
+        for g in scenegraphs_sequence:
+            if g['label'] == 0:
+                class_0.append(g)
+            elif g['label'] == 1:
+                class_1.append(g)
+            
+        y_0 = [0]*len(class_0)
+        y_1 = [1]*len(class_1)
 
-    return train, test, feature_list
+        min_number = min(len(class_0), len(class_1))
+        if downsample:
+            modified_class_0, modified_y_0 = resample(class_0, y_0, n_samples=min_number)
+        else:
+            modified_class_0, modified_y_0 = class_0, y_0
+            
+        train, test, train_y, test_y = train_test_split(modified_class_0+class_1, modified_y_0+y_1, test_size=train_to_test_ratio, shuffle=True, stratify=modified_y_0+y_1, random_state=seed)
+
+        return train, test, feature_list
+
+    else: 
+
+        test, _ = pkl.load(open(transfer_path, "rb"))
+
+        return scenegraphs_sequence, test, feature_list 
 
 class DynKGTrainer:
 
@@ -102,7 +115,7 @@ class DynKGTrainer:
         if not self.config.cache_path.exists():
             raise Exception("The cache file does not exist.")    
 
-        self.training_data, self.testing_data, self.feature_list = build_scenegraph_dataset(self.config.cache_path, self.config.split_ratio, downsample=self.config.downsample, seed=self.config.seed)
+        self.training_data, self.testing_data, self.feature_list = build_scenegraph_dataset(self.config.cache_path, self.config.split_ratio, downsample=self.config.downsample, seed=self.config.seed, transfer_path=self.config.transfer_path)
         self.training_labels = [data['label'] for data in self.training_data]
         self.testing_labels = [data['label'] for data in self.testing_data]
         self.class_weights = torch.from_numpy(compute_class_weight('balanced', np.unique(self.training_labels), self.training_labels))

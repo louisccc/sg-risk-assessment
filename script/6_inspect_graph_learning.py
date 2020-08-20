@@ -29,7 +29,7 @@ def add_node(g, node, label):
 def add_relation(g, src, relation, dst):
     g.add_edge(src, dst, object=relation, label=Relations(relation).name)
 
-def visualize(g, to_filename):
+def visualize_graph(g, to_filename):
     A = to_agraph(g)
     A.layout('dot')
     A.draw(to_filename)
@@ -89,12 +89,24 @@ def parse_attn_weights(node_attns, sequences, dest_dir, visualize=False):
                 reversed_g.nodes[node_idx]['fillcolor'] = ','.join(hsv_color)
                 reversed_g.nodes[node_idx]['label'] += '\n' + str(round(float(score), 5))
 
+            root_idx = None
+            ego_idx = None
+            for (node, data) in reversed_g.nodes(data=True):
+                if root_idx and ego_idx:
+                    break
+                if data['label'].startswith('Ego'):
+                    ego_idx = node
+                elif data['label'].startswith('Root'):
+                    root_idx = node
+            reversed_g.nodes[ego_idx]['pos'] = "0,20.0!"
+            reversed_g.nodes[root_idx]['pos'] = "0,-20.0!"
+            # import pdb; pdb.set_trace()
             folder_name = sequences[idx]['folder_name']
             frame_num = sequences[idx]['frame_number']
             folder_path = dest_dir / folder_name
             folder_path.mkdir(exist_ok=True)
-            visualize(reversed_g, str(folder_path / (str(frame_num) + '.png')))
-            # visualize(reversed_g, "./tmp.png")
+            visualize_graph(reversed_g, str(folder_path / (str(frame_num) + '.png')))
+            # visualize_graph(reversed_g, "./tmp.png")
     return node_attns_list
 
 def inspect_dynamic_kg(args, iterations=1):
@@ -121,16 +133,16 @@ def inspect_dynamic_kg(args, iterations=1):
     columns = ['safe_level', 'risk_level', 'prediction', 'label', 'folder_name', 'attn_weights', 'node_attns_score']
     inspecting_result_df = pd.DataFrame(columns=columns)
 
-    dest_dir = Path('/home/louisccc/NAS/louisccc/av/post_visualization_carla_271_transfer/').resolve()
+    dest_dir = Path('../test/').resolve()
     dest_dir.mkdir(exist_ok=True)
 
     node_attns_train_proc = []
     for i in tqdm(range(len(trainer.training_data))):
-        node_attns_train_proc += parse_attn_weights(node_attns_train[i], trainer.training_data[i]['sequence'], dest_dir)
+        node_attns_train_proc += parse_attn_weights(node_attns_train[i], trainer.training_data[i]['sequence'], dest_dir, visualize=True)
 
     node_attns_test_proc = []
     for i in tqdm(range(len(trainer.testing_data))):
-        node_attns_test_proc += parse_attn_weights(node_attns_test[i], trainer.testing_data[i]['sequence'], dest_dir)
+        node_attns_test_proc += parse_attn_weights(node_attns_test[i], trainer.testing_data[i]['sequence'], dest_dir, vizualize=True)
 
     for output, label, folder_name, attns, node_attns in zip(outputs_train, labels_train, folder_names_train, attns_train, node_attns_train_proc):
         inspecting_result_df = inspecting_result_df.append(

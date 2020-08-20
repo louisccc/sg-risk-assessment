@@ -96,10 +96,10 @@ def parse_attn_weights(node_attns, sequences, dest_dir, visualize=False):
                     break
                 if data['label'].startswith('Ego'):
                     ego_idx = node
+                    reversed_g.nodes[ego_idx]['pos'] = "0,20.0!"
                 elif data['label'].startswith('Root'):
                     root_idx = node
-            reversed_g.nodes[ego_idx]['pos'] = "0,20.0!"
-            reversed_g.nodes[root_idx]['pos'] = "0,-20.0!"
+                    reversed_g.nodes[root_idx]['pos'] = "0,-20.0!"
             # import pdb; pdb.set_trace()
             folder_name = sequences[idx]['folder_name']
             frame_num = sequences[idx]['frame_number']
@@ -133,7 +133,7 @@ def inspect_dynamic_kg(args, iterations=1):
     columns = ['safe_level', 'risk_level', 'prediction', 'label', 'folder_name', 'attn_weights', 'node_attns_score']
     inspecting_result_df = pd.DataFrame(columns=columns)
 
-    dest_dir = Path('../test/').resolve()
+    dest_dir = Path('/home/louisccc/NAS/louisccc/av/post_visualization_carla_2').resolve()
     dest_dir.mkdir(exist_ok=True)
 
     node_attns_train_proc = []

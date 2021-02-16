@@ -1,133 +1,114 @@
-import os, sys, pdb
-sys.path.append(os.path.dirname(sys.path[0]))
-
-import torch
-import torch.optim as optim
-from torch.utils.tensorboard import SummaryWriter
+import os, sys
 import numpy as np
 import pandas as pd
 import random
-from sklearn.metrics import accuracy_score, f1_score, confusion_matrix, precision_score, recall_score, roc_auc_score, roc_curve
+import pickle as pkl
+from tqdm import tqdm
+from pathlib import Path
+
+import torch
+import torch.optim as optim
+from torch_geometric.data import Data, DataLoader, DataListLoader
+from torch.utils.tensorboard import SummaryWriter
+
 from sklearn import preprocessing
+from sklearn.metrics import accuracy_score, f1_score, confusion_matrix, precision_score, recall_score, roc_auc_score, roc_curve
+from sklearn.utils import resample
+from sklearn.utils.class_weight import compute_class_weight
+from sklearn.model_selection import train_test_split
 from matplotlib import pyplot as plt
 
+# sys.path.append(os.path.dirname(sys.path[0]))
+
 from core.relation_extractor import Relations
-from argparse import ArgumentParser
-from pathlib import Path
-from tqdm import tqdm
 from core.mrgcn import *
-from torch_geometric.data import Data, DataLoader, DataListLoader
-from sklearn.utils.class_weight import compute_class_weight
+from core.metrics import *
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
-from sklearn.utils import resample
-import pickle as pkl
-from sklearn.model_selection import train_test_split
 
-from collections import Counter
-class Config:
-    '''Argument Parser for script to train scenegraphs.'''
-    def __init__(self, args):
-        self.parser = ArgumentParser(description='The parameters for training the scene graph using GCN.')
-        self.parser.add_argument('--cache_path', type=str, default="../script/image_dataset.pkl", help="Path to the cache file.")
-        self.parser.add_argument('--transfer_path', type=str, default="", help="Path to the transfer file.")
-        self.parser.add_argument('--model_load_path', type=str, default="./model/model_best_val_loss_.vec.pt", help="Path to load cached model file.")
-        self.parser.add_argument('--model_save_path', type=str, default="./model/model_best_val_loss_.vec.pt", help="Path to save model file.")
-        self.parser.add_argument('--split_ratio', type=float, default=0.3, help="Ratio of dataset withheld for testing.")
-        self.parser.add_argument('--downsample', type=lambda x: (str(x).lower() == 'true'), default=False, help='Set to true to downsample dataset.')
-        self.parser.add_argument('--learning_rate', default=0.0001, type=float, help='The initial learning rate for GCN.')
-        self.parser.add_argument('--seed', type=int, default=random.randint(0,2**32), help='Random seed.')
-        self.parser.add_argument('--epochs', type=int, default=200, help='Number of epochs to train.')
-        self.parser.add_argument('--activation', type=str, default='relu', help='Activation function to use, options: [relu, leaky_relu].')
-        self.parser.add_argument('--weight_decay', type=float, default=5e-4, help='Weight decay (L2 loss on parameters).')
-        self.parser.add_argument('--dropout', type=float, default=0.25, help='Dropout rate (1 - keep probability).')
-        self.parser.add_argument('--nclass', type=int, default=2, help="The number of classes for dynamic graph classification (currently only supports 2).")
-        self.parser.add_argument('--batch_size', type=int, default=32, help='Number of graphs in a batch.')
-        self.parser.add_argument('--device', type=str, default="cpu", help='The device on which models are run, options: [cuda, cpu].')
-        self.parser.add_argument('--test_step', type=int, default=10, help='Number of training epochs before testing the model.')
-        self.parser.add_argument('--model', type=str, default="mrgcn", help="Model to be used intrinsically. options: [mrgcn, mrgin]")
-        self.parser.add_argument('--conv_type', type=str, default="FastRGCNConv", help="type of RGCNConv to use [RGCNConv, FastRGCNConv].")
-        self.parser.add_argument('--num_layers', type=int, default=3, help="Number of layers in the network.")
-        self.parser.add_argument('--hidden_dim', type=int, default=32, help="Hidden dimension in RGCN.")
-        self.parser.add_argument('--layer_spec', type=str, default=None, help="manually specify the size of each layer in format l1,l2,l3 (no spaces).")
-        self.parser.add_argument('--pooling_type', type=str, default="sagpool", help="Graph pooling type, options: [sagpool, topk, None].")
-        self.parser.add_argument('--pooling_ratio', type=float, default=0.5, help="Graph pooling ratio.")        
-        self.parser.add_argument('--readout_type', type=str, default="mean", help="Readout type, options: [max, mean, add].")
-        self.parser.add_argument('--temporal_type', type=str, default="lstm_attn", help="Temporal type, options: [mean, lstm_last, lstm_sum, lstm_attn].")
-        self.parser.add_argument('--lstm_input_dim', type=int, default=50, help="LSTM input dimensions.")
-        self.parser.add_argument('--lstm_output_dim', type=int, default=20, help="LSTM output dimensions.")
-        self.parser.add_argument('--stats_path', type=str, default="best_stats.csv", help="path to save best test statistics.")
-
-        args_parsed = self.parser.parse_args(args)
-        
-        for arg_name in vars(args_parsed):
-            self.__dict__[arg_name] = getattr(args_parsed, arg_name)
-
-        self.cache_path = Path(self.cache_path).resolve()
-        if self.transfer_path != "":
-            self.transfer_path = Path(self.transfer_path).resolve()
-        else:
-            self.transfer_path = None
-        self.stats_path = Path(self.stats_path.strip()).resolve()
-
-def build_scenegraph_dataset(cache_path, train_to_test_ratio=0.3, downsample=False, seed=0, transfer_path=None):
-    dataset_file = open(cache_path, "rb")
-    scenegraphs_sequence, feature_list = pkl.load(dataset_file)
-
-    if transfer_path == None:
-
-        class_0 = []
-        class_1 = []
-
-        for g in scenegraphs_sequence:
-            if g['label'] == 0:
-                class_0.append(g)
-            elif g['label'] == 1:
-                class_1.append(g)
-            
-        y_0 = [0]*len(class_0)
-        y_1 = [1]*len(class_1)
-
-        min_number = min(len(class_0), len(class_1))
-        if downsample:
-            modified_class_0, modified_y_0 = resample(class_0, y_0, n_samples=min_number)
-        else:
-            modified_class_0, modified_y_0 = class_0, y_0
-            
-        train, test, train_y, test_y = train_test_split(modified_class_0+class_1, modified_y_0+y_1, test_size=train_to_test_ratio, shuffle=True, stratify=modified_y_0+y_1, random_state=seed)
-
-        return train, test, feature_list
-
-    else: 
-
-        test, _ = pkl.load(open(transfer_path, "rb"))
-
-        return scenegraphs_sequence, test, feature_list 
 
 class DynKGTrainer:
 
-    def __init__(self, args):
-        self.config = Config(args)
-        self.args = args
+    def __init__(self, config):
+        self.config = config
+        self.args = config.args
         np.random.seed(self.config.seed)
         torch.manual_seed(self.config.seed)
-
-        if not self.config.cache_path.exists():
-            raise Exception("The cache file does not exist.")    
-
-        self.training_data, self.testing_data, self.feature_list = build_scenegraph_dataset(self.config.cache_path, self.config.split_ratio, downsample=self.config.downsample, seed=self.config.seed, transfer_path=self.config.transfer_path)
-        self.training_labels = [data['label'] for data in self.training_data]
-        self.testing_labels = [data['label'] for data in self.testing_data]
-        self.class_weights = torch.from_numpy(compute_class_weight('balanced', np.unique(self.training_labels), self.training_labels))
-        print("Number of Sequences Included: ", len(self.training_data))
-        print("Num Labels in Each Class: " + str(np.unique(self.training_labels, return_counts=True)[1]) + ", Class Weights: " + str(self.class_weights))
 
         self.summary_writer = SummaryWriter()
 
         self.best_val_loss = 99999
         self.best_epoch = 0
         self.best_val_acc = 0
+        self.best_val_auc = 0
         self.best_val_confusion = []
+        self.best_val_f1 = 0
+        self.best_val_mcc = -1.0
+        self.best_val_acc_balanced = 0
+        self.unique_clips = {}
+        self.log = False
+
+        if not self.config.cache_path.exists():
+            raise Exception("The cache file does not exist.")    
+        
+    def init_dataset(self):
+        self.training_data, self.testing_data, self.feature_list = self.build_scenegraph_dataset(self.config.cache_path, self.config.split_ratio, downsample=self.config.downsample, seed=self.config.seed, transfer_path=self.config.transfer_path)
+        self.training_labels = [data['label'] for data in self.training_data]
+        self.testing_labels = [data['label'] for data in self.testing_data]
+        self.class_weights = torch.from_numpy(compute_class_weight('balanced', np.unique(self.training_labels), self.training_labels))
+        print("Number of Sequences Included: ", len(self.training_data))
+        print("Num Labels in Each Class: " + str(np.unique(self.training_labels, return_counts=True)[1]) + ", Class Weights: " + str(self.class_weights))
+    
+    def build_scenegraph_dataset(self, cache_path, train_to_test_ratio=0.3, downsample=False, seed=0, transfer_path=None):
+        '''
+            scenegraphs_sequence (gnn dataset):
+                List of scenegraph data structures for evey clip
+                Keys: {'sequence', 'label', 'folder_name', 'category'}
+            feature_list:
+                FILL IN DESCRIPTION HERE!
+        '''
+        dataset_file = open(cache_path, "rb")
+        scenegraphs_sequence, feature_list = pkl.load(dataset_file)
+
+        # Store driving categories and their frequencies
+        self.unique_clips['all'] = 0
+        for scenegraph in scenegraphs_sequence:
+            self.unique_clips['all'] += 1
+            if 'category' in scenegraph:
+                category = scenegraph['category']
+                if category in self.unique_clips:
+                    self.unique_clips[category] += 1
+                else:
+                    self.unique_clips[category] = 1
+            else:
+                scenegraph['category'] = 'all'
+                print('no category')
+        print('Total dataset breakdown: {}'.format(self.unique_clips))        
+
+        if transfer_path == None:
+            class_0 = []
+            class_1 = []
+
+            for g in scenegraphs_sequence:
+                if g['label'] == 0:
+                    class_0.append(g)
+                elif g['label'] == 1:
+                    class_1.append(g)
+                
+            y_0 = [0]*len(class_0)
+            y_1 = [1]*len(class_1)
+
+            min_number = min(len(class_0), len(class_1))
+            if downsample:
+                modified_class_0, modified_y_0 = resample(class_0, y_0, n_samples=min_number)
+            else:
+                modified_class_0, modified_y_0 = class_0, y_0
+                
+            train, test, train_y, test_y = train_test_split(modified_class_0+class_1, modified_y_0+y_1, test_size=train_to_test_ratio, shuffle=True, stratify=modified_y_0+y_1, random_state=seed)
+            return train, test, feature_list
+        else: 
+            test, _ = pkl.load(open(transfer_path, "rb"))
+            return scenegraphs_sequence, test, feature_list 
 
     def build_model(self):
         self.config.num_features = len(self.feature_list)
@@ -144,36 +125,31 @@ class DynKGTrainer:
             self.loss_func = nn.CrossEntropyLoss()
         else:    
            self.loss_func = nn.CrossEntropyLoss(weight=self.class_weights.float().to(self.config.device))
+           
+        self.config.wandb.watch(self.model, log="all")
 
     def train(self):
-        
         tqdm_bar = tqdm(range(self.config.epochs))
-
         for epoch_idx in tqdm_bar: # iterate through epoch   
             acc_loss_train = 0
-            
-            self.sequence_loader = DataListLoader(self.training_data, batch_size=self.config.batch_size)
-
+            self.sequence_loader = DataListLoader(self.training_data, batch_size=self.config.batch_size, shuffle=True)
+            # TODO: Condense into one for loop
             for data_list in self.sequence_loader: # iterate through scenegraphs
-                self.model.train()
-                self.optimizer.zero_grad()
-                
                 labels = torch.empty(0).long().to(self.config.device)
                 outputs = torch.empty(0,2).to(self.config.device)
-                for sequence in data_list: # iterate through sequences
+                self.model.train()
+                self.optimizer.zero_grad()
 
+                for sequence in data_list: # iterate through sequences
                     data, label = sequence['sequence'], sequence['label']
                     graph_list = [Data(x=g['node_features'], edge_index=g['edge_index'], edge_attr=g['edge_attr']) for g in data]
-                
                     # data is a sequence that consists of serveral graphs 
                     self.train_loader = DataLoader(graph_list, batch_size=len(graph_list))
                     sequence = next(iter(self.train_loader)).to(self.config.device)
-
                     output, _ = self.model.forward(sequence.x, sequence.edge_index, sequence.edge_attr, sequence.batch)
                     outputs = torch.cat([outputs, output.view(-1, 2)], dim=0)
                     labels  = torch.cat([labels, torch.LongTensor([label]).to(self.config.device)], dim=0)
-                
-
+                # import pdb; pdb.set_trace()
                 loss_train = self.loss_func(outputs, labels)
                 loss_train.backward()
                 acc_loss_train += loss_train.detach().cpu().item() * len(data_list)
@@ -200,33 +176,41 @@ class DynKGTrainer:
                 self.summary_writer.add_scalar('Recall/test', metrics['test']['recall'], epoch_idx)
                 self.summary_writer.add_scalar('Auc/test', metrics['test']['auc'], epoch_idx)
 
-    def inference(self, testing_data, testing_labels):
-        labels = []
-        outputs = []
+    def inference(self, X, y):
+        labels = torch.LongTensor().to(self.config.device)
+        outputs = torch.FloatTensor().to(self.config.device)
+        # Dictionary storing (output, label) pair for all driving categories
+        categories = dict.fromkeys(self.unique_clips)
+        for key, val in categories.items():
+            categories[key] = {'outputs': outputs, 'labels': labels}
         acc_loss_test = 0
         folder_names = []
         attns_weights = []
         node_attns = []
+        inference_time = 0
 
         with torch.no_grad():
-            for i in range(len(testing_data)): # iterate through scenegraphs
-                data, label = testing_data[i]['sequence'], testing_labels[i]
-                
+            for i in range(len(X)): # iterate through scenegraphs
+                data, label, category = X[i]['sequence'], y[i], X[i]['category']
                 data_list = [Data(x=g['node_features'], edge_index=g['edge_index'], edge_attr=g['edge_attr']) for g in data]
-
                 self.test_loader = DataLoader(data_list, batch_size=len(data_list))
                 sequence = next(iter(self.test_loader)).to(self.config.device)
-
                 self.model.eval()
-                output, attns = self.model.forward(sequence.x, sequence.edge_index, sequence.edge_attr, sequence.batch)
-                
-                loss_test = self.loss_func(output.view(-1, 2), torch.LongTensor([label]).to(self.config.device))
-                
-                acc_loss_test += loss_test.detach().cpu().item()
 
-                outputs.append(output.detach().cpu().numpy().tolist())
-                labels.append(label)
-                folder_names.append(testing_data[i]['folder_name'])
+                #start = torch.cuda.Event(enable_timing=True)
+                #end =  torch.cuda.Event(enable_timing=True)
+                #start.record()
+                output, attns = self.model.forward(sequence.x, sequence.edge_index, sequence.edge_attr, sequence.batch)
+                #end.record()
+                #torch.cuda.synchronize()
+                inference_time += 0#start.elapsed_time(end)
+                loss_test = self.loss_func(output.view(-1, 2), torch.LongTensor([label]).to(self.config.device))
+                acc_loss_test += loss_test.detach().cpu().item()
+                label = torch.tensor(label, dtype=torch.long).to(self.config.device)
+                # store output, label statistics
+                self.update_categorical_outputs(categories, output, label, category)
+                
+                folder_names.append(X[i]['folder_name'])
                 if 'lstm_attn_weights' in attns:
                     attns_weights.append(attns['lstm_attn_weights'].squeeze().detach().cpu().numpy().tolist())
                 if 'pool_score' in attns:
@@ -236,63 +220,131 @@ class DynKGTrainer:
                     node_attn["pool_batch"] = attns['batch'].detach().cpu().numpy().tolist()
                     node_attn["pool_score"] = attns['pool_score'].detach().cpu().numpy().tolist()
                     node_attns.append(node_attn)
+        
+        sum_seq_len = 0
+        num_risky_sequences = 0
+        sequences = len(categories['all']['labels'])
+        for indices in range(sequences):
+            seq_output = categories['all']['outputs'][indices]
+            label = categories['all']['labels'][indices]
+            pred = torch.argmax(seq_output)        
+            # risky clip
+            if label == 1:
+                num_risky_sequences += 1
+                sum_seq_len += seq_output.shape[0]
 
-        return outputs, labels, folder_names, acc_loss_test/len(testing_data), attns_weights, node_attns
+        avg_risky_seq_len = sum_seq_len / num_risky_sequences 
+
+        return  categories, \
+                folder_names, \
+                acc_loss_test/len(X), \
+                avg_risky_seq_len, \
+                inference_time, \
+                attns_weights, \
+                node_attns
     
     def evaluate(self, current_epoch=None):
         metrics = {}
+        categories_train, \
+        folder_names_train, \
+        acc_loss_train, \
+        train_avg_seq_len, \
+        train_inference_time, \
+        attns_train, \
+        node_attns_train = self.inference(self.training_data, self.training_labels)
 
-        outputs_train, labels_train, folder_names_train, acc_loss_train, attns_train, node_attns_train = self.inference(self.training_data, self.training_labels)
-        metrics['train'] = get_metrics(outputs_train, labels_train)
-        metrics['train']['loss'] = acc_loss_train
-
-        outputs_test, labels_test, folder_names_test, acc_loss_test, attns_test, node_attns_test = self.inference(self.testing_data, self.testing_labels)
-        metrics['test'] = get_metrics(outputs_test, labels_test)
-        metrics['test']['loss'] = acc_loss_test
-
-        print("\ntrain loss: " + str(acc_loss_train) + ", acc:", metrics['train']['acc'], metrics['train']['confusion'], metrics['train']['auc'], \
-              "\ntest loss: " +  str(acc_loss_test) + ", acc:",  metrics['test']['acc'],  metrics['test']['confusion'], metrics['test']['auc'])
-
-        #automatically save the model and metrics with the lowest validation loss
-        if acc_loss_test < self.best_val_loss:
-            self.best_val_loss = acc_loss_test
-            self.best_epoch = current_epoch if current_epoch != None else self.config.epochs
-
-            best_metrics = {}
-            best_metrics['args'] = str(self.args)
-            best_metrics['epoch'] = self.best_epoch
-            best_metrics['val loss'] = acc_loss_test
-            best_metrics['val acc'] = metrics['test']['acc']
-            best_metrics['val conf'] = metrics['test']['confusion']
-            best_metrics['val auc'] = metrics['test']['auc']
-            best_metrics['val precision'] = metrics['test']['precision']
-            best_metrics['val recall'] = metrics['test']['recall']
-            best_metrics['train loss'] = acc_loss_train
-            best_metrics['train acc'] = metrics['train']['acc']
-            best_metrics['train conf'] = metrics['train']['confusion'] 
-            best_metrics['train auc'] = metrics['train']['auc']
-            best_metrics['train precision'] = metrics['train']['precision']
-            best_metrics['train recall'] = metrics['train']['recall']
-            
-            
-
-            if not self.config.stats_path.exists():
-                current_stats = pd.DataFrame(best_metrics, index=[0])
-                current_stats.to_csv(str(self.config.stats_path), mode='w+', header=True, index=False, columns=list(best_metrics.keys()))
+         # Collect metrics from all driving categories
+        for category in self.unique_clips.keys():
+            if category == 'all':
+                metrics['train'] = get_metrics(categories_train['all']['outputs'], categories_train['all']['labels'])
+                metrics['train']['loss'] = acc_loss_train
+                metrics['train']['avg_seq_len'] = train_avg_seq_len
             else:
-                best_stats = pd.read_csv(str(self.config.stats_path), header=0)
-                best_stats = best_stats.reset_index(drop=True)
-                replace_row = best_stats.loc[best_stats.args == str(self.args)]
-                if(replace_row.empty):
-                    current_stats = pd.DataFrame(best_metrics, index=[0])
-                    current_stats.to_csv(str(self.config.stats_path), mode='a', header=False, index=False, columns=list(best_metrics.keys()))
-                else:
-                    best_stats.iloc[replace_row.index] = pd.DataFrame(best_metrics, index=replace_row.index)
-                    best_stats.to_csv(str(self.config.stats_path), mode='w', header=True,index=False, columns=list(best_metrics.keys()))
+                metrics['train'][category] = get_metrics(categories_train[category]['outputs'], categories_train[category]['labels'])
 
-            self.save_model()
+        categories_test, \
+        folder_names_test, \
+        acc_loss_test, \
+        val_avg_seq_len, \
+        test_inference_time, \
+        attns_test, \
+        node_attns_test = self.inference(self.testing_data, self.testing_labels)
+        
+        # Collect metrics from all driving categories
+        for category in self.unique_clips.keys():
+            if category == 'all':
+                metrics['test'] = get_metrics(categories_test['all']['outputs'], categories_test['all']['labels'])
+                metrics['test']['loss'] = acc_loss_test
+                metrics['test']['avg_seq_len'] = val_avg_seq_len
+                metrics['avg_inf_time'] = (train_inference_time + test_inference_time) / ((len(self.training_labels) + len(self.testing_labels)))
+            else:
+                metrics['test'][category] = get_metrics(categories_test[category]['outputs'], categories_test[category]['labels'])
 
-        return outputs_test, labels_test, metrics, folder_names_train
+        print("\ntrain loss: " + str(acc_loss_train) + ", acc:", metrics['train']['acc'], metrics['train']['confusion'], "mcc:", metrics['train']['mcc'], \
+              "\ntest loss: " +  str(acc_loss_test) + ", acc:",  metrics['test']['acc'],  metrics['test']['confusion'], "mcc:", metrics['test']['mcc'])
+        
+        #automatically save the model and metrics with the lowest validation loss
+        self.update_best_metrics(metrics, current_epoch)
+        metrics['best_epoch'] = self.best_epoch
+        metrics['best_val_loss'] = self.best_val_loss
+        metrics['best_val_acc'] = self.best_val_acc
+        metrics['best_val_auc'] = self.best_val_auc
+        metrics['best_val_conf'] = self.best_val_confusion
+        metrics['best_val_f1'] = self.best_val_f1
+        metrics['best_val_mcc'] = self.best_val_mcc
+        metrics['best_val_acc_balanced'] = self.best_val_acc_balanced
+            
+        self.log2wandb(metrics)
+        # NOTE: update code to support
+        # self.save2csv(metrics) 
+    
+        return categories_train, categories_test, metrics, folder_names_train
+
+    # Utilities
+    def update_categorical_outputs(self, categories, outputs, labels, category):
+        '''
+            Aggregates output, label pairs for every driving category
+            Based on inference setup, only one scenegraph_sequence is updated per call
+        '''
+        if category in categories:
+            categories[category]['outputs'] = torch.cat([categories[category]['outputs'], torch.unsqueeze(outputs, dim=0)], dim=0)
+            categories[category]['labels'] = torch.cat([categories[category]['labels'], torch.unsqueeze(labels, dim=0)], dim=0)
+        # multi category
+        if category != 'all': 
+            category = 'all'
+            categories[category]['outputs'] = torch.cat([categories[category]['outputs'], torch.unsqueeze(outputs, dim=0)], dim=0)
+            categories[category]['labels'] = torch.cat([categories[category]['labels'], torch.unsqueeze(labels, dim=0)], dim=0)
+        
+        # reshape outputs
+        for k, v in categories.items():
+            categories[k]['outputs'] = categories[k]['outputs'].reshape(-1, 2)
+
+    def update_best_metrics(self, metrics, current_epoch):
+        if metrics['test']['loss'] < self.best_val_loss:
+            self.best_val_loss = metrics['test']['loss']
+            self.best_epoch = current_epoch if current_epoch != None else self.config.epochs
+            self.best_val_acc = metrics['test']['acc']
+            self.best_val_auc = metrics['test']['auc']
+            self.best_val_confusion = metrics['test']['confusion']
+            self.best_val_f1 = metrics['test']['f1']
+            self.best_val_mcc = metrics['test']['mcc']
+            self.best_val_acc_balanced = metrics['test']['balanced_acc']
+            #self.save_model()
+
+    def save2csv(self, best_metrics):
+        if not self.config.stats_path.exists():
+            current_stats = pd.DataFrame(best_metrics, index=[0])
+            current_stats.to_csv(str(self.config.stats_path), mode='w+', header=True, index=False, columns=list(best_metrics.keys()))
+        else:
+            best_stats = pd.read_csv(str(self.config.stats_path), header=0)
+            best_stats = best_stats.reset_index(drop=True)
+            replace_row = best_stats.loc[best_stats.args == str(self.args)]
+            if(replace_row.empty):
+                current_stats = pd.DataFrame(best_metrics, index=[0])
+                current_stats.to_csv(str(self.config.stats_path), mode='a', header=False, index=False, columns=list(best_metrics.keys()))
+            else:
+                best_stats.iloc[replace_row.index] = pd.DataFrame(best_metrics, index=replace_row.index)
+                best_stats.to_csv(str(self.config.stats_path), mode='w', header=True,index=False, columns=list(best_metrics.keys()))
 
     def save_model(self):
         """Function to save the model."""
@@ -311,22 +363,16 @@ class DynKGTrainer:
             self.build_model()
             self.model.load_state_dict(torch.load(str(saved_path)))
             self.model.eval()
-
-def get_metrics(outputs, labels):
-    labels_tensor = torch.LongTensor(labels).detach()
-    outputs_tensor = torch.FloatTensor(outputs).detach()
-    preds = outputs_tensor.max(1)[1].type_as(labels_tensor).detach()
-
-    metrics = {}
-    metrics['acc'] = accuracy_score(labels_tensor, preds)
-    metrics['f1'] = f1_score(labels_tensor, preds, average="binary")
-    metrics['confusion'] = str(confusion_matrix(labels_tensor, preds)).replace('\n', ',')
-    metrics['precision'] = precision_score(labels_tensor, preds, average="binary")
-    metrics['recall'] = recall_score(labels_tensor, preds, average="binary")
-    metrics['auc'] = get_auc(outputs_tensor, labels_tensor)
-    metrics['label_distribution'] = str(np.unique(labels_tensor, return_counts=True)[1])
-    
-    return metrics 
+   
+    def log2wandb(self, metrics):
+        '''
+            Log metrics from all driving categories
+        '''
+        for category in self.unique_clips.keys():
+            if category == 'all':
+                log_wandb(self.config.wandb, metrics)
+            else:
+                log_wandb_categories(self.config.wandb, metrics, id=category)
 
 #returns onehot version of labels. can specify n_classes to force onehot size.
 def encode_onehot(labels, n_classes=None):

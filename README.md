@@ -24,13 +24,16 @@ $pip install -r requirements.txt
 
 Since our primary working environment is Windows, we refer to [this solution](https://stackoverflow.com/questions/14372706/visual-studio-cant-build-due-to-rc-exe) to have pycocotools to be installed.
 
-# Usages **brandon fix this.
-To be filled.
+# Usages
+For running the sg-risk-assessment in this repo, you may refer to the following commands:
 - how to run sg_risk_assessment.py
+For running the baseline-risk-assessment in this repo, you may refer to the following commands:
 - how to run baseline_risk_assessment.py
-- what are the expected outputs?
 
-- Information about pretrained coco model: Mask-RCNN pretrained weights can refer to [this link](https://www.dropbox.com/s/n81pagybkj8p5w1/mask_rcnn_coco.h5?dl=0) and move it under [project folder]/pretrained_model (credit to [this repo]([Mask R-CNN implementation by Matterport](https://github.com/matterport/Mask_RCNN)). 
+After running these commands the expected outputs are like:
+```shell
+To be filled. Brandon fix this.
+```
 
 # Citation 
 Please kindly consider citing our paper if you find our work useful for your research

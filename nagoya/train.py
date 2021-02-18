@@ -9,7 +9,6 @@ from sklearn.utils import resample
 from sklearn.model_selection import train_test_split, StratifiedKFold
 from sklearn.utils.class_weight import compute_class_weight
 from core.metrics import *
-from nagoya.gradcam import *
 
 
 class Trainer:
@@ -182,9 +181,6 @@ class Trainer:
             # no cross validation 
             if epoch_idx % self.config.test_step == 0:
                 self.eval_model(epoch_idx)
-
-        if self.config.gradcam:
-            self.perform_grad_cam()
 
     def model_inference(self, X, y, clip_name):
         labels = torch.LongTensor().to(self.config.device)
@@ -445,41 +441,6 @@ class Trainer:
         # reshape outputs
         for k, v in categories.items():
             categories[k]['outputs'] = categories[k]['outputs'].reshape(-1, 2)
-        
-    # GradCam
-    def perform_grad_cam(self):
-        train_data = self.training_x[: self.config.batch_size]          if self.config.batch_size > len(self.training_x) else self.training_x
-        train_label = self.training_y[: self.config.batch_size]         if self.config.batch_size > len(self.training_y) else self.training_y
-        train_name = self.training_clip_name[: self.config.batch_size]  if self.config.batch_size > len(self.training_clip_name) else self.training_clip_name
-        test_data = self.testing_x[: self.config.batch_size]            if self.config.batch_size > len(self.testing_x) else self.testing_x
-        test_label = self.testing_y[: self.config.batch_size]           if self.config.batch_size > len(self.testing_y) else self.testing_y
-        test_name = self.testing_clip_name[: self.config.batch_size]    if self.config.batch_size > len(self.testing_clip_name) else self.testing_clip_name
-        
-        # preprocess input data
-        train_pre_data = self.preprocess_batch(train_data)
-        test_pre_data = self.preprocess_batch(test_data)
-
-        # create grad_cam module (based on CNN_LSTM)
-        grad_cam = GradCam(model=self.model, feature_module=self.model.c2, target_layer_names=["c2"], cfg=self.config)
-
-        Path("grad_cam").mkdir(exist_ok=True)
-        self.run_grad_cam(grad_cam, train_pre_data, train_data, train_label, train_name, 'train')
-        self.run_grad_cam(grad_cam, test_pre_data, test_data, test_label, test_name, 'test')
-    
-    def run_grad_cam(self, grad_cam, pre_data, data, label, clip_name, mode):
-        folder = 'grad_cam'+'/'+mode
-        Path(folder).mkdir(exist_ok=True)
-        target_category = 1 # gradients with respect to risky class
-        for i in range(len(pre_data)):
-            grayscale_cam = grad_cam(pre_data[i].unsqueeze(0), target_category)
-            for f in range(self.model.frames):
-                gray_cam = cv2.resize(grayscale_cam[f], (grayscale_cam.shape[-2], grayscale_cam.shape[-1]))
-                img = np.moveaxis(data[i][f], 0, -1)
-                cam = show_cam_on_image(img, gray_cam)
-                fname = (clip_name[i]+'_'+str(i)+str(f)+'.jpg')
-                fname = folder+'/'+fname
-                cv2.imwrite(fname, cam)
-                print('Writing {}'.format(fname))
    
     def preprocess_batch(self, x):
         '''

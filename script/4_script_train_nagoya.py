@@ -41,7 +41,6 @@ class Config:
 		self.parser.add_argument('--seed', type=int, default=0, help="Seed for splitting the dataset.")
 		self.parser.add_argument('--test_step', type=int, default=5, help='Number of training epochs before testing the model.')
 		self.parser.add_argument('--device', type=str, default="cuda", help='The device on which models are run, options: [cuda, cpu].')
-		self.parser.add_argument('--gradcam', type=lambda x: (str(x).lower() == 'true'), default=False, help='Compute gradcam over a single batch')
 
 		# Hyperparameters
 		self.parser.add_argument('--epochs', type=int, default=200, help="Number of epochs to train")
@@ -160,6 +159,7 @@ if __name__ == '__main__':
 
 	if config.load_pkl:
 		dataset = load_pickle(Path(config.pkl_path).resolve())
+		import pdb; pdb.set_trace()
 	else:
 		if config.mask_rcnn: dataset = run_maskrcnn(config, root_folder_path, raw_image_path);
 		else: dataset = load_dataset(raw_image_path, raw_image_path, dataset_type="raw", config=config);

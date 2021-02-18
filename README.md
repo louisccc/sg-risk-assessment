@@ -1,4 +1,4 @@
-# av_av
+# Scene-graph augmented data-driven risk assessment of autonomous vehicle decisions
 This project is about a collection of approaches that tries to augment autonomous vehicle's perception with scene graphs.
 
 We primarily use [CARLA](https://github.com/carla-simulator/carla) 0.9.8 which is an open-source autonomous car driving simulator. Besides, we also utilized the [scenario_runner](https://github.com/carla-simulator/scenario_runner) which was designed for CARLA challenge event.

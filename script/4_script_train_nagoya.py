@@ -18,6 +18,7 @@ from nagoya.train import Trainer
 # from nagoya.Mask_RCNN.mask_rcnn.detect_objects import DetectObjects
 
 PROJECT_NAME = "Fill me with wandb id"
+PROJECT_NAME = "av-risk"
 
 class Config:
 
@@ -115,7 +116,6 @@ def load_pickle(pkl_path: Path):
 		Read dataset from pickle file.
 	'''
 	dataset = DataSet().loader(str(pkl_path))
-	import pdb; pdb.set_trace()
 	return dataset
 
 def reshape_dataset(dataset):
@@ -159,7 +159,6 @@ if __name__ == '__main__':
 
 	if config.load_pkl:
 		dataset = load_pickle(Path(config.pkl_path).resolve())
-		import pdb; pdb.set_trace()
 	else:
 		if config.mask_rcnn: dataset = run_maskrcnn(config, root_folder_path, raw_image_path);
 		else: dataset = load_dataset(raw_image_path, raw_image_path, dataset_type="raw", config=config);

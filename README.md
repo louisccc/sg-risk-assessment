@@ -10,19 +10,24 @@ The architecture of this repository is as below:
 - **sg_risk_assessment.py**: the script that triggers our scene-graph based approach. 
 - **baseline_risk_assessment.py**: the script that triggers our baseline algorithm.
 
-# To get started **brandon fix this.
-We recommend our potential users to use [Anaconda](https://www.anaconda.com/) as the primary virtual environment. 
+# To Get Started
+We recommend our potential users to use [Anaconda](https://www.anaconda.com/) as the primary virtual environment. The requirements to run through our repo are as follows,
+- python >= 3.6 
+- torch == 1.6.0
+- torch_teometric == 1.6.1
 
+Our recommended command sequence is as follows:
 ```shell
-$conda install python=3.6.8
-$conda install -c anaconda cython=0.29.10
-$conda install -c aaronzs tensorflow-gpu
-$conda install git
-$pip install git+https://github.com/philferriere/cocoapi.git#subdirectory=PythonAPI
-$pip install -r requirements.txt
+# conda create --name sg_risk_assessment python=3.6
+$ conda install pytorch==1.6.0 torchvision==0.7.0 cudatoolkit=10.1 -c pytorch
+$ python -m pip install --no-index torch-scatter -f https://pytorch-geometric.com/whl/torch-1.6.0+cu101.html
+$ python -m pip install --no-index torch-sparse -f https://pytorch-geometric.com/whl/torch-1.6.0+cu101.html
+$ python -m pip install --no-index torch-cluster -f https://pytorch-geometric.com/whl/torch-1.6.0+cu101.html
+$ python -m pip install --no-index torch-spline-conv -f https://pytorch-geometric.com/whl/torch-1.6.0+cu101.html
+$ python -m pip install torch-geometric==1.6.1
+$ python -m pip install -r requirements.txt
 ```	
-
-Since our primary working environment is Windows, we refer to [this solution](https://stackoverflow.com/questions/14372706/visual-studio-cant-build-due-to-rc-exe) to have pycocotools to be installed.
+This set of commands assumes you to have cuda10.1 in your local. Please refer to the installation guides of [torch](https://pytorch.org/) and [pytorch_geometric](https://pytorch-geometric.readthedocs.io/en/latest/notes/installation.html) if you have different environment settings.
 
 # Usages
 For running the sg-risk-assessment in this repo, you may refer to the following commands:
@@ -39,7 +44,7 @@ For running the baseline-risk-assessment in this repo, you may refer to the foll
 
 After running these commands the expected outputs are like:
 ```shell
-To be filled. Brandon fix this.
+To be filled.
 ```
 
 # Citation 

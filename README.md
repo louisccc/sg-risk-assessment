@@ -33,6 +33,8 @@ $pip install -r requirements.txt
 
 Since our primary working environment is Windows, we refer to [this solution](https://stackoverflow.com/questions/14372706/visual-studio-cant-build-due-to-rc-exe) to have pycocotools to be installed.
 
+# Usages
+To be filled.
 
 # Citation 
 Please kindly consider citing our paper if you find our work useful for your research

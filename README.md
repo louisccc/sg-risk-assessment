@@ -28,6 +28,9 @@ Since our primary working environment is Windows, we refer to [this solution](ht
 
 # Usages **brandon fix this.
 To be filled.
+- how to run sg_risk_assessment.py
+- how to run baseline_risk_assessment.py
+- what are the expected outputs?
 
 - Information about pretrained coco model: Mask-RCNN pretrained weights can refer to [this link](https://www.dropbox.com/s/n81pagybkj8p5w1/mask_rcnn_coco.h5?dl=0) and move it under [project folder]/pretrained_model (credit to [this repo]([Mask R-CNN implementation by Matterport](https://github.com/matterport/Mask_RCNN)). 
 

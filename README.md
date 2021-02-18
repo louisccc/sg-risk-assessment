@@ -9,9 +9,8 @@ The architecture of this repository is as below:
 - **sg-risk-assessment/**: this folder collects all the core model/trainer/utilties used for our scene-graph based approach. 
 - **baseline-risk-assessment/**: this folder collects all the related source file that our baseline method requires
   - Mask_RCNN is the module that handle object detection and coloring on the image sequence.
-- **sg_risk_assessment.py**: the scripts that triggers our algorithm. 
-- **baseline_risk_assessment.py**: the scripts that triggers our baseline algorithm. 
-
+- **sg_risk_assessment.py**: the script that triggers our scene-graph based approach. 
+- **baseline_risk_assessment.py**: the script that triggers our baseline algorithm.
 
 # To get started **brandon fix this.
 We recommend our potential users to use [Anaconda](https://www.anaconda.com/) as the primary virtual environment. 

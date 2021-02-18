@@ -27,7 +27,7 @@ Since our primary working environment is Windows, we refer to [this solution](ht
 # Usages
 For running the sg-risk-assessment in this repo, you may refer to the following commands:
 - how to run sg_risk_assessment.py
-- 
+
 For running the baseline-risk-assessment in this repo, you may refer to the following commands:
 - how to run baseline_risk_assessment.py
 

@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 import pdb
 import os
-import detectron2.utils.visualizer
+
 import sys
-from core.relation_extractor import ActorType, Relations, RELATION_COLORS
-from core.scene_graph import SceneGraph
-from core.image_scenegraph import RealSceneGraph
+from relation_extractor import ActorType, Relations, RELATION_COLORS
+from scene_graph import SceneGraph
+from image_scenegraph import RealSceneGraph
+import detectron2.utils.visualizer
 from detectron2.data import MetadataCatalog
 from detectron2.config import get_cfg
 from detectron2.engine import DefaultPredictor

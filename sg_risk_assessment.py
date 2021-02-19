@@ -4,11 +4,7 @@ from argparse import ArgumentParser
 from pathlib import Path
 import wandb
 
-import check_gpu as cg
-os.environ['CUDA_VISIBLE_DEVICES'] = cg.get_free_gpu()
-sys.path.append('../core')
-sys.path.append('../')
-from core.dynkg_trainer import *
+from sg_risk_assessment.dynkg_trainer import *
 
 PROJECT_NAME = "Fill me with wandb id"
 

@@ -8,7 +8,7 @@ import torch.optim as optim
 from sklearn.utils import resample
 from sklearn.model_selection import train_test_split, StratifiedKFold
 from sklearn.utils.class_weight import compute_class_weight
-from core.metrics import *
+from metrics import *
 
 
 class Trainer:

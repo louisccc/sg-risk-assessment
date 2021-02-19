@@ -13,7 +13,7 @@ import torch
 import pandas as pd
 from glob import glob
 sys.path.append(os.path.dirname(sys.path[0]))
-from core.scene_graph import SceneGraph
+from scene_graph import SceneGraph
 
 
 class CarlaSceneGraphSequenceGenerator:

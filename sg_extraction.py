@@ -2,8 +2,6 @@ import sys, os
 from pathlib import Path
 from argparse import ArgumentParser
 
-sys.path.append(os.path.dirname(sys.path[0]))
-
 
 class Config:
     def __init__(self, args):
@@ -29,13 +27,13 @@ if __name__ == '__main__':
     generator = None
 
     if cfg.platform == "carla":
-        from core.carla_seq_generator import CarlaSceneGraphSequenceGenerator
+        from sg_risk_assessment.carla_seq_generator import CarlaSceneGraphSequenceGenerator
         generator = CarlaSceneGraphSequenceGenerator(cfg.framenum)
     elif cfg.platform == "image":
-        from core.real_seq_generator import ImageSceneGraphSequenceGenerator
+        from sg_risk_assessment.real_seq_generator import ImageSceneGraphSequenceGenerator
         generator = ImageSceneGraphSequenceGenerator(cfg.framenum)
     elif cfg.platform == "honda":
-        from core.real_seq_generator import ImageSceneGraphSequenceGenerator
+        from sg_risk_assessment.real_seq_generator import ImageSceneGraphSequenceGenerator
         generator = ImageSceneGraphSequenceGenerator(cfg.framenum, platform='honda')
 
     if cfg.visualize:

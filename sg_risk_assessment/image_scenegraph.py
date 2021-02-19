@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from core.relation_extractor import ActorType, Relations, RELATION_COLORS
+from relation_extractor import ActorType, Relations, RELATION_COLORS
 from networkx.drawing.nx_agraph import to_agraph
 import matplotlib.pyplot as plt
 import networkx as nx

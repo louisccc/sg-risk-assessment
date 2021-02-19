@@ -20,9 +20,9 @@ from matplotlib import pyplot as plt
 
 # sys.path.append(os.path.dirname(sys.path[0]))
 
-from core.relation_extractor import Relations
-from core.mrgcn import *
-from core.metrics import *
+from relation_extractor import Relations
+from mrgcn import *
+from metrics import *
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 

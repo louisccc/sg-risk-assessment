@@ -4,16 +4,12 @@ import os
 import numpy as np
 from tqdm import tqdm
 import pandas as pd
-# FIXME: Not working... ModuleNotFoundError: No module named 'prompt_toolkit.formatted_text'
-# from Mask_RCNN.mask_rcnn.detect_objects import DetectObjects
 from pathlib import Path
 from collections import Counter
 
 class DataSet:
 
     def __init__(self):
-        # TODO: clean these up, some are not used
-        # Better to just refactor the entire thing...
         self.dataset = {}
         self.video = []
         self.foldernames = []

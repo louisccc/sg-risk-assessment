@@ -111,3 +111,14 @@ def log_wandb_categories(wb, metrics, id):
         'train_mcc'+"_"+id: metrics['train'][id]['mcc'],
         'val_mcc'+"_"+id: metrics['test'][id]['mcc'],
 })
+
+#~~~~~~~~~~Scoring Metrics~~~~~~~~~~
+#note: these scoring metrics only work properly for binary classification use cases (graph classification, dyngraph classification) 
+def get_auc(outputs, labels):
+    try:    
+        labels = encode_onehot(labels.numpy().tolist(), 2) #binary labels
+        auc = roc_auc_score(labels, outputs.numpy(), average="micro")
+    except ValueError as err: 
+        print("error calculating AUC: ", err)
+        auc = 0.0
+    return auc

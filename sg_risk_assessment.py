@@ -57,7 +57,7 @@ class Config:
             self.__dict__[arg_name] = getattr(args_parsed, arg_name)
             self.wandb_config[arg_name] = getattr(args_parsed, arg_name)
             
-        self.cache_path = Path(self.cache_path).resolve()
+        self.pkl_path = Path(self.pkl_path).resolve()
         if self.transfer_path != "":
             self.transfer_path = Path(self.transfer_path).resolve()
         else:
@@ -83,7 +83,7 @@ def train_dynamic_kg(config, iterations=1):
         metrics.append(metric)
 
     # Store the prediction results. 
-    store_path = trainer.config.cache_path.parent
+    store_path = trainer.config.pkl_path.parent
     outputs_pd = pd.DataFrame(outputs)
     labels_pd  = pd.DataFrame(labels)
     

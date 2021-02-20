@@ -33,7 +33,7 @@ This set of commands assumes you to have cuda10.1 in your local. Please refer to
 # Usages
 For running the sg-risk-assessment in this repo, you may refer to the following commands:
 ```shell
-  $ python sg_risk_assessment.py --load_pkl True --pkl_path risk-assessment/scenegraph/synthetic/271_dataset.pkl
+  $ python sg_risk_assessment.py --pkl_path risk-assessment/scenegraph/synthetic/271_dataset.pkl
 
   # For tuning hyperparameters view the config class of sg_risk_assessment.py
 ```

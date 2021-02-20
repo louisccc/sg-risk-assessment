@@ -46,18 +46,18 @@ class DynKGTrainer:
         self.unique_clips = {}
         self.log = False
 
-        if not self.config.cache_path.exists():
+        if not self.config.pkl_path.exists():
             raise Exception("The cache file does not exist.")    
         
     def init_dataset(self):
-        self.training_data, self.testing_data, self.feature_list = self.build_scenegraph_dataset(self.config.cache_path, self.config.split_ratio, downsample=self.config.downsample, seed=self.config.seed, transfer_path=self.config.transfer_path)
+        self.training_data, self.testing_data, self.feature_list = self.build_scenegraph_dataset(self.config.pkl_path, self.config.split_ratio, downsample=self.config.downsample, seed=self.config.seed, transfer_path=self.config.transfer_path)
         self.training_labels = [data['label'] for data in self.training_data]
         self.testing_labels = [data['label'] for data in self.testing_data]
         self.class_weights = torch.from_numpy(compute_class_weight('balanced', np.unique(self.training_labels), self.training_labels))
         print("Number of Sequences Included: ", len(self.training_data))
         print("Num Labels in Each Class: " + str(np.unique(self.training_labels, return_counts=True)[1]) + ", Class Weights: " + str(self.class_weights))
     
-    def build_scenegraph_dataset(self, cache_path, train_to_test_ratio=0.3, downsample=False, seed=0, transfer_path=None):
+    def build_scenegraph_dataset(self, pkl_path, train_to_test_ratio=0.3, downsample=False, seed=0, transfer_path=None):
         '''
             scenegraphs_sequence (gnn dataset):
                 List of scenegraph data structures for evey clip
@@ -65,7 +65,7 @@ class DynKGTrainer:
             feature_list:
                 FILL IN DESCRIPTION HERE!
         '''
-        dataset_file = open(cache_path, "rb")
+        dataset_file = open(pkl_path, "rb")
         scenegraphs_sequence, feature_list = pkl.load(dataset_file)
 
         # Store driving categories and their frequencies

@@ -12,7 +12,7 @@ class Config:
     '''Argument Parser for script to train scenegraphs.'''
     def __init__(self, args):
         self.parser = ArgumentParser(description='The parameters for training the scene graph using GCN.')
-        self.parser.add_argument('--cache_path', type=str, default="../script/image_dataset.pkl", help="Path to the cache file.")
+        self.parser.add_argument('--pkl_path', type=str, default="risk-assessment/scenegraph/synthetic/271_dataset.pkl", help="Path to the cache file.")
         self.parser.add_argument('--transfer_path', type=str, default="", help="Path to the transfer file.")
         self.parser.add_argument('--model_load_path', type=str, default="./model/model_best_val_loss_.vec.pt", help="Path to load cached model file.")
         self.parser.add_argument('--model_save_path', type=str, default="./model/model_best_val_loss_.vec.pt", help="Path to save model file.")

@@ -12,8 +12,7 @@ import json
 import torch
 import pandas as pd
 from glob import glob
-sys.path.append(os.path.dirname(sys.path[0]))
-from scene_graph import SceneGraph
+from sg_risk_assessment.scene_graph import SceneGraph
 
 
 class CarlaSceneGraphSequenceGenerator:
@@ -54,7 +53,7 @@ class CarlaSceneGraphSequenceGenerator:
 
     def load(self, input_path):
         all_video_clip_dirs = [x for x in input_path.iterdir() if x.is_dir()]
-        all_video_clip_dirs = sorted(all_video_clip_dirs, key=lambda x: int(x.stem))
+        all_video_clip_dirs = sorted(all_video_clip_dirs, key=lambda x: int(x.stem.split('_')[0]))
         for path in tqdm(all_video_clip_dirs):
             scenegraphs = {} 
 
@@ -97,6 +96,12 @@ class CarlaSceneGraphSequenceGenerator:
                         print(e)
                         traceback.print_exc()
             
+            ignore_path = (path/"ignore.txt").resolve()
+            if ignore_path.exists():
+                with open(str(path/"ignore.txt"), 'r') as label_f:
+                    ignore_label = int(label_f.read())
+                    if ignore_label: continue;
+                    
             label_path = (path/"label.txt").resolve()
 
             if label_path.exists():
@@ -114,6 +119,7 @@ class CarlaSceneGraphSequenceGenerator:
                 scenegraphs_dict['sequence'] = self.process_graph_sequences(subsampled_scenegraphs, frame_numbers, folder_name=path.name)
                 scenegraphs_dict['label'] = risk_label
                 scenegraphs_dict['folder_name'] = path.name
+                scenegraphs_dict['category'] = path.name.split('_')[-1]
 
                 if self.visualize and (self.clip_ids == None or int(path.stem) in self.clip_ids):
                     vis_folder_name = path / "carla_visualize"

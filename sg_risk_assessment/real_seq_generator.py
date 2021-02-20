@@ -1,11 +1,8 @@
 # -*- coding: utf-8 -*-
-import pdb
-import os
-
-import sys
-from relation_extractor import ActorType, Relations, RELATION_COLORS
-from scene_graph import SceneGraph
-from image_scenegraph import RealSceneGraph
+import os, sys
+from sg_risk_assessment.relation_extractor import ActorType, Relations, RELATION_COLORS
+from sg_risk_assessment.scene_graph import SceneGraph
+from sg_risk_assessment.image_scenegraph import RealSceneGraph
 import detectron2.utils.visualizer
 from detectron2.data import MetadataCatalog
 from detectron2.config import get_cfg
@@ -30,10 +27,8 @@ import numpy as np
 import detectron2
 from detectron2.utils.logger import setup_logger
 setup_logger()
-# import some common libraries
 matplotlib.use("Agg")
-# import some common detectron2 utilities
-sys.path.append(os.path.dirname(sys.path[0]))
+
 
 
 def create_text_labels_with_idx(classes, scores, class_names):
@@ -112,10 +107,7 @@ class ImageSceneGraphSequenceGenerator:
 
     def load(self, input_path):
         all_video_clip_dirs = [x for x in input_path.iterdir() if x.is_dir()]
-
-        # (Honda dataset) create raw_images directory and move *.jpg into that directory
-        if self.platfrom == 'honda':
-            self.format_folders(all_video_clip_dirs)
+        all_video_clip_dirs = sorted(all_video_clip_dirs, key=lambda x: int(x.stem.split('_')[0]))
 
         for path in tqdm(all_video_clip_dirs):
             scenegraphs = {}
@@ -138,6 +130,12 @@ class ImageSceneGraphSequenceGenerator:
                     raw_image_path), bounding_boxes, coco_class_names=self.coco_class_names, platform=self.platfrom)
                 scenegraphs[frame] = scenegraph
 
+            ignore_path = (path/"ignore.txt").resolve()
+            if ignore_path.exists():
+                with open(str(path/"ignore.txt"), 'r') as label_f:
+                    ignore_label = int(label_f.read())
+                    if ignore_label: continue;
+            
             label_path = (path/"label.txt").resolve()
 
             if label_path.exists():
@@ -157,6 +155,7 @@ class ImageSceneGraphSequenceGenerator:
                     subsampled_scenegraphs, frame_numbers, folder_name=path.name)
                 scenegraphs_dict['label'] = risk_label
                 scenegraphs_dict['folder_name'] = path.name
+                scenegraphs_dict['category'] = path.name.split('_')[-1]
 
                 if self.visualize and (self.clip_ids == None or int(path.stem) in self.clip_ids):
                     vis_folder_name = path / "image_visualize"
@@ -286,15 +285,3 @@ class ImageSceneGraphSequenceGenerator:
         edge_attr = torch.LongTensor(edge_attr)
 
         return edge_index, edge_attr
-
-    def format_folders(self, all_video_clip_dirs):
-        print('Begin formatting folders for Honda Dataset')
-        for path in tqdm(all_video_clip_dirs):
-            raw_path = path / "raw_images"
-            raw_path.mkdir(exist_ok=True)
-            honda_clips = [x for x in path.iterdir() if x.is_file()]
-            for clip in honda_clips:
-                if (clip.name.endswith(".jpg") or clip.name.endswith(".png")):
-                    new_path = raw_path / clip.name
-                    clip.replace(new_path)
-        print('Finish formatting folders for Honda Dataset')

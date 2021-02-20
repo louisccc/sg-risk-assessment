@@ -2,7 +2,7 @@ import matplotlib, math, itertools
 matplotlib.use("Agg")
 import networkx as nx
 from networkx.drawing.nx_agraph import to_agraph
-from relation_extractor import Relations, ActorType, RelationExtractor, RELATION_COLORS
+from sg_risk_assessment.relation_extractor import Relations, ActorType, RelationExtractor, RELATION_COLORS
 
 
 LANE_THRESHOLD = 6 #feet. if object's center is more than this distance away from ego's center, build left or right lane relation

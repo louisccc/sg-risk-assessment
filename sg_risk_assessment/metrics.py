@@ -111,39 +111,3 @@ def log_wandb_categories(wb, metrics, id):
         'train_mcc'+"_"+id: metrics['train'][id]['mcc'],
         'val_mcc'+"_"+id: metrics['test'][id]['mcc'],
 })
-
-#~~~~~~~~~~Scoring Metrics~~~~~~~~~~
-#note: these scoring metrics only work properly for binary classification use cases (graph classification, dyngraph classification) 
-def get_auc(outputs, labels):
-    try:    
-        labels = encode_onehot(labels.numpy().tolist(), 2) #binary labels
-        auc = roc_auc_score(labels, outputs.numpy(), average="micro")
-    except ValueError as err: 
-        print("error calculating AUC: ", err)
-        auc = 0.0
-    return auc
-
-#NOTE: ROC curve is only generated for positive class (risky label) confidence values 
-#render parameter determines if the figure is actually generated. If false, it saves the values to a csv file.
-def get_roc_curve(outputs, labels, render=False):
-    risk_scores = []
-    outputs = preprocessing.normalize(outputs.numpy(), axis=0)
-    for i in outputs:
-        risk_scores.append(i[1])
-    fpr, tpr, thresholds = roc_curve(labels.numpy(), risk_scores)
-    roc = pd.DataFrame()
-    roc['fpr'] = fpr
-    roc['tpr'] = tpr
-    roc['thresholds'] = thresholds
-    roc.to_csv("ROC_data.csv")
-
-    if(render):
-        plt.figure(figsize=(8,8))
-        plt.xlim((0,1))
-        plt.ylim((0,1))
-        plt.ylabel("TPR")
-        plt.xlabel("FPR")
-        plt.title("Receiver Operating Characteristic")
-        plt.plot([0,1],[0,1], linestyle='dashed')
-        plt.plot(fpr,tpr, linewidth=2)
-        plt.savefig("ROC_curve.svg")

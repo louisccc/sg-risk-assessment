@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from relation_extractor import ActorType, Relations, RELATION_COLORS
+from sg_risk_assessment.relation_extractor import ActorType, Relations, RELATION_COLORS
 from networkx.drawing.nx_agraph import to_agraph
 import matplotlib.pyplot as plt
 import networkx as nx
@@ -11,7 +11,6 @@ import itertools
 import math
 import matplotlib
 matplotlib.use("Agg")
-sys.path.append(os.path.dirname(sys.path[0]))
 
 # SELECT ONE OF THE FOLLOWING:
 

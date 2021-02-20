@@ -16,27 +16,27 @@ class Config:
 
 	def __init__(self, args):
 		self.parser = ArgumentParser(description='The parameters for configuring and training the baseline Nagoya model(s)')
-		self.parser.add_argument('--input_path', type=str, default="../input/synthesis_data", help="Path to data directory.")
-		self.parser.add_argument('--pkl_path', type=str, default="/home/louisccc/NAS/louisccc/av/nagoya_pkl_data/one_camera/5_frames_dataset.pkl", help="Path to pickled dataset.")
-		self.parser.add_argument('--load_pkl', type=lambda x: (str(x).lower() == 'true'), default=False, help='Load model from cache.')
-		self.parser.add_argument('--save_pkl_path', type=str, default="", help="Path to save pickled dataset.")
-		self.parser.add_argument('--save_pkl', type=lambda x: (str(x).lower() == 'true'), default=False, help='Save pkl to save_pkl_path.')
+		self.parser.add_argument('--input_path', type=str, default="./risk-assessment", help="Path to data directory.")
+		self.parser.add_argument('--pkl_path', type=str, default="./risk-assessment/scene/synthetic/271_dataset.pkl", help="Path to pickled dataset.")
+		self.parser.add_argument('--load_pkl', type=lambda x: (str(x).lower() == 'true'), default=False, help='Set True to load pkl dataset.')
+		self.parser.add_argument('--save_pkl_path', type=str, default="./save_dataset.pkl", help="Path to save pickled dataset.")
+		self.parser.add_argument('--save_pkl', type=lambda x: (str(x).lower() == 'true'), default=False, help='Set True to save pkl dataset.')
 
 		# Training
 		self.parser.add_argument('--model_name', type=str, default="cnn_lstm", help="Type of model to run, choices include [gru, lstm, cnn, cnn_lstm, resnet]")
-		self.parser.add_argument('--n_folds', type=int, default=5, help="Number of cross validations")
+		self.parser.add_argument('--n_folds', type=int, default=1, help="Number of folds for cross validations")
 		self.parser.add_argument('--train_ratio', type=float, default=0.7, help="Ratio of dataset used for testing")
 		self.parser.add_argument('--downsample', type=lambda x: (str(x).lower() == 'true'), default=False, help='Downsample (balance) dataset.')
 		self.parser.add_argument('--seed', type=int, default=0, help="Seed for splitting the dataset.")
-		self.parser.add_argument('--test_step', type=int, default=5, help='Number of training epochs before testing the model.')
+		self.parser.add_argument('--test_step', type=int, default=10, help='Number of training epochs before testing the model.')
 		self.parser.add_argument('--device', type=str, default="cuda", help='The device on which models are run, options: [cuda, cpu].')
 
 		# Hyperparameters
 		self.parser.add_argument('--epochs', type=int, default=200, help="Number of epochs to train")
-		self.parser.add_argument('--batch_size', type=int, default=32, help="Batch size per forward")		
+		self.parser.add_argument('--batch_size', type=int, default=64, help="Batch size per forward")		
 		self.parser.add_argument('--bnorm', type=lambda x: (str(x).lower() == 'true'), default=False, help="Utilize batch normalization.")
 		self.parser.add_argument('--dropout', type=float, default=0.1, help='Dropout rate (1 - keep probability).')
-		self.parser.add_argument('--learning_rate', default=3e-4, type=float, help='The initial learning rate.')
+		self.parser.add_argument('--learning_rate', default=3e-5, type=float, help='The initial learning rate.')
 		self.parser.add_argument('--weight_decay', type=float, default=5e-4, help='Weight decay (L2 loss on parameters).')
 
 		args_parsed = self.parser.parse_args(args)
@@ -49,9 +49,8 @@ class Config:
 			self.wandb_config[arg_name] = getattr(args_parsed, arg_name)
 
 		self.input_base_dir = Path(self.input_path).resolve()
-		self.cache_model_path = Path(self.model_path).resolve()
 	
-def load_dataset(raw_image_path: Path, config=None):
+def load_dataset(raw_image_path, config=None):
 	'''
 		This step is for loading the dataset, preprocessing the video clips 
 		and neccessary scaling and normalizing. Also it reads and converts the labeling info.
@@ -60,7 +59,6 @@ def load_dataset(raw_image_path: Path, config=None):
 
 	dataset = DataSet()
 	dataset.read_video(image_path, option='fixed frame amount', number_of_frames=5, scaling='scale', scale_x=0.05, scale_y=0.05)
-
 	dataset.risk_scores = dataset.read_risk_data(raw_image_path)
 	dataset.convert_risk_to_one_hot()
 
@@ -71,7 +69,7 @@ def load_dataset(raw_image_path: Path, config=None):
 		print("Saved pickled dataset")
 	return dataset
 
-def load_pickle(pkl_path: Path):
+def load_pickle(pkl_path):
 	'''
 		Read dataset from pickle file.
 	'''
@@ -115,7 +113,6 @@ def train_model(dataset, config):
 if __name__ == '__main__':
 	config = Config(sys.argv[1:])
 	raw_image_path = config.input_base_dir
-	root_folder_path = raw_image_path.parent
 
 	if config.load_pkl:
 		dataset = load_pickle(Path(config.pkl_path).resolve())

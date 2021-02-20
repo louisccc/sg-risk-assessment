@@ -18,11 +18,9 @@ from sklearn.utils.class_weight import compute_class_weight
 from sklearn.model_selection import train_test_split
 from matplotlib import pyplot as plt
 
-# sys.path.append(os.path.dirname(sys.path[0]))
-
-from relation_extractor import Relations
-from mrgcn import *
-from metrics import *
+from sg_risk_assessment.relation_extractor import Relations
+from sg_risk_assessment.mrgcn import *
+from sg_risk_assessment.metrics import *
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
@@ -295,8 +293,6 @@ class DynKGTrainer:
         metrics['best_val_acc_balanced'] = self.best_val_acc_balanced
             
         self.log2wandb(metrics)
-        # NOTE: update code to support
-        # self.save2csv(metrics) 
     
         return categories_train, categories_test, metrics, folder_names_train
 
@@ -331,21 +327,6 @@ class DynKGTrainer:
             self.best_val_acc_balanced = metrics['test']['balanced_acc']
             #self.save_model()
 
-    def save2csv(self, best_metrics):
-        if not self.config.stats_path.exists():
-            current_stats = pd.DataFrame(best_metrics, index=[0])
-            current_stats.to_csv(str(self.config.stats_path), mode='w+', header=True, index=False, columns=list(best_metrics.keys()))
-        else:
-            best_stats = pd.read_csv(str(self.config.stats_path), header=0)
-            best_stats = best_stats.reset_index(drop=True)
-            replace_row = best_stats.loc[best_stats.args == str(self.args)]
-            if(replace_row.empty):
-                current_stats = pd.DataFrame(best_metrics, index=[0])
-                current_stats.to_csv(str(self.config.stats_path), mode='a', header=False, index=False, columns=list(best_metrics.keys()))
-            else:
-                best_stats.iloc[replace_row.index] = pd.DataFrame(best_metrics, index=replace_row.index)
-                best_stats.to_csv(str(self.config.stats_path), mode='w', header=True,index=False, columns=list(best_metrics.keys()))
-
     def save_model(self):
         """Function to save the model."""
         saved_path = Path(self.config.model_save_path).resolve()
@@ -373,51 +354,3 @@ class DynKGTrainer:
                 log_wandb(self.config.wandb, metrics)
             else:
                 log_wandb_categories(self.config.wandb, metrics, id=category)
-
-#returns onehot version of labels. can specify n_classes to force onehot size.
-def encode_onehot(labels, n_classes=None):
-    if(n_classes):
-        classes = set(range(n_classes))
-    else:
-        classes = set(labels)
-    classes_dict = {c: np.identity(len(classes))[i, :] for i, c in
-                    enumerate(classes)}
-    labels_onehot = np.array(list(map(classes_dict.get, labels)),
-                             dtype=np.int32)
-    return labels_onehot
-
-#~~~~~~~~~~Scoring Metrics~~~~~~~~~~
-#note: these scoring metrics only work properly for binary classification use cases (graph classification, dyngraph classification) 
-def get_auc(outputs, labels):
-    try:    
-        labels = encode_onehot(labels.numpy().tolist(), 2) #binary labels
-        auc = roc_auc_score(labels, outputs.numpy(), average="micro")
-    except ValueError as err: 
-        print("error calculating AUC: ", err)
-        auc = 0.0
-    return auc
-
-#NOTE: ROC curve is only generated for positive class (risky label) confidence values 
-#render parameter determines if the figure is actually generated. If false, it saves the values to a csv file.
-def get_roc_curve(outputs, labels, render=False):
-    risk_scores = []
-    outputs = preprocessing.normalize(outputs.numpy(), axis=0)
-    for i in outputs:
-        risk_scores.append(i[1])
-    fpr, tpr, thresholds = roc_curve(labels.numpy(), risk_scores)
-    roc = pd.DataFrame()
-    roc['fpr'] = fpr
-    roc['tpr'] = tpr
-    roc['thresholds'] = thresholds
-    roc.to_csv("ROC_data_"+task+".csv")
-
-    if(render):
-        plt.figure(figsize=(8,8))
-        plt.xlim((0,1))
-        plt.ylim((0,1))
-        plt.ylabel("TPR")
-        plt.xlabel("FPR")
-        plt.title("Receiver Operating Characteristic for " + task)
-        plt.plot([0,1],[0,1], linestyle='dashed')
-        plt.plot(fpr,tpr, linewidth=2)
-        plt.savefig("ROC_curve_"+task+".svg")

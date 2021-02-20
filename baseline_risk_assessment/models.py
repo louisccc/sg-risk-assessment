@@ -145,7 +145,7 @@ class CNN_Classifier(nn.Module):
         self.mp1 = nn.MaxPool3d(kernel_size=(1,2,2), stride=(1,2,2))
         self.mp2 = nn.MaxPool3d(kernel_size=(1,2,2))
         self.flat = nn.Flatten(start_dim=1)
-        self.flat_dim = 64*self.frames*self.get_flat_dim() # TODO: automate this number
+        self.flat_dim = 64*self.frames*self.get_flat_dim()
         self.l1 = nn.Linear(in_features=self.flat_dim, out_features=1000)
         self.l2 = nn.Linear(in_features=1000, out_features=2)
     
@@ -209,51 +209,3 @@ class ResNet50_LSTM_Classifier(nn.Module):
         _,(lstm1,_) = self.lstm1(torch.squeeze(resnet))
         l1 = self.l1(lstm1)
         return l1.squeeze()
-         
-def get_model_params(model):
-    for name, param in model.named_parameters():
-        if param.requires_grad:
-            print(name, param)
-
-def test_models():
-    # populate some default hyperparameters
-    from types import SimpleNamespace
-    cfg = {'dropout': 0.1, 'device': 'cpu', 'activation': 'relu'}
-    cfg= SimpleNamespace(**cfg)
-
-    # setup fake dataset
-    image = torch.randn(16, 5, 3, 224, 224)
-    x = image
-    
-    # construct LSTM_Classifier model
-    model_name = ['gru', 'lstm']
-    for name in model_name:
-        model = LSTM_Classifier(image.shape, name, cfg)
-        pred = model(x)
-        print(pred.shape, pred)
-        assert pred.shape[0] == image.shape[0]
-    print('LSTM_Classifier Passed!')
-
-    # construct CNN_LSTM_Classifier model
-    model = CNN_LSTM_Classifier(image.shape, cfg)
-    pred = model(x)
-    print(pred.shape, pred)
-    assert pred.shape[0] == image.shape[0]
-    print('CNN_LSTM_Classifier Passed!')
-
-    # construct CNN_Classifier model
-    model = CNN_Classifier(image.shape, cfg)
-    pred = model(x)
-    print(pred.shape, pred)
-    assert pred.shape[0] == image.shape[0]
-    print('CNN_Classifier Passed!')
-
-    # construct ResNet model
-    model = ResNet50_LSTM_Classifier(image.shape, cfg)
-    pred = model(x)
-    print(pred.shape, pred)
-    assert pred.shape[0] == image.shape[0]
-    print('ResNet_Classifier Passed!')
-
-if __name__ == "__main__":
-    test_models()

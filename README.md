@@ -35,17 +35,17 @@ For running the sg-risk-assessment in this repo, you may refer to the following 
 ```shell
   $ python sg_risk_assessment.py --load_pkl True --pkl_path risk-assessment/scenegraph/synthetic/271_dataset.pkl
 
-  # For tuning hyperparameters view the the config class of sg_risk_assessment.py
+  # For tuning hyperparameters view the config class of sg_risk_assessment.py
 ```
 
 For running the baseline-risk-assessment in this repo, you may refer to the following commands:
 ```shell
   $ python baseline_risk_assessment.py --load_pkl True --pkl_path risk-assessment/scene/synthetic/271_dataset.pkl
 
-  # For tuning hyperparameters view the the config class of baseline_risk_assessment.py
+  # For tuning hyperparameters view the config class of baseline_risk_assessment.py
 ```
 
-After running these commands the expected outputs are list of metrics logged by wandb:
+After running these commands, the expected outputs are a dump of metrics logged by wandb:
 ```shell
 wandb:                    train_recall ▁████████████████████
 wandb:                   val_precision █▁▅▄▅▄▆▆▆▅▄▄▇▆▅▆▅▇▆▆▆

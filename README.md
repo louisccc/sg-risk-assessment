@@ -1,5 +1,5 @@
 # Scene-graph Augmented Data-driven Risk Assessment of Autonomous Vehicle Decisions
-This repository includes the code and dataset information required for reproducing the results in [our paper](https://arxiv.org/abs/2009.06435). Besides, we also integrated the source code of [our baseline method](https://arxiv.org/abs/1906.02859), [DeepTL-Lane-Change-Classification](https://github.com/Ekim-Yurtsever/DeepTL-Lane-Change-Classification), into this repo. The baseline approach infers the risk level of lane change video clips with deep CNN+LSTM. The architecture of our approach is illustrated as below,
+This repository includes the code and dataset information required for reproducing the results in [our paper](https://arxiv.org/abs/2009.06435). Besides, we also integrated the source code of [our baseline method](https://arxiv.org/abs/1906.02859), [DeepTL-Lane-Change-Classification](https://github.com/Ekim-Yurtsever/DeepTL-Lane-Change-Classification), into this repo. The baseline approach infers the risk level of lane change video clips with deep CNN+LSTM. Our approach incoporates both spatial modeling and temporal modeling in the task of subjective risk assessment. The architecture of our approach is illustrated as below,
 
 ![](https://github.com/louisccc/sg-risk-assessment/blob/master/assets/archi.png?raw=true)
 
@@ -19,7 +19,7 @@ We recommend our potential users to use [Anaconda](https://www.anaconda.com/) as
 
 Our recommended command sequence is as follows:
 ```shell
-# conda create --name sg_risk_assessment python=3.6
+$ conda create --name sg_risk_assessment python=3.6
 $ conda install pytorch==1.6.0 torchvision==0.7.0 cudatoolkit=10.1 -c pytorch
 $ python -m pip install --no-index torch-scatter -f https://pytorch-geometric.com/whl/torch-1.6.0+cu101.html
 $ python -m pip install --no-index torch-sparse -f https://pytorch-geometric.com/whl/torch-1.6.0+cu101.html
@@ -33,16 +33,18 @@ This set of commands assumes you to have cuda10.1 in your local. Please refer to
 # Usages
 For running the sg-risk-assessment in this repo, you may refer to the following commands:
 ```shell
-  $ python sg_risk_assessment.py --pkl_path risk-assessment/scenegraph/synthetic/271_dataset.pkl
+$ python sg_risk_assessment.py --pkl_path risk-assessment/scenegraph/synthetic/271_dataset.pkl
 
-  # For tuning hyperparameters view the config class of sg_risk_assessment.py
+# --pkl_path + [wherever path that stores the downloaded pkl]
+# For tuning hyperparameters view the config class of sg_risk_assessment.py
 ```
 
 For running the baseline-risk-assessment in this repo, you may refer to the following commands:
 ```shell
-  $ python baseline_risk_assessment.py --load_pkl True --pkl_path risk-assessment/scene/synthetic/271_dataset.pkl
+$ python baseline_risk_assessment.py --load_pkl True --pkl_path risk-assessment/scene/synthetic/271_dataset.pkl
 
-  # For tuning hyperparameters view the config class of baseline_risk_assessment.py
+# --pkl_path + [wherever path that stores the downloaded pkl]
+# For tuning hyperparameters view the config class of baseline_risk_assessment.py
 ```
 
 After running these commands, the expected outputs are a dump of metrics logged by wandb:

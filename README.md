@@ -15,7 +15,7 @@ The architecture of this repository is as below:
 We recommend our potential users to use [Anaconda](https://www.anaconda.com/) as the primary virtual environment. The requirements to run through our repo are as follows,
 - python >= 3.6 
 - torch == 1.6.0
-- torch_teometric == 1.6.1
+- torch_geometric == 1.6.1
 
 Our recommended command sequence is as follows:
 ```shell

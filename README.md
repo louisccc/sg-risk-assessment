@@ -1,5 +1,10 @@
 # Scene-graph Augmented Data-driven Risk Assessment of Autonomous Vehicle Decisions
-This repository includes the code and dataset information required for reproducing the results in [our paper](https://arxiv.org/abs/2009.06435). Besides, we also integrated the source code of [our baseline method](https://arxiv.org/abs/1906.02859), [DeepTL-Lane-Change-Classification](https://github.com/Ekim-Yurtsever/DeepTL-Lane-Change-Classification), into this repo. The baseline approach infers the risk level of lane change video clips with deep CNN+LSTM. Our approach incoporates both spatial modeling and temporal modeling in the task of subjective risk assessment. The architecture of our approach is illustrated as below,
+This repository includes the code and dataset information required for reproducing the results in [our paper](https://arxiv.org/abs/2009.06435). Besides, we also integrated the source code of [our baseline method](https://arxiv.org/abs/1906.02859), [DeepTL-Lane-Change-Classification](https://github.com/Ekim-Yurtsever/DeepTL-Lane-Change-Classification), into this repo. The baseline approach infers the risk level of lane change video clips with deep CNN+LSTM. Our approach incoporates both spatial modeling and temporal modeling in the task of subjective risk assessment. 
+
+**NOTE:** For a more comprehensive implementation of the code from this project and our other related work, please refer to our new open-source tool for AV scene-graph generation and embedding [roadscene2vec](https://github.com/AICPS/roadscene2vec).
+
+
+The architecture of our approach is illustrated as below,
 
 ![](https://github.com/louisccc/sg-risk-assessment/blob/master/assets/archi.png?raw=true)
 
